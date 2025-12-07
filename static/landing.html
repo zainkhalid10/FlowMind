@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowMind – Intelligent Document Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        
+        .hero-section {
+            padding: 80px 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .hero-section h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: fadeInDown 0.8s ease-out;
+        }
+        
+        .hero-section p {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+        
+        .features-section {
+            background: white;
+            padding: 80px 20px;
+            margin: 40px 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        
+        .features-section .row {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .features-section .col-md-4 {
+            flex: 0 0 auto;
+            width: auto;
+            max-width: 320px;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            padding: 45px 40px;
+            text-align: center;
+            margin-bottom: 0;
+            border-radius: 24px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 340px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+        
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.25), 0 8px 16px rgba(0,0,0,0.1);
+            border-color: rgba(102, 126, 234, 0.5);
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+        }
+        
+        .feature-icon {
+            font-size: 3.8rem;
+            color: #667eea;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border-radius: 22px;
+            border: 2px solid rgba(102, 126, 234, 0.25);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+            border-color: rgba(102, 126, 234, 0.4);
+        }
+        
+        .feature-card h3 {
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            color: #1e293b;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .feature-card p {
+            color: #64748b;
+            line-height: 1.8;
+            font-size: 1rem;
+            margin: 0;
+            font-weight: 400;
+        }
+        
+        @media (max-width: 768px) {
+            .features-section .col-md-4 {
+                max-width: 100%;
+                width: 100%;
+            }
+            
+            .feature-card {
+                min-height: 280px;
+                padding: 35px 30px;
+            }
+            
+            .feature-icon {
+                font-size: 3rem;
+                width: 70px;
+                height: 70px;
+            }
+        }
+        
+        .auth-section {
+            background: white;
+            padding: 60px 40px;
+            margin: 40px 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .auth-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .alert-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .about-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 70px 50px;
+            margin: 40px auto;
+            border-radius: 24px;
+            color: white;
+            max-width: 900px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .about-section h2 {
+            font-size: 2.8rem;
+            margin-bottom: 35px;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            letter-spacing: -1px;
+        }
+        
+        .about-section p {
+            font-size: 1.15rem;
+            line-height: 1.9;
+            margin-bottom: 25px;
+            opacity: 0.98;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .about-section {
+                max-width: 95%;
+                padding: 50px 30px;
+                margin: 40px auto;
+            }
+            
+            .about-section h2 {
+                font-size: 2.2rem;
+            }
+            
+            .about-section p {
+                font-size: 1.05rem;
+            }
+        }
+        
+        /* Contact Us Section */
+        .contact-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 80px 50px;
+            margin: 60px auto 40px;
+            border-radius: 24px;
+            color: white;
+            max-width: 1000px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .contact-section h2 {
+            font-size: 2.8rem;
+            margin-bottom: 50px;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            letter-spacing: -1px;
+        }
+        
+        .contact-profiles {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 60px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .profile-card {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 40px 35px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            min-width: 280px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.4);
+        }
+        
+        .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            border: 4px solid rgba(255,255,255,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        
+        .profile-card:hover .profile-image {
+            transform: scale(1.05);
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .social-link {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .social-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px) scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .social-link.github:hover {
+            background: #333;
+            border-color: #333;
+        }
+        
+        .social-link.linkedin:hover {
+            background: #0077b5;
+            border-color: #0077b5;
+        }
+        
+        .social-link.email:hover {
+            background: #ea4335;
+            border-color: #ea4335;
+        }
+        
+        @media (max-width: 768px) {
+            .contact-section {
+                max-width: 95%;
+                padding: 50px 30px;
+                margin: 40px auto;
+            }
+            
+            .contact-section h2 {
+                font-size: 2.2rem;
+            }
+            
+            .contact-profiles {
+                gap: 30px;
+            }
+            
+            .profile-card {
+                min-width: 100%;
+            }
+            
+            .profile-image {
+                width: 120px;
+                height: 120px;
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-section">
+        <h1><i class="fas fa-brain"></i> FlowMind</h1>
+        <p>Intelligent Document Analysis & Requirements Extraction</p>
+    </div>
+    
+    <div class="features-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-file-alt"></i></div>
+                        <h3>Document Extraction</h3>
+                        <p>Extract text, images, and OCR from PDFs, Word documents, PowerPoint presentations, and more.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-robot"></i></div>
+                        <h3>AI-Powered Analysis</h3>
+                        <p>Advanced RAG-powered requirements extraction using state-of-the-art AI models.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                        <h3>Smart Insights</h3>
+                        <p>Get intelligent summaries, requirements analysis, and actionable insights from your documents.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="about-section">
+        <h2>About FlowMind</h2>
+        <p>FlowMind is an intelligent document analysis platform that helps you extract, analyze, and understand complex documents with ease. Whether you're working with technical specifications, requirements documents, or research papers, FlowMind uses advanced AI to help you get the insights you need.</p>
+        <p>Our platform supports multiple document formats including PDF, Word, PowerPoint, and images. With our RAG-powered AI agent, you can extract requirements, analyze content, and generate comprehensive summaries automatically.</p>
+    </div>
+    
+    <div class="auth-section">
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="showTab('login')">Login</button>
+            <button class="auth-tab" onclick="showTab('signup')">Sign Up</button>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form active">
+            <div class="form-group">
+                <input type="email" class="form-control" id="loginEmail" placeholder="Email Address" required>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" id="loginPassword" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+        </form>
+        
+        <!-- Signup Form -->
+        <form id="signupForm" class="auth-form">
+            <div class="form-group">
+                <input type="email" class="form-control" id="signupEmail" placeholder="Email Address" required>
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="signupUsername" placeholder="Username" required>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" id="signupPassword" placeholder="Password (min 6 characters)" required minlength="6">
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+    </div>
+    
+    <!-- Contact Us Section -->
+    <div class="contact-section">
+        <h2><i class="fas fa-envelope"></i> Contact Us</h2>
+        <div class="contact-profiles">
+            <!-- Muhammad Zain Profile -->
+            <div class="profile-card">
+                <div class="profile-image" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    MZ
+                </div>
+                <div class="profile-name">Muhammad Zain</div>
+                <div class="social-links">
+                    <a href="https://github.com/zainkhalid10" target="_blank" class="social-link github" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/in/muhammad-zain" target="_blank" class="social-link linkedin" title="LinkedIn">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
+                    <a href="mailto:zainkhalid459510@gmail.com" class="social-link email" title="Email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Moosa Nasir Profile -->
+            <div class="profile-card">
+                <div class="profile-image" style="background: linear-gradient(135deg, #764ba2, #667eea);">
+                    MN
+                </div>
+                <div class="profile-name">Moosa Nasir</div>
+                <div class="social-links">
+                    <a href="https://github.com/moosanasir" target="_blank" class="social-link github" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/in/moosa-nasir" target="_blank" class="social-link linkedin" title="LinkedIn">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
+                    <a href="mailto:moosa.nasir@example.com" class="social-link email" title="Email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update forms
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.getElementById(tab + 'Form').classList.add('active');
+            
+            // Clear alerts
+            document.getElementById('alertContainer').innerHTML = '';
+        }
+        
+        function showAlert(message, type = 'danger') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.innerHTML = `<i class="fas fa-${type === 'danger' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}`;
+            document.getElementById('alertContainer').innerHTML = '';
+            document.getElementById('alertContainer').appendChild(alert);
+        }
+        
+        // Login form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    // Store token and user info
+                    const token = data.access_token;
+                    console.log('Login successful, token received:', token.substring(0, 20) + '...');
+                    console.log('Token length:', token.length);
+                    console.log('Token parts:', token.split('.').length);
+                    
+                    // Validate token format before storing
+                    if (token.split('.').length !== 3) {
+                        console.error('Invalid token format received from server!');
+                        showAlert('Invalid token format. Please try again.');
+                        return;
+                    }
+                    
+                    localStorage.setItem('access_token', token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Verify token was stored correctly
+                    const storedToken = localStorage.getItem('access_token');
+                    console.log('Token stored successfully:', storedToken ? 'Yes' : 'No');
+                    console.log('Stored token matches:', storedToken === token);
+                    console.log('Stored token format valid:', storedToken && storedToken.split('.').length === 3);
+                    
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/extract';
+                    }, 1000);
+                } else {
+                    const errorMsg = data.detail || data.message || 'Login failed. Please try again.';
+                    console.error('Login failed:', errorMsg);
+                    console.error('Response status:', response.status);
+                    console.error('Response data:', data);
+                    showAlert(errorMsg);
+                }
+            } catch (error) {
+                showAlert('Network error. Please check your connection.');
+            }
+        });
+        
+        // Signup form
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const username = document.getElementById('signupUsername').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    // Store token and user info
+                    const token = data.access_token;
+                    console.log('Signup successful, token received:', token.substring(0, 20) + '...');
+                    console.log('Token length:', token.length);
+                    console.log('Token parts:', token.split('.').length);
+                    
+                    // Validate token format before storing
+                    if (token.split('.').length !== 3) {
+                        console.error('Invalid token format received from server!');
+                        showAlert('Invalid token format. Please try again.');
+                        return;
+                    }
+                    
+                    localStorage.setItem('access_token', token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Verify token was stored correctly
+                    const storedToken = localStorage.getItem('access_token');
+                    console.log('Token stored successfully:', storedToken ? 'Yes' : 'No');
+                    console.log('Stored token matches:', storedToken === token);
+                    console.log('Stored token format valid:', storedToken && storedToken.split('.').length === 3);
+                    
+                    showAlert('Account created successfully! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/extract';
+                    }, 1000);
+                } else {
+                    const errorMsg = data.detail || data.message || 'Signup failed. Please try again.';
+                    console.error('Signup failed:', errorMsg);
+                    console.error('Response status:', response.status);
+                    console.error('Response data:', data);
+                    showAlert(errorMsg);
+                }
+            } catch (error) {
+                showAlert('Network error. Please check your connection.');
+            }
+        });
+        
+        // Check if already logged in
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            window.location.href = '/extract';
+        }
+    </script>
+</body>
+</html>
+

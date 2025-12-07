@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FlowMind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .dashboard-header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px 35px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(102, 126, 234, 0.15);
+        }
+        
+        .dashboard-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .dashboard-header h1 i {
+            color: #667eea;
+            margin-right: 10px;
+        }
+        
+        .dashboard-header p {
+            color: #64748b;
+            font-size: 1rem;
+        }
+        
+        .dashboard-header h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+        
+        .dashboard-header h3 i {
+            color: #667eea;
+            margin-right: 10px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px 20px;
+            margin-bottom: 0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 126, 234, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+            border-color: rgba(102, 126, 234, 0.25);
+        }
+        
+        .stats-card:hover::before {
+            opacity: 1;
+        }
+        
+        .stats-card .icon {
+            font-size: 2.2rem;
+            color: #667eea;
+            margin-bottom: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover .icon {
+            transform: scale(1.1);
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 8px 0;
+            line-height: 1.2;
+        }
+        
+        .stats-card .text-muted {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .stats-card .view-link {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .stats-card .view-link:hover {
+            color: #764ba2;
+        }
+        
+        .upload-card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 126, 234, 0.12);
+        }
+        
+        .upload-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.12);
+            border-color: rgba(102, 126, 234, 0.25);
+        }
+        
+        .upload-card .filename {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+        
+        .upload-card .filename i {
+            color: #667eea;
+            margin-right: 8px;
+        }
+        
+        .upload-card .meta {
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .upload-card .badge {
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+        
+        .btn-dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .btn-dashboard:hover {
+            transform: translateY(-2px);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-dashboard i {
+            font-size: 0.9rem;
+        }
+        
+        .btn-outline-danger {
+            border: 1px solid #dc3545;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 25px;
+            }
+            
+            .stats-card {
+                padding: 20px;
+            }
+            
+            .upload-card {
+                padding: 20px;
+            }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid rgba(102, 126, 234, 0.12);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            color: #cbd5e1;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+        
+        .loading i {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .auth-error {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .auth-error i {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div id="loadingState" class="loading">
+            <i class="fas fa-spinner"></i>
+            <div style="margin-top: 20px;">Loading dashboard...</div>
+        </div>
+        
+        <div id="authError" class="auth-error" style="display: none;">
+            <i class="fas fa-lock"></i>
+            <h2>Authentication Required</h2>
+            <p class="text-muted mb-4">Please login to view your dashboard</p>
+            <a href="/login" class="btn btn-dashboard me-2"><i class="fas fa-sign-in-alt"></i> Login</a>
+            <a href="/" class="btn btn-outline-secondary"><i class="fas fa-home"></i> Home</a>
+        </div>
+        
+        <div id="dashboardContent" style="display: none;">
+            <div class="dashboard-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fas fa-tachometer-alt text-primary"></i> Dashboard</h1>
+                        <p class="text-muted mb-0">Welcome back, <strong id="username-display"></strong>!</p>
+                    </div>
+                    <div>
+                        <a href="/extract" class="btn btn-dashboard me-2"><i class="fas fa-upload"></i> Extract</a>
+                        <a href="#" onclick="navigateToTraining(); return false;" class="btn btn-dashboard me-2" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-graduation-cap"></i> View Training Dashboard</a>
+                        <a href="/" class="btn btn-dashboard me-2"><i class="fas fa-home"></i> Home</a>
+                        <button onclick="logout()" class="btn btn-outline-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stats-card text-center">
+                        <div class="icon"><i class="fas fa-file-upload"></i></div>
+                        <div class="stats-number" id="total-uploads">0</div>
+                        <div class="text-muted">Total Uploads</div>
+                        <div class="view-link" style="color: transparent; height: 20px;">
+                            &nbsp;
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card text-center">
+                        <div class="icon"><i class="fas fa-images"></i></div>
+                        <div class="stats-number" id="total-images">0</div>
+                        <div class="text-muted">Total Images Detected</div>
+                        <div class="view-link" style="color: transparent; height: 20px;">
+                            &nbsp;
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card text-center" style="cursor: pointer;" onclick="navigateToTraining()">
+                        <div class="icon"><i class="fas fa-brain"></i></div>
+                        <div class="stats-number" id="learning-patterns">-</div>
+                        <div class="text-muted">Patterns Learned</div>
+                        <div class="view-link">
+                            <i class="fas fa-arrow-right"></i> View Training Dashboard
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-header">
+                <h3><i class="fas fa-history"></i> Upload History</h3>
+            </div>
+
+            <div id="uploadsList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Get token from localStorage
+        const token = localStorage.getItem('access_token');
+        const userStr = localStorage.getItem('user');
+        
+        // Check authentication
+        if (!token || !userStr) {
+            showAuthError();
+        } else {
+            try {
+                const user = JSON.parse(userStr);
+                document.getElementById('username-display').textContent = user.username || user.email;
+                loadDashboard();
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+                showAuthError();
+            }
+        }
+        
+        function showAuthError() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('authError').style.display = 'block';
+        }
+        
+        function navigateToTraining() {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                window.location.href = '/training?token=' + encodeURIComponent(token);
+            } else {
+                window.location.href = '/';
+            }
+        }
+        
+        async function loadDashboard() {
+            try {
+                // Get fresh token from localStorage
+                const currentToken = localStorage.getItem('access_token');
+                console.log('Dashboard: Token retrieved from localStorage:', currentToken ? 'Token exists' : 'No token');
+                
+                // Validate token format first
+                if (!currentToken || currentToken.split('.').length !== 3) {
+                    console.error('Invalid token format:', currentToken);
+                    showAuthError();
+                    return;
+                }
+                
+                console.log('Dashboard: Making request to /api/me with token');
+                console.log('Dashboard: Token being sent:', currentToken.substring(0, 30) + '...');
+                console.log('Dashboard: Authorization header:', `Bearer ${currentToken.substring(0, 20)}...`);
+                
+                // Get user info - try query parameter method first (more reliable)
+                console.log('Dashboard: Trying query parameter method first...');
+                let userResponse = await fetch(`/api/me?token=${encodeURIComponent(currentToken)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                // If query parameter fails, try header method
+                if (!userResponse.ok && userResponse.status === 401) {
+                    console.log('Dashboard: Query parameter failed, trying Authorization header...');
+                    userResponse = await fetch('/api/me', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${currentToken}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'include'
+                    });
+                }
+                
+                console.log('Dashboard: /api/me response status:', userResponse.status);
+                console.log('Dashboard: /api/me response statusText:', userResponse.statusText);
+                
+                if (!userResponse.ok) {
+                    // Try to get error details
+                    let errorDetail = 'Unknown error';
+                    try {
+                        const errorData = await userResponse.json();
+                        errorDetail = errorData.detail || errorData.message || 'Unknown error';
+                        console.error('Dashboard: Error detail:', errorDetail);
+                    } catch (e) {
+                        const errorText = await userResponse.text();
+                        console.error('Dashboard: Error text:', errorText);
+                        errorDetail = errorText || 'Unknown error';
+                    }
+                    
+                    if (userResponse.status === 401 || userResponse.status === 403) {
+                        console.error('Authentication failed:', errorDetail);
+                        console.error('Dashboard: Clearing token and redirecting to login');
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('user');
+                        showAuthError();
+                        return;
+                    }
+                    throw new Error(`Failed to load user info: ${errorDetail}`);
+                }
+                
+                const user = await userResponse.json();
+                document.getElementById('username-display').textContent = user.username || user.email;
+                
+                // Get user's uploads from database
+                console.log('Dashboard: Making request to /api/my-uploads');
+                const recordsResponse = await fetch('/api/my-uploads', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'  // Include credentials for CORS
+                });
+                
+                console.log('Dashboard: /api/my-uploads response status:', recordsResponse.status);
+                
+                let uploads = [];
+                if (recordsResponse.ok) {
+                    const responseData = await recordsResponse.json();
+                    // Backend returns {"uploads": [...]}, so extract the uploads array
+                    if (responseData && responseData.uploads && Array.isArray(responseData.uploads)) {
+                        uploads = responseData.uploads;
+                    } else if (Array.isArray(responseData)) {
+                        // Fallback: if response is directly an array
+                        uploads = responseData;
+                    } else {
+                        uploads = [];
+                    }
+                    console.log('Dashboard: Received uploads:', uploads.length);
+                    console.log('Dashboard: Response data structure:', Object.keys(responseData));
+                } else if (recordsResponse.status === 401 || recordsResponse.status === 403) {
+                    console.error('Authentication failed for uploads');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                    showAuthError();
+                    return;
+                }
+                
+                // Ensure uploads is an array (null-safety)
+                if (!Array.isArray(uploads)) {
+                    console.warn('Dashboard: uploads is not an array, defaulting to empty array');
+                    uploads = [];
+                }
+                
+                // Calculate statistics
+                const totalUploads = uploads.length;
+                const totalImages = uploads.reduce((sum, upload) => sum + (upload.detected_shapes || 0), 0);
+                
+                // Update stats
+                document.getElementById('total-uploads').textContent = totalUploads;
+                document.getElementById('total-images').textContent = totalImages;
+                
+                // Load learning status
+                loadLearningStatus();
+                
+                // Display uploads
+                const uploadsList = document.getElementById('uploadsList');
+                if (!uploadsList) {
+                    console.error('Dashboard: uploadsList element not found');
+                    throw new Error('Dashboard element not found');
+                }
+                
+                if (uploads.length === 0) {
+                    uploadsList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h3>No uploads yet</h3>
+                            <p>Start by uploading your first document to see it here!</p>
+                            <a href="/" class="btn btn-dashboard"><i class="fas fa-upload"></i> Upload Document</a>
+                        </div>
+                    `;
+                } else {
+                    uploadsList.innerHTML = uploads.map(upload => `
+                        <div class="upload-card" style="cursor: pointer;" onclick="viewFullExtraction(${upload.id})">
+                            <div class="filename">
+                                <i class="fas fa-file-alt"></i> ${escapeHtml(upload.filename || 'Unknown file')}
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary me-2"><i class="fas fa-images"></i> ${upload.detected_shapes || 0} images</span>
+                                <span class="badge bg-secondary"><i class="fas fa-calendar"></i> ${formatDate(upload.created_at)}</span>
+                            </div>
+                            <div class="meta">
+                                <strong>Summary:</strong> ${escapeHtml(upload.summary || 'No summary available')}
+                            </div>
+                            <div class="meta mt-2">
+                                <strong>Text Preview:</strong> ${escapeHtml((upload.extracted_text || '').substring(0, 200))}${(upload.extracted_text || '').length > 200 ? '...' : ''}
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); viewFullExtraction(${upload.id})">
+                                    <i class="fas fa-eye"></i> View Full Results
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); window.location.href='/extract'">
+                                    <i class="fas fa-upload"></i> Extract More
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                // Hide loading, show content
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div style="margin-top: 20px;">Error loading dashboard. Please try again.</div>
+                        <a href="/" class="btn btn-dashboard mt-3"><i class="fas fa-home"></i> Go Home</a>
+                    </div>
+                `;
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString();
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        function viewFullExtraction(uploadId) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('Please login to view extraction details');
+                window.location.href = '/';
+                return;
+            }
+            
+            // Fetch full extraction details
+            fetch(`/api/upload/${uploadId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Failed to fetch extraction details');
+                }
+            })
+            .then(data => {
+                // If view_id exists, redirect to formatted results page
+                if (data.view_id) {
+                    window.location.href = `/view_requirements/${data.view_id}`;
+                } else {
+                    // Otherwise show modal with basic extraction results
+                    showExtractionModal(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching extraction:', error);
+                alert('Could not load extraction details. Redirecting to extract page...');
+                window.location.href = '/extract';
+            });
+        }
+        
+        async function loadLearningStatus() {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    document.getElementById('learning-patterns').textContent = '-';
+                    return;
+                }
+                
+                const response = await fetch('/api/training-status', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const status = await response.json();
+                    // Get total patterns from the response
+                    const totalPatterns = status.total_learned_patterns || 0;
+                    const patternsElement = document.getElementById('learning-patterns');
+                    if (patternsElement) {
+                        patternsElement.textContent = totalPatterns;
+                        console.log('Learning status loaded:', totalPatterns, 'patterns');
+                    }
+                } else {
+                    console.warn('Failed to load learning status:', response.status);
+                    const patternsElement = document.getElementById('learning-patterns');
+                    if (patternsElement) {
+                        patternsElement.textContent = '0';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading learning status:', error);
+                const patternsElement = document.getElementById('learning-patterns');
+                if (patternsElement) {
+                    patternsElement.textContent = '0';
+                }
+            }
+        }
+        
+        function showExtractionModal(data) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade show';
+            modal.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-file-alt"></i> ${escapeHtml(data.filename || 'Extraction Results')}</h5>
+                            <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${data.summary ? `<div class="alert alert-info"><strong>Summary:</strong><br>${escapeHtml(data.summary)}</div>` : ''}
+                            ${data.extracted_text ? `<div><strong>Extracted Text:</strong><br><pre style="max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 5px;">${escapeHtml(data.extracted_text)}</pre></div>` : ''}
+                            ${data.detected_shapes ? `<p><strong>Images Detected:</strong> ${data.detected_shapes}</p>` : ''}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="window.location.href='/extract'">
+                                <i class="fas fa-upload"></i> Extract More
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
+
