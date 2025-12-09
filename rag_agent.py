@@ -153,15 +153,22 @@ class RequirementsExtractionAgent:
                 "features": {"keywords": set(), "phrases": set(), "patterns": set()}
             }
             
-            # Performance tracking
-            self.extraction_stats = {
-                "total_documents": 0,
-                "successful_extractions": 0,
-                "failed_extractions": 0,
-                "method_performance": {},
-                "category_accuracy": {},
-                "learning_iterations": 0
-            }
+        # Performance tracking
+        self.extraction_stats = {
+            "total_documents": 0,
+            "successful_extractions": 0,
+            "failed_extractions": 0,
+            "method_performance": {},
+            "category_accuracy": {},
+            "learning_iterations": 0,
+            "average_quality_score": 0.0,
+            "domain_contexts": {}
+        }
+        
+        # Advanced features
+        self.enable_quality_scoring = True
+        self.enable_priority_detection = True
+        self.enable_context_awareness = True
             
             # Load existing learned patterns
             self._load_learned_patterns()
@@ -869,12 +876,17 @@ class RequirementsExtractionAgent:
         return len(s) > 15 and len(s.split()) >= 3
 
     def _format_sections(self, sections: Dict[str, List[str]]) -> str:
-        """Format sections into a user-friendly, deduplicated bullet list per section."""
+        """Format sections into a user-friendly, deduplicated bullet list per section with quality indicators."""
         import re
         global_seen = set()
         parts: List[str] = []
+        total_quality = 0
+        total_count = 0
+        
         for title, items in sections.items():
             cleaned: List[str] = []
+            req_data: List[tuple] = []  # (line, quality_score)
+            
             for item in items or []:
                 line = self._normalize_line(item)
                 if not self._should_keep_line(line):
@@ -883,24 +895,66 @@ class RequirementsExtractionAgent:
                 if key in global_seen:
                     continue
                 global_seen.add(key)
-                cleaned.append(line)
-            # Prefer imperative/actionable ordering: must/shall/should first, then others
-            def sort_key(x: str) -> tuple:
-                xl = x.lower()
+                
+                # Calculate quality score
+                quality_score = self._score_requirement_quality(line) if self.enable_quality_scoring else 0
+                req_data.append((line, quality_score))
+                total_quality += quality_score
+                total_count += 1
+            
+            # Enhanced sorting: first by mandatory keywords, then by quality, then by length
+            def enhanced_sort_key(x: tuple) -> tuple:
+                line, quality = x
+                xl = line.lower()
                 priority = 0
-                if any(w in xl for w in (" must ", " shall ")):
+                
+                # Critical/mandatory requirements first
+                if any(w in xl for w in (" must ", " shall ", " critical ")):
+                    priority = -4
+                elif " should " in xl:
                     priority = -3
-                elif " should " in xl or xl.startswith("ensure") or xl.startswith("implement"):
+                elif xl.startswith("ensure") or xl.startswith("implement"):
                     priority = -2
-                elif any(w in xl for w in (" run ", " build ", " push ", " trigger ", " verify ")):
+                elif any(w in xl for w in (" can ", " may ")):
                     priority = -1
-                return (priority, len(x))
-            cleaned.sort(key=sort_key)
-            if cleaned:
-                bullet_lines = [f"- {l}" for l in cleaned]
-                parts.append(f"{title}:\n" + "\n".join(bullet_lines))
+                
+                # Secondary sort by quality (higher quality first within same priority)
+                return (priority, -quality, len(line))
+            
+            req_data.sort(key=enhanced_sort_key)
+            
+            if req_data:
+                bullet_lines = []
+                for line, quality in req_data:
+                    # Add quality indicator for high/low quality requirements
+                    if self.enable_quality_scoring and quality > 0:
+                        if quality >= 80:
+                            indicator = "✅ "  # High quality
+                        elif quality >= 60:
+                            indicator = "⚠️  "  # Medium quality
+                        elif quality < 50:
+                            indicator = "❌ "  # Low quality - needs review
+                        else:
+                            indicator = ""
+                    else:
+                        indicator = ""
+                    
+                    bullet_lines.append(f"- {indicator}{line}")
+                
+                # Add quality summary for the section
+                avg_quality = sum(q for _, q in req_data) / len(req_data) if req_data else 0
+                quality_summary = ""
+                if self.enable_quality_scoring and avg_quality > 0:
+                    quality_summary = f" (Avg Quality: {avg_quality:.0f}/100)"
+                
+                parts.append(f"{title} ({len(bullet_lines)} items{quality_summary}):\n" + "\n".join(bullet_lines))
             else:
                 parts.append(f"{title}:\n(none)")
+        
+        # Update global statistics
+        if total_count > 0:
+            self.extraction_stats["average_quality_score"] = total_quality / total_count
+        
         return "\n\n".join(parts)
 
     # ---------------------- Learning ----------------------
@@ -1238,6 +1292,294 @@ Thought: {agent_scratchpad}""",
                 "message": f"Error processing document: {str(e)}"
             }
     
+    def _reclassify_and_deduplicate_all(self, initial_categories: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Reclassify all requirements to their correct categories."""
+        all_reqs_with_category = []
+        
+        for category, reqs in initial_categories.items():
+            for req in reqs:
+                # Reclassify each requirement
+                correct_category = self._classify_requirement_improved(req)
+                all_reqs_with_category.append((req, correct_category))
+        
+        # Build reclassified dict
+        result = {
+            'functional': [],
+            'non_functional': [],
+            'user': [],
+            'business': [],
+            'system': [],
+            'features': []
+        }
+        
+        for req, category in all_reqs_with_category:
+            if category in result:
+                result[category].append(req)
+        
+        return result
+
+    def _cross_category_deduplicate(self, categorized: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Remove duplicates across ALL categories using advanced similarity detection."""
+        import re
+        
+        # Collect all requirements with normalized versions
+        all_reqs = []  # (original, normalized, category)
+        
+        for category, reqs in categorized.items():
+            for req in reqs:
+                normalized = re.sub(r'\s+', ' ', req.strip().lower())
+                normalized = re.sub(r'[^a-z0-9\s]', '', normalized)
+                all_reqs.append((req, normalized, category))
+        
+        # Track what we've seen
+        seen_normalized = set()
+        seen_core_keys = set()
+        kept_reqs = []
+        
+        for original, normalized, category in all_reqs:
+            # Check 1: Exact match
+            if normalized in seen_normalized:
+                continue
+            
+            # Check 2: Core content match (remove common prefixes)
+            core_text = normalized
+            for prefix in ['bot must', 'system must', 'application must', 'bot shall', 
+                           'system shall', 'must', 'shall', 'should', 'will']:
+                if core_text.startswith(prefix + ' '):
+                    core_text = core_text[len(prefix)+1:].strip()
+                    break
+            
+            # Create key from core content words
+            words = core_text.split()
+            stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 
+                          'for', 'of', 'with', 'by', 'from', 'as', 'is', 'are'}
+            content_words = [w for w in words if w not in stop_words and len(w) > 2]
+            core_key = ' '.join(sorted(content_words[:10]))
+            
+            if core_key in seen_core_keys and len(core_key) > 15:
+                continue
+            
+            # Check 3: Similarity with existing kept requirements
+            is_duplicate = False
+            current_words = set(normalized.split())
+            
+            for _, kept_normalized, _ in kept_reqs:
+                kept_words = set(kept_normalized.split())
+                
+                if len(current_words) > 3 and len(kept_words) > 3:
+                    intersection = len(current_words.intersection(kept_words))
+                    union = len(current_words.union(kept_words))
+                    similarity = intersection / union if union > 0 else 0
+                    
+                    # Jaccard similarity threshold
+                    if similarity >= 0.75:
+                        is_duplicate = True
+                        break
+                    
+                    # Containment check (one is mostly contained in the other)
+                    containment = intersection / min(len(current_words), len(kept_words))
+                    if containment >= 0.85:
+                        is_duplicate = True
+                        break
+            
+            if is_duplicate:
+                continue
+            
+            # Keep this requirement
+            seen_normalized.add(normalized)
+            if core_key and len(core_key) > 15:
+                seen_core_keys.add(core_key)
+            kept_reqs.append((original, normalized, category))
+        
+        # Rebuild categorized dict
+        result = {cat: [] for cat in categorized.keys()}
+        for original, _, category in kept_reqs:
+            if category in result:
+                result[category].append(original)
+        
+        return result
+
+    def _is_valid_requirement(self, sentence: str) -> bool:
+        """Filter out non-requirements like dates, project info, metadata."""
+        normalized = sentence.lower().strip()
+        
+        # Minimum length check
+        if len(normalized) < 15:
+            return False
+        
+        # Exclude pure metadata, headers, dates
+        import re
+        exclude_patterns = [
+            r'^\d+\.?\s*$',  # Just numbers
+            r'^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)',  # Starts with month
+            r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',  # Dates
+            r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}',
+            r'timeline.*(jan|feb|mar|apr|may|june|july|aug|sep|oct|nov|dec|\d{4})',
+            r'expected.*\d{4}',  # Expected dates
+            r'delivery.*\d{4}',  # Delivery dates  
+            r'due.*\d{4}',  # Due dates
+            r'demo.*\d{4}',  # Demo dates
+            r'^(page|section|chapter|figure|table|appendix)\s+\d+',  # Document structure
+            r'^(version|revision|date|author|title)',  # Document metadata
+        ]
+        
+        for pattern in exclude_patterns:
+            if re.search(pattern, normalized):
+                return False
+        
+        # Require some requirement-like indicators
+        requirement_indicators = [
+            'must', 'shall', 'should', 'will', 'can', 'may',
+            'enable', 'allow', 'provide', 'support', 'include',
+            'process', 'handle', 'manage', 'generate', 'validate',
+            'bot', 'system', 'application', 'platform', 'user',
+        ]
+        
+        has_indicator = any(indicator in normalized for indicator in requirement_indicators)
+        if not has_indicator:
+            return False
+        
+        return True
+
+    def _score_requirement_quality(self, requirement: str) -> float:
+        """
+        Advanced quality scoring for requirements.
+        Returns overall quality score (0-100).
+        """
+        normalized = requirement.lower().strip()
+        words = normalized.split()
+        word_count = len(words)
+        
+        score = 50  # Base score
+        
+        # Length scoring (prefer 5-30 words)
+        if 5 <= word_count <= 30:
+            score += 15
+        elif word_count < 5:
+            score -= 20
+        elif word_count > 50:
+            score -= 10
+        
+        # Clear action verbs boost
+        clear_verbs = ['must', 'shall', 'will', 'calculate', 'fetch', 'collect', 
+                       'book', 'reserve', 'charge', 'process', 'validate', 'provide']
+        score += min(20, sum(3 for v in clear_verbs if v in normalized))
+        
+        # Specificity boost (has API, numbers, specific terms)
+        if any(term in normalized for term in ['api', 'using', 'via', 'through']):
+            score += 10
+        if re.search(r'\d+', normalized):
+            score += 5
+        
+        # Vague terms penalty
+        vague_terms = ['somehow', 'maybe', 'probably', 'might', 'approximately', 'user-friendly', 'fast', 'good']
+        score -= sum(5 for term in vague_terms if term in normalized)
+        
+        # Multiple 'and' penalty (compound requirements)
+        score -= min(15, normalized.count(' and ') * 5)
+        
+        # Has clear actor bonus
+        if any(actor in normalized for actor in ['bot', 'system', 'user', 'application']):
+            score += 10
+        
+        return max(0, min(100, score))
+
+    def _detect_domain_context(self, text: str) -> str:
+        """Detect the domain/context of the requirements."""
+        normalized = text.lower()
+        
+        # Count domain indicators
+        domains = {
+            'booking_system': ['book', 'reservation', 'appointment', 'schedule', 'slot', 'availability'],
+            'e_commerce': ['payment', 'checkout', 'cart', 'product', 'order', 'purchase'],
+            'api_service': ['api', 'endpoint', 'rest', 'request', 'response', 'json'],
+            'web_app': ['web', 'browser', 'http', 'html', 'frontend', 'backend'],
+            'security': ['security', 'encryption', 'authentication', 'authorization', 'access']
+        }
+        
+        domain_scores = {}
+        for domain, keywords in domains.items():
+            domain_scores[domain] = sum(1 for kw in keywords if kw in normalized)
+        
+        # Return domain with highest score, or 'general'
+        if max(domain_scores.values()) > 0:
+            return max(domain_scores, key=domain_scores.get)
+        return 'general'
+
+    def _classify_requirement_improved(self, sentence: str, context: str = '') -> str:
+        """
+        Improved classification with context awareness and domain knowledge.
+        """
+        normalized = sentence.lower().strip()
+        import re
+        
+        # Detect domain for context-aware classification
+        domain = self._detect_domain_context(sentence + ' ' + context)
+        
+        # PRIORITY 1: User Stories (highest specificity)
+        user_story_patterns = [
+            r'as\s+(a|an|the)\s+\w+',
+            r'i\s+(want|need|should|can|will)',
+            r'so\s+that',
+            r'user\s+story',
+        ]
+        
+        if any(re.search(pattern, normalized) for pattern in user_story_patterns):
+            return 'user'
+        
+        # PRIORITY 2: Non-Functional (quality attributes ONLY)
+        nfr_indicators = [
+            'performance', 'latency', 'throughput', 'response time',
+            'security', 'encryption', 'authentication', 
+            'reliability', 'availability', 'uptime', 'downtime',
+            'scalability', 'scalable', 'concurrent users',
+            'usability', 'user-friendly', 'accessible',
+            'maintainability', 'portability', 'compatibility',
+        ]
+        
+        nfr_patterns = [
+            r'within\s+\d+\s*(ms|millisecond|second|minute)',
+            r'\d+%\s+(uptime|availability)',
+            r'requests\s+per\s+second',
+            r'concurrent\s+users',
+        ]
+        
+        # Check for NFR signals
+        nfr_count = sum(1 for indicator in nfr_indicators if indicator in normalized)
+        has_nfr_pattern = any(re.search(pattern, normalized) for pattern in nfr_patterns)
+        
+        # Important: Payment, deposits, calculations are FUNCTIONAL, not NFR
+        # Domain-aware functional indicators
+        functional_business_keywords = [
+            'collect', 'charge', 'payment', 'deposit', 'invoice',
+            'calculate', 'compute', 'fetch', 'gather', 'book', 'reserve',
+            'assign', 'schedule', 'using', 'api', 'maps', 'process order',
+        ]
+        
+        # Add domain-specific functional keywords
+        if domain == 'booking_system':
+            functional_business_keywords.extend(['availability', 'slot', 'calendar'])
+        elif domain == 'e_commerce':
+            functional_business_keywords.extend(['checkout', 'cart', 'product'])
+        
+        has_functional = any(keyword in normalized for keyword in functional_business_keywords)
+        
+        # NFR only if it has NFR signals AND NO functional keywords
+        if (nfr_count >= 2 or has_nfr_pattern) and not has_functional:
+            return 'non_functional'
+        
+        # PRIORITY 3: Business Rules
+        business_indicators = [
+            'business rule', 'policy', 'regulation', 'compliance',
+            'approval', 'stakeholder', 'kpi', 'roi',
+        ]
+        
+        if any(indicator in normalized for indicator in business_indicators):
+            return 'business'
+        
+        # Default: Functional (most action-oriented requirements)
+        return 'functional'
+
     def _heuristic_extract(self, text: str) -> Dict[str, Any]:
         """Enhanced heuristic extraction with improved accuracy and classification."""
         try:
@@ -1251,6 +1593,9 @@ Thought: {agent_scratchpad}""",
             # Split into sentences for better analysis
             sentences = re.split(r'(?<=[.!?])\s+', content)
             sentences = [s.strip() for s in sentences if s.strip()]
+            
+            # STEP 1: Filter out non-requirements early
+            sentences = [s for s in sentences if self._is_valid_requirement(s)]
             
             # Enhanced keyword patterns with better specificity
             patterns = {
@@ -1436,13 +1781,31 @@ Thought: {agent_scratchpad}""",
             business = enhanced_dedup(business, seen_global)
             features = enhanced_dedup(features, seen_global)
 
+            # STEP 2: Reclassify and deduplicate across categories
+            initial_sections = {
+                "functional": functional,
+                "non_functional": non_functional,
+                "user": user,
+                "system": system,
+                "business": business,
+                "features": features,
+            }
+            
+            # Reclassify all requirements to their correct categories
+            reclassified = self._reclassify_and_deduplicate_all(initial_sections)
+            
+            # Merge system and features into functional (they're subsets)
+            reclassified["functional"].extend(reclassified.get("system", []))
+            reclassified["functional"].extend(reclassified.get("features", []))
+            
+            # Final cross-category deduplication
+            final_sections = self._cross_category_deduplicate(reclassified)
+            
             sections = {
-                "Functional Requirements": functional,
-                "Non-Functional Requirements": non_functional,
-                "User Requirements / Stories": user,
-                "System Requirements": system,
-                "Business Requirements": business,
-                "Features": features,
+                "Functional Requirements": final_sections.get("functional", []),
+                "Non-Functional Requirements": final_sections.get("non_functional", []),
+                "User Requirements / Stories": final_sections.get("user", []),
+                "Business Requirements": final_sections.get("business", []),
             }
             
             return {"status": "success", "response": self._format_sections(sections)}
