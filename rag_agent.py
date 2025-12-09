@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from typing import List, Dict, Any, Optional
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
@@ -153,22 +154,22 @@ class RequirementsExtractionAgent:
                 "features": {"keywords": set(), "phrases": set(), "patterns": set()}
             }
             
-        # Performance tracking
-        self.extraction_stats = {
-            "total_documents": 0,
-            "successful_extractions": 0,
-            "failed_extractions": 0,
-            "method_performance": {},
-            "category_accuracy": {},
-            "learning_iterations": 0,
-            "average_quality_score": 0.0,
-            "domain_contexts": {}
-        }
-        
-        # Advanced features
-        self.enable_quality_scoring = True
-        self.enable_priority_detection = True
-        self.enable_context_awareness = True
+            # Performance tracking
+            self.extraction_stats = {
+                "total_documents": 0,
+                "successful_extractions": 0,
+                "failed_extractions": 0,
+                "method_performance": {},
+                "category_accuracy": {},
+                "learning_iterations": 0,
+                "average_quality_score": 0.0,
+                "domain_contexts": {}
+            }
+            
+            # Advanced features
+            self.enable_quality_scoring = True
+            self.enable_priority_detection = True
+            self.enable_context_awareness = True
             
             # Load existing learned patterns
             self._load_learned_patterns()
@@ -180,6 +181,20 @@ class RequirementsExtractionAgent:
         except Exception as e:
             print(f"⚠️ Failed to initialize learning system: {str(e)}")
             self.enable_self_learning = False
+            # Initialize with defaults even if learning fails
+            self.extraction_stats = {
+                "total_documents": 0,
+                "successful_extractions": 0,
+                "failed_extractions": 0,
+                "method_performance": {},
+                "category_accuracy": {},
+                "learning_iterations": 0,
+                "average_quality_score": 0.0,
+                "domain_contexts": {}
+            }
+            self.enable_quality_scoring = True
+            self.enable_priority_detection = True
+            self.enable_context_awareness = True
         
         print("✅ AI models and components initialized successfully")
         print(f"📊 Model: {self.model_name}, User ID: {self.user_id}, Self-learning: {self.enable_self_learning}")
@@ -691,7 +706,6 @@ class RequirementsExtractionAgent:
     def _parse_response_to_sections(self, response_text: str) -> Dict[str, List[str]]:
         """Parse formatted response text into sections for learning."""
         try:
-            import re
             sections = {}
             current_section = None
             current_items = []
@@ -732,7 +746,6 @@ class RequirementsExtractionAgent:
     # ---------------------- Formatting Helpers ----------------------
     def _normalize_line(self, line: str) -> str:
         """Enhanced normalization for better requirement extraction."""
-        import re
         if not line:
             return ""
         
@@ -773,12 +786,11 @@ class RequirementsExtractionAgent:
             return False
         
         # Enhanced heading detection with more patterns
+        # NOTE: Don't filter section headers that end with ":" - they're used in output formatting
         heading_patterns = (
             "introduction", "submission guidelines", "exercises", "exercise ",
-            "step ", "follow these steps", "features:", "system requirements:",
-            "business requirements:", "user requirements / stories:",
-            "functional requirements:", "non-functional requirements:",
-            "your jenkins pipeline should:", "table of contents", "contents",
+            "step ", "follow these steps", "your jenkins pipeline should:", 
+            "table of contents", "contents",
             "abstract", "summary", "conclusion", "references", "bibliography",
             "appendix", "glossary", "index", "acknowledgments", "acknowledgements"
         )
@@ -877,7 +889,6 @@ class RequirementsExtractionAgent:
 
     def _format_sections(self, sections: Dict[str, List[str]]) -> str:
         """Format sections into a user-friendly, deduplicated bullet list per section with quality indicators."""
-        import re
         global_seen = set()
         parts: List[str] = []
         total_quality = 0
@@ -1583,8 +1594,6 @@ Thought: {agent_scratchpad}""",
     def _heuristic_extract(self, text: str) -> Dict[str, Any]:
         """Enhanced heuristic extraction with improved accuracy and classification."""
         try:
-            import re
-            
             # Enhanced text preprocessing
             content = (text or "").strip()
             if not content:
@@ -2084,8 +2093,6 @@ Thought: {agent_scratchpad}""",
     def _advanced_pattern_extract(self, text: str) -> Dict[str, Any]:
         """Advanced pattern-based extraction using regex and NLP techniques."""
         try:
-            import re
-            
             content = (text or "").strip()
             if not content:
                 return {"status": "success", "response": "No content to analyze."}
@@ -2213,6 +2220,13 @@ Thought: {agent_scratchpad}""",
                 try:
                     print(f"🔄 Trying {method_name} extraction method...")
                     result = method_func(text)
+                    
+                    # Debug: Show what we got
+                    print(f"  📊 {method_name} result status: {result.get('status')}")
+                    print(f"  📊 {method_name} has response: {bool(result.get('response'))}")
+                    if result.get("response"):
+                        print(f"  📊 {method_name} response length: {len(str(result.get('response')))}")
+                    
                     if result.get("status") == "success" and result.get("response"):
                         # Check if we got meaningful results
                         response = result.get("response", "")
@@ -2231,10 +2245,17 @@ Thought: {agent_scratchpad}""",
                                 best_score = quality_score
                                 best_result = result
                                 method_used = method_name
+                        else:
+                            print(f"  ⚠️ {method_name} response too short: {len(response.strip())} chars")
+                    else:
+                        if result.get("message"):
+                            print(f"  ❌ {method_name} error: {result.get('message')}")
                                 
                 except Exception as e:
                     last_error = e
-                    print(f"⚠️ {method_name} extraction failed: {str(e)}")
+                    print(f"⚠️ {method_name} extraction exception: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                     continue
             
             # Use learned patterns if no other method worked
@@ -2249,6 +2270,12 @@ Thought: {agent_scratchpad}""",
                     method_used = "learned_patterns"
             
             if best_result:
+                # Ensure best_result has required fields
+                if not best_result.get("response"):
+                    best_result["response"] = "No requirements extracted."
+                if not best_result.get("status"):
+                    best_result["status"] = "success"
+                
                 # Learn from successful extraction - merge learned results with extraction results
                 if self.enable_self_learning and text:
                     # Parse the best result to extract sections for learning
@@ -2285,6 +2312,7 @@ Thought: {agent_scratchpad}""",
                 best_result["quality_score"] = best_score
                 
                 print(f"✅ Used {method_used} extraction method")
+                print(f"📊 Result status: {best_result.get('status')}, Response length: {len(str(best_result.get('response', '')))}")
                 return best_result
             
             # If all methods failed, return error

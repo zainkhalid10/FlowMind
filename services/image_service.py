@@ -1,9 +1,16 @@
-"""Enhanced image summarization service"""
+"""
+Enhanced Image Processing Service with Advanced OCR and VLM Integration
+"""
 import os
 import base64
+import json
 import requests
-from typing import Optional
-from collections import Counter
+import pytesseract
+from PIL import Image, ImageEnhance, ImageFilter
+import cv2
+import numpy as np
+from typing import Optional, Dict, List
+import re
 
 
 def _get_env_bool(key: str, default: bool = False) -> bool:
@@ -12,279 +19,759 @@ def _get_env_bool(key: str, default: bool = False) -> bool:
     return val in ("1", "true", "yes", "on")
 
 
-def enhanced_vlm_summarize(image_path: str, context: str = "", image_type: str = "unknown") -> str:
-    """Enhanced VLM summarization with better prompts and fallback handling.
+# ============================================================================
+# ADVANCED OCR WITH PREPROCESSING
+# ============================================================================
+
+def advanced_ocr_extract(image_path: str) -> Dict[str, str]:
+    """
+    Advanced OCR with multiple preprocessing techniques for better accuracy.
+    Returns dict with 'text' and 'confidence' keys.
+    """
+    try:
+        img = Image.open(image_path)
+        
+        # Convert to RGB if needed
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Try multiple preprocessing strategies
+        strategies = [
+            ('original', img),
+            ('grayscale_enhanced', preprocess_grayscale_enhanced(img)),
+            ('binary_adaptive', preprocess_binary_adaptive(img)),
+            ('denoised', preprocess_denoise(img))
+        ]
+        
+        best_text = ""
+        best_confidence = 0
+        
+        for strategy_name, processed_img in strategies:
+            try:
+                # Get OCR with confidence data
+                data = pytesseract.image_to_data(processed_img, output_type=pytesseract.Output.DICT)
+                
+                # Calculate average confidence
+                confidences = [int(conf) for conf in data['conf'] if conf != '-1']
+                avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+                
+                # Get text
+                text = pytesseract.image_to_string(processed_img, config='--psm 6').strip()
+                
+                if len(text) > len(best_text) and avg_confidence >= best_confidence:
+                    best_text = text
+                    best_confidence = avg_confidence
+                    
+            except Exception as e:
+                continue
+        
+        return {
+            'text': best_text,
+            'confidence': best_confidence
+        }
+    except Exception as e:
+        print(f"⚠️  Advanced OCR failed: {e}")
+        return {'text': '', 'confidence': 0}
+
+
+def preprocess_grayscale_enhanced(img: Image.Image) -> Image.Image:
+    """Convert to grayscale and enhance contrast."""
+    img = img.convert('L')
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2.0)
+    return img
+
+
+def preprocess_binary_adaptive(img: Image.Image) -> Image.Image:
+    """Apply adaptive thresholding for better text detection."""
+    img_cv = np.array(img.convert('L'))
+    binary = cv2.adaptiveThreshold(
+        img_cv, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        cv2.THRESH_BINARY, 11, 2
+    )
+    return Image.fromarray(binary)
+
+
+def preprocess_denoise(img: Image.Image) -> Image.Image:
+    """Denoise image for cleaner text."""
+    img_cv = np.array(img.convert('RGB'))
+    denoised = cv2.fastNlMeansDenoisingColored(img_cv, None, 10, 10, 7, 21)
+    return Image.fromarray(denoised)
+
+
+# ============================================================================
+# INTELLIGENT IMAGE ANALYSIS
+# ============================================================================
+
+def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]:
+    """
+    Advanced image type detection using visual and textual features.
+    Returns type, confidence, and characteristics.
+    """
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            return {'type': 'unknown', 'confidence': 0, 'characteristics': []}
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        height, width = gray.shape
+        
+        characteristics = []
+        type_scores = {
+            'diagram': 0,
+            'flowchart': 0,
+            'chart': 0,
+            'table': 0,
+            'ui_mockup': 0,
+            'text_document': 0,
+            'screenshot': 0
+        }
+        
+        # Edge detection for structure
+        edges = cv2.Canny(gray, 50, 150)
+        edge_density = np.sum(edges > 0) / edges.size
+        
+        # Line detection
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=50, maxLineGap=10)
+        line_count = len(lines) if lines is not None else 0
+        
+        # Contour detection
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Analyze text content
+        text_lower = ocr_text.lower()
+        
+        # Scoring logic
+        if line_count > 20:
+            type_scores['diagram'] += 30
+            type_scores['flowchart'] += 25
+            characteristics.append('structured_lines')
+        
+        if edge_density > 0.1:
+            type_scores['diagram'] += 20
+            characteristics.append('high_structure')
+        
+        # Text-based detection
+        flowchart_keywords = ['start', 'end', 'decision', 'process', 'if', 'else', 'loop']
+        if any(kw in text_lower for kw in flowchart_keywords):
+            type_scores['flowchart'] += 40
+            characteristics.append('flowchart_keywords')
+        
+        chart_keywords = ['chart', 'graph', 'data', '%', 'axis', 'plot']
+        if any(kw in text_lower for kw in chart_keywords):
+            type_scores['chart'] += 35
+            characteristics.append('chart_keywords')
+        
+        table_keywords = ['table', 'row', 'column', '|']
+        if any(kw in text_lower for kw in table_keywords) or ocr_text.count('|') > 5:
+            type_scores['table'] += 40
+            characteristics.append('table_structure')
+        
+        ui_keywords = ['button', 'menu', 'click', 'field', 'form', 'input']
+        if any(kw in text_lower for kw in ui_keywords):
+            type_scores['ui_mockup'] += 35
+            characteristics.append('ui_elements')
+        
+        # Text density
+        text_ratio = len(ocr_text) / (width * height) if (width * height) > 0 else 0
+        if text_ratio > 0.001:
+            type_scores['text_document'] += 30
+            characteristics.append('text_heavy')
+        
+        # Rectangle detection for UI/screenshots
+        rectangles = [c for c in contours if cv2.contourArea(c) > 1000]
+        if len(rectangles) > 5:
+            type_scores['ui_mockup'] += 20
+            type_scores['screenshot'] += 20
+            characteristics.append('multiple_rectangles')
+        
+        # Determine best type
+        best_type = max(type_scores, key=type_scores.get)
+        confidence = type_scores[best_type]
+        
+        return {
+            'type': best_type if confidence > 20 else 'unknown',
+            'confidence': confidence,
+            'characteristics': characteristics,
+            'details': {
+                'line_count': line_count,
+                'edge_density': float(edge_density),
+                'contour_count': len(contours),
+                'text_length': len(ocr_text)
+            }
+        }
+    except Exception as e:
+        print(f"⚠️  Image type detection failed: {e}")
+        return {'type': 'unknown', 'confidence': 0, 'characteristics': []}
+
+
+# ============================================================================
+# ENHANCED VLM ANALYSIS
+# ============================================================================
+
+def check_ollama_status() -> Dict:
+    """Check if Ollama is running and what models are available."""
+    try:
+        resp = requests.get("http://localhost:11434/api/tags", timeout=2.0)
+        if resp.ok:
+            data = resp.json()
+            models = [m.get('name', '') for m in data.get('models', [])]
+            return {
+                'running': True,
+                'models': models,
+                'has_vlm': any('llava' in m.lower() or 'vision' in m.lower() for m in models)
+            }
+    except Exception as e:
+        return {
+            'running': False,
+            'error': str(e),
+            'models': []
+        }
     
-    Args:
-        image_path: Path to image file
-        context: Text context from surrounding document
-        image_type: Type of image (diagram, chart, screenshot, etc.)
-    
-    Returns:
-        Summary string or empty if VLM not available
+    return {'running': False, 'models': []}
+
+
+def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, context: str = "") -> Dict:
+    """
+    Enhanced VLM analysis with smart prompts based on image type and context.
+    Returns comprehensive interpretation.
     """
     if not _get_env_bool("FLOWMIND_USE_VLM", False):
-        return ""
+        print("   ⚠️  VLM disabled in .env (FLOWMIND_USE_VLM=false)")
+        return {
+            'interpretation': '',
+            'requirements': [],
+            'components': [],
+            'confidence': 0
+        }
+    
+    # Check Ollama status
+    ollama_status = check_ollama_status()
+    if not ollama_status['running']:
+        print(f"   ❌ Ollama is not running! Error: {ollama_status.get('error', 'Connection failed')}")
+        print(f"   💡 Start Ollama with: ollama serve")
+        return {
+            'interpretation': '',
+            'requirements': [],
+            'components': [],
+            'confidence': 0
+        }
+    
+    model = os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")
+    
+    if model not in ollama_status['models']:
+        print(f"   ❌ Model '{model}' not found in Ollama!")
+        print(f"   📦 Available models: {', '.join(ollama_status['models']) if ollama_status['models'] else 'None'}")
+        print(f"   💡 Install with: ollama pull {model}")
+        return {
+            'interpretation': '',
+            'requirements': [],
+            'components': [],
+            'confidence': 0
+        }
+    
+    print(f"   🤖 Using VLM: {model}")
     
     try:
-        with open(image_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
+        with open(image_path, 'rb') as f:
+            b64 = base64.b64encode(f.read()).decode('utf-8')
         
-        # Enhanced prompt based on image type and context
-        base_prompt = "You are an expert software and business analyst. Analyze this image carefully and provide a detailed, structured summary."
+        # Build smart prompt based on image type
+        prompt = build_smart_prompt(image_type, ocr_text, context)
         
-        if image_type == "diagram" or "diagram" in context.lower():
-            prompt = f"""{base_prompt}
-Focus on:
-- Architecture components and their relationships
-- Data flow and process flows
-- User roles and interactions
-- System boundaries and interfaces
-- Key design patterns or structures
-
-Context from document: {context[:500] if context else "No context available"}
-
-Provide 4-8 bullet points with specific details."""
+        print(f"   📤 Sending image to VLM... (this may take 10-30 seconds)")
         
-        elif image_type == "chart" or any(word in context.lower() for word in ["chart", "graph", "plot", "data"]):
-            prompt = f"""{base_prompt}
-Focus on:
-- Data trends and patterns
-- Key metrics and values
-- Comparisons and relationships
-- Important insights or conclusions
-
-Context: {context[:500] if context else "No context available"}
-
-Provide 3-6 bullet points with specific data points."""
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "images": [b64],
+                "stream": False,
+                "options": {
+                    "temperature": 0.3,
+                    "top_p": 0.9,
+                    "num_predict": 500  # Max tokens
+                }
+            },
+            timeout=60.0  # Increased timeout for VLM processing
+        )
         
-        elif image_type == "workflow" or any(word in context.lower() for word in ["workflow", "process", "state", "transition"]):
-            prompt = f"""{base_prompt}
-Focus on:
-- Process steps and sequence
-- Decision points and branches
-- States and state transitions
-- Actors and their actions
-- Entry and exit points
-
-Context: {context[:500] if context else "No context available"}
-
-Provide 4-7 bullet points showing the workflow structure."""
-        
+        if resp.ok:
+            result = resp.json().get("response", "").strip()
+            
+            if not result:
+                print(f"   ⚠️  VLM returned empty response")
+                return {
+                    'interpretation': '',
+                    'requirements': [],
+                    'components': [],
+                    'confidence': 0
+                }
+            
+            print(f"   ✅ VLM analysis complete ({len(result)} chars)")
+            
+            # Parse structured response
+            parsed = parse_vlm_response(result, image_type)
+            
+            return {
+                'interpretation': result,
+                'requirements': parsed.get('requirements', []),
+                'components': parsed.get('components', []),
+                'relationships': parsed.get('relationships', []),
+                'confidence': 85
+            }
         else:
-            # Generic enhanced prompt
-            prompt = f"""{base_prompt}
-Analyze the image content and provide insights about:
-- Main subjects and objects
-- Relationships and connections
-- Key information or data
-- Important patterns or structures
-- Business or technical implications
-
-Context from document: {context[:500] if context else "No context available"}
-
-Provide 3-6 concise bullet points with actionable insights."""
-
-        models_env = os.getenv("FLOWMIND_VLM_MODELS", "")
-        if models_env.strip():
-            models = [m.strip() for m in models_env.split(",") if m.strip()]
-        else:
-            models = [os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")]
-        
-        try:
-            timeout_ms = int(os.getenv("FLOWMIND_VLM_TIMEOUT_MS", "12000"))  # Increased timeout
-        except Exception:
-            timeout_ms = 12000
-
-        summaries: list[str] = []
-        for model in models:
-            try:
-                body = {"model": model, "prompt": prompt, "images": [b64], "stream": False}
-                resp = requests.post(
-                    "http://localhost:11434/api/generate",
-                    json=body,
-                    timeout=max(2, timeout_ms/1000.0)
-                )
-                if resp.ok:
-                    data = resp.json()
-                    txt = (data.get("response") or data.get("output") or "").strip()
-                    if txt:
-                        summaries.append(txt)
-            except Exception as e:
-                print(f"VLM model {model} failed: {e}")
-                continue
-
-        if not summaries:
-            return ""
-
-        # Enhanced merging: better deduplication and ranking
-        lines = []
-        for s in summaries:
-            for ln in (s or "").splitlines():
-                ln = (ln or "").strip()
-                if not ln or len(ln) < 10:  # Filter very short lines
-                    continue
-                # Normalize bullets and formatting
-                if ln.startswith(("- ", "• ", "* ", "1. ", "2. ", "3. ", "4. ", "5. ")):
-                    ln_norm = ln.split(". ", 1)[-1].strip() if ". " in ln else ln[2:].strip()
-                else:
-                    ln_norm = ln
-                if len(ln_norm) > 10:  # Only keep substantial lines
-                    lines.append(ln_norm)
-
-        # Count frequency and prioritize common insights
-        counts = Counter([l.lower().strip() for l in lines])
-        # Prioritize lines that appear in multiple models
-        frequent = [(l, counts[l.lower()]) for l in lines if counts[l.lower()] >= 2]
-        frequent.sort(key=lambda x: x[1], reverse=True)
-        
-        seen = set()
-        merged = []
-        # Add frequent lines first
-        for l, _ in frequent:
-            k = l.strip().lower()
-            if k not in seen and len(k) > 10:
-                seen.add(k)
-                merged.append(l)
-        
-        # Add remaining unique lines
-        for l in lines:
-            k = l.strip().lower()
-            if k not in seen and len(k) > 10:
-                seen.add(k)
-                merged.append(l)
-            if len(merged) >= 10:  # Limit to top 10 insights
-                break
-
-        if not merged:
-            return ""
-
-        header = f"AI Analysis ({len(models)} model{'s' if len(models) > 1 else ''}):" if len(models) > 1 else "AI Analysis:"
-        return header + "\n" + "\n".join("• " + m for m in merged[:8])  # Max 8 points
-    
+            print(f"   ❌ VLM request failed: HTTP {resp.status_code}")
+            print(f"   Error: {resp.text[:200]}")
+            
+    except requests.exceptions.Timeout:
+        print(f"   ⏱️  VLM request timed out (>60s)")
     except Exception as e:
-        print(f"Enhanced VLM summarize error: {e}")
-        return ""
+        print(f"   ❌ VLM analysis exception: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    return {
+        'interpretation': '',
+        'requirements': [],
+        'components': [],
+        'confidence': 0
+    }
+
+
+def build_smart_prompt(image_type: str, ocr_text: str, context: str) -> str:
+    """Build intelligent prompts based on image type."""
+    
+    base = f"""You are analyzing a {image_type} image from a software requirements document.
+
+Context: {context[:200] if context else 'Software requirements specification'}
+OCR extracted text: "{ocr_text[:300] if ocr_text else 'No text detected'}"
+
+"""
+    
+    type_specific_prompts = {
+        'flowchart': """This is a flowchart/process diagram. Analyze and extract:
+1. PROCESS STEPS: List each step/node in the flowchart in order
+2. DECISION POINTS: Identify decision branches and conditions
+3. START/END POINTS: Note the beginning and end states
+4. REQUIREMENTS: Extract any functional requirements implied by the flow
+5. BUSINESS LOGIC: Describe the business rules shown
+
+Format your response clearly with these sections.""",
+
+        'diagram': """This is a system diagram. Analyze and extract:
+1. COMPONENTS: List all system components/modules shown
+2. CONNECTIONS: Describe how components are connected
+3. DATA FLOWS: Identify data flowing between components
+4. ARCHITECTURE: Describe the overall architecture pattern
+5. TECHNICAL REQUIREMENTS: Extract any technical constraints or requirements
+
+Be specific about component names and relationships.""",
+
+        'chart': """This is a data chart/graph. Analyze and extract:
+1. CHART TYPE: Identify the type (bar, line, pie, etc.)
+2. DATA CATEGORIES: List the categories or dimensions shown
+3. KEY METRICS: Identify the metrics being measured
+4. INSIGHTS: Describe key trends or patterns visible
+5. REQUIREMENTS: Extract any performance or data requirements implied
+
+Focus on quantitative information.""",
+
+        'table': """This is a table/matrix. Analyze and extract:
+1. TABLE STRUCTURE: Describe rows and columns
+2. HEADERS: List column headers and row labels
+3. KEY DATA: Extract important data points or values
+4. RELATIONSHIPS: Describe relationships between data
+5. REQUIREMENTS: Extract any requirements specified in the table
+
+Be thorough with data extraction.""",
+
+        'ui_mockup': """This is a UI mockup/wireframe. Analyze and extract:
+1. UI ELEMENTS: List all visible UI components (buttons, fields, menus)
+2. LAYOUT: Describe the screen layout and organization
+3. USER INTERACTIONS: Identify possible user actions
+4. NAVIGATION: Describe navigation flow if visible
+5. FUNCTIONAL REQUIREMENTS: Extract UI-related requirements
+
+Be detailed about interactive elements.""",
+
+        'screenshot': """This is a screenshot. Analyze and extract:
+1. APPLICATION CONTEXT: Identify what application/system this is
+2. VISIBLE FEATURES: List all visible features and functions
+3. USER INTERFACE: Describe the UI layout and components
+4. CURRENT STATE: Describe what state/action is shown
+5. REQUIREMENTS: Extract any requirements visible
+
+Focus on functional aspects.""",
+
+        'text_document': """This is a text document. Analyze and extract:
+1. MAIN CONTENT: Summarize the key text content
+2. REQUIREMENTS: Extract any explicit requirements statements
+3. SPECIFICATIONS: Identify technical specifications
+4. CONSTRAINTS: Note any constraints or limitations mentioned
+5. KEY POINTS: List the most important points
+
+Be comprehensive with text extraction."""
+    }
+    
+    specific_prompt = type_specific_prompts.get(image_type, 
+        """Analyze this image and extract:
+1. MAIN SUBJECT: What is shown in the image
+2. KEY ELEMENTS: Important components or elements
+3. TEXT CONTENT: Any visible text or labels
+4. REQUIREMENTS: Any requirements implied or stated
+5. TECHNICAL DETAILS: Technical information visible
+
+Provide detailed analysis.""")
+    
+    return base + specific_prompt
+
+
+def parse_vlm_response(response: str, image_type: str) -> Dict:
+    """Parse structured information from VLM response."""
+    parsed = {
+        'requirements': [],
+        'components': [],
+        'relationships': []
+    }
+    
+    # Extract requirements (looking for must/shall/should statements)
+    req_patterns = [
+        r'(?:must|shall|should|will|need to)\s+([^.!?\n]+)',
+        r'requirement[s]?:\s*([^.!?\n]+)',
+        r'system\s+(?:must|shall|should)\s+([^.!?\n]+)'
+    ]
+    
+    for pattern in req_patterns:
+        matches = re.findall(pattern, response, re.IGNORECASE)
+        parsed['requirements'].extend(matches)
+    
+    # Extract components (for diagrams)
+    if image_type in ['diagram', 'flowchart']:
+        component_patterns = [
+            r'component[s]?:\s*([^.!?\n]+)',
+            r'module[s]?:\s*([^.!?\n]+)',
+            r'(?:include|contain)[s]?\s+([A-Z][^.!?,\n]+)'
+        ]
+        for pattern in component_patterns:
+            matches = re.findall(pattern, response, re.IGNORECASE)
+            parsed['components'].extend(matches)
+    
+    # Extract relationships
+    relation_keywords = ['connect', 'link', 'flow', 'interact', 'communicate']
+    for keyword in relation_keywords:
+        pattern = f'{keyword}[s]?\\s+([^.!?\n]+)'
+        matches = re.findall(pattern, response, re.IGNORECASE)
+        parsed['relationships'].extend(matches)
+    
+    # Clean and deduplicate
+    parsed['requirements'] = list(set([r.strip() for r in parsed['requirements'] if len(r.strip()) > 10]))
+    parsed['components'] = list(set([c.strip() for c in parsed['components'] if len(c.strip()) > 3]))
+    parsed['relationships'] = list(set([r.strip() for r in parsed['relationships'] if len(r.strip()) > 10]))
+    
+    return parsed
+
+
+# ============================================================================
+# COMPREHENSIVE IMAGE INTERPRETATION
+# ============================================================================
+
+def comprehensive_image_interpretation(image_path: str, context: str = "") -> Dict:
+    """
+    Complete image interpretation combining OCR, VLM, and analysis.
+    This is the main function to use for image interpretation.
+    """
+    print(f"🖼️  Comprehensive interpretation: {os.path.basename(image_path)}")
+    
+    # Step 1: Advanced OCR
+    ocr_result = advanced_ocr_extract(image_path)
+    ocr_text = ocr_result['text']
+    ocr_confidence = ocr_result['confidence']
+    
+    print(f"   📝 OCR: {len(ocr_text)} chars (confidence: {ocr_confidence:.1f}%)")
+    
+    # Step 2: Detect image type
+    type_info = detect_image_type_advanced(image_path, ocr_text)
+    image_type = type_info['type']
+    
+    print(f"   🔍 Type: {image_type} (confidence: {type_info['confidence']})")
+    
+    # Step 3: VLM analysis (if enabled)
+    vlm_result = {'interpretation': '', 'requirements': [], 'components': [], 'relationships': []}
+    
+    if _get_env_bool("FLOWMIND_USE_VLM", False):
+        print(f"   🤖 Starting VLM analysis...")
+        vlm_result = enhanced_vlm_analyze(image_path, ocr_text, image_type, context)
+        if vlm_result.get('interpretation'):
+            print(f"   ✅ VLM: {len(vlm_result['interpretation'])} chars")
+        else:
+            print(f"   ⚠️  VLM analysis produced no results (falling back to OCR-only)")
+    else:
+        print(f"   ⏭️  VLM disabled, using intelligent OCR analysis")
+    
+    # Step 4: Merge and structure results
+    final_interpretation = merge_interpretations(
+        ocr_text, 
+        ocr_confidence,
+        vlm_result,
+        type_info
+    )
+    
+    print(f"   ✅ Complete: {len(final_interpretation['full_interpretation'])} chars")
+    
+    return final_interpretation
+
+
+def intelligent_ocr_analysis(ocr_text: str, image_type: str) -> Dict:
+    """
+    Intelligent analysis of OCR text to extract structured information.
+    This works WITHOUT VLM and provides detailed interpretation.
+    """
+    analysis = {
+        'summary': '',
+        'requirements': [],
+        'components': [],
+        'process_steps': [],
+        'key_points': []
+    }
+    
+    if not ocr_text or len(ocr_text) < 20:
+        return analysis
+    
+    lines = [l.strip() for l in ocr_text.split('\n') if l.strip()]
+    
+    # Analyze based on image type
+    if image_type in ['flowchart', 'diagram']:
+        # Extract process steps and components
+        analysis['summary'] = f"This {image_type} shows a workflow with {len(lines)} identifiable elements."
+        
+        for line in lines:
+            line_lower = line.lower()
+            
+            # Identify requirements
+            if any(word in line_lower for word in ['must', 'shall', 'should', 'will', 'need', 'require']):
+                analysis['requirements'].append(line)
+            
+            # Identify steps (numbered or action verbs)
+            if re.match(r'^\d+[.:]?\s+', line) or any(verb in line_lower for verb in ['validate', 'extract', 'convert', 'process', 'perform', 'generate', 'store', 'upload', 'parse']):
+                analysis['process_steps'].append(line)
+            
+            # Identify components (capitalized words, technical terms)
+            if re.search(r'[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*', line):
+                components = re.findall(r'[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*', line)
+                analysis['components'].extend([c for c in components if len(c) > 3])
+        
+        # Deduplicate components
+        analysis['components'] = list(set(analysis['components']))[:10]
+        
+    elif image_type == 'table':
+        analysis['summary'] = f"This table contains structured data with {len(lines)} rows."
+        # Extract key data points
+        for line in lines:
+            if ':' in line or '|' in line:
+                analysis['key_points'].append(line)
+    
+    else:
+        # General analysis
+        analysis['summary'] = f"This image contains text content with {len(lines)} lines."
+        # Extract important lines (longer ones, or with keywords)
+        important = [l for l in lines if len(l) > 30 or any(kw in l.lower() for kw in ['system', 'user', 'data', 'process', 'requirement'])]
+        analysis['key_points'] = important[:10]
+    
+    return analysis
+
+
+def merge_interpretations(ocr_text: str, ocr_confidence: float, vlm_result: Dict, type_info: Dict) -> Dict:
+    """Intelligently merge OCR and VLM results into comprehensive interpretation."""
+    
+    sections = []
+    image_type = type_info['type']
+    
+    # Image type and characteristics
+    sections.append(f"**Image Type**: {image_type.replace('_', ' ').title()}")
+    if type_info.get('characteristics'):
+        sections.append(f"**Characteristics**: {', '.join(type_info['characteristics'])}")
+    
+    # Intelligent OCR analysis (works without VLM)
+    ocr_analysis = intelligent_ocr_analysis(ocr_text, image_type)
+    
+    # Summary
+    if ocr_analysis.get('summary'):
+        sections.append(f"\n**Analysis**:")
+        sections.append(ocr_analysis['summary'])
+    
+    # OCR text (show condensed version)
+    if ocr_text and len(ocr_text) > 50:
+        sections.append(f"\n**Text Content** (Confidence: {ocr_confidence:.0f}%):")
+        # Show structured or condensed version
+        if len(ocr_text) > 500:
+            sections.append(ocr_text[:500] + "...")
+        else:
+            sections.append(ocr_text)
+    
+    # Process steps (for flowcharts/algorithms)
+    if ocr_analysis.get('process_steps'):
+        sections.append(f"\n**Process Steps**:")
+        for i, step in enumerate(ocr_analysis['process_steps'][:15], 1):
+            sections.append(f"{i}. {step}")
+    
+    # VLM interpretation (if available)
+    if vlm_result.get('interpretation'):
+        sections.append(f"\n**Visual Analysis**:")
+        sections.append(vlm_result['interpretation'])
+    
+    # Requirements (from both OCR and VLM)
+    all_requirements = list(set(ocr_analysis.get('requirements', []) + vlm_result.get('requirements', [])))
+    if all_requirements:
+        sections.append(f"\n**Requirements Identified**:")
+        for i, req in enumerate(all_requirements[:10], 1):
+            sections.append(f"{i}. {req}")
+    
+    # Components (from both sources)
+    all_components = list(set(ocr_analysis.get('components', []) + vlm_result.get('components', [])))
+    if all_components:
+        sections.append(f"\n**Key Components**:")
+        sections.append(", ".join(all_components[:15]))
+    
+    # Key points
+    if ocr_analysis.get('key_points') and not ocr_analysis.get('process_steps'):
+        sections.append(f"\n**Key Information**:")
+        for point in ocr_analysis['key_points'][:8]:
+            sections.append(f"• {point}")
+    
+    # Relationships (from VLM)
+    if vlm_result.get('relationships'):
+        sections.append(f"\n**Relationships**:")
+        for rel in vlm_result['relationships'][:5]:
+            sections.append(f"• {rel}")
+    
+    # Technical details
+    if image_type in ['flowchart', 'diagram']:
+        details = []
+        if type_info.get('details', {}).get('line_count', 0) > 20:
+            details.append(f"Contains {type_info['details']['line_count']} structural lines")
+        if len(ocr_analysis.get('process_steps', [])) > 0:
+            details.append(f"{len(ocr_analysis['process_steps'])} identifiable steps")
+        if len(all_components) > 0:
+            details.append(f"{len(all_components)} components/modules")
+        
+        if details:
+            sections.append(f"\n**Technical Details**: {', '.join(details)}")
+    
+    full_interpretation = "\n".join(sections)
+    
+    return {
+        'full_interpretation': full_interpretation,
+        'ocr_text': ocr_text,
+        'ocr_confidence': ocr_confidence,
+        'image_type': type_info['type'],
+        'vlm_interpretation': vlm_result.get('interpretation', ''),
+        'requirements': all_requirements,
+        'components': all_components,
+        'relationships': vlm_result.get('relationships', []),
+        'process_steps': ocr_analysis.get('process_steps', []),
+        'quality_score': calculate_interpretation_quality(ocr_text, vlm_result, type_info)
+    }
+
+
+def calculate_interpretation_quality(ocr_text: str, vlm_result: Dict, type_info: Dict) -> int:
+    """Calculate quality score (0-100) for the interpretation."""
+    score = 0
+    
+    # OCR quality
+    if len(ocr_text) > 50:
+        score += 20
+    elif len(ocr_text) > 10:
+        score += 10
+    
+    # Type detection confidence
+    score += min(type_info.get('confidence', 0) / 3, 25)
+    
+    # VLM content richness
+    if vlm_result.get('interpretation'):
+        interp_len = len(vlm_result['interpretation'])
+        if interp_len > 200:
+            score += 25
+        elif interp_len > 100:
+            score += 15
+        elif interp_len > 50:
+            score += 10
+    
+    # Structured data extraction
+    if vlm_result.get('requirements'):
+        score += min(len(vlm_result['requirements']) * 5, 15)
+    if vlm_result.get('components'):
+        score += min(len(vlm_result['components']) * 3, 10)
+    if vlm_result.get('relationships'):
+        score += min(len(vlm_result['relationships']) * 2, 5)
+    
+    return min(score, 100)
+
+
+# ============================================================================
+# LEGACY COMPATIBILITY FUNCTIONS
+# ============================================================================
+
+def enhanced_vlm_summarize(image_path: str, context: str = "", image_type: str = "unknown") -> str:
+    """Legacy function - returns simple string summary."""
+    result = comprehensive_image_interpretation(image_path, context)
+    return result['full_interpretation']
 
 
 def enhanced_ocr_summarize(ocr_text: str, context: str = "") -> str:
-    """Enhanced OCR text summarization with better pattern detection."""
-    try:
-        raw = (ocr_text or "").strip()
-        if not raw:
-            return "(no text detected)"
-        
-        ctx = (context or "").strip()
-        lines = [l.strip() for l in (raw + ("\n" + ctx if ctx else "")).splitlines()]
-        lines = [l for l in lines if l and len(l) > 2]
-
-        # Enhanced role detection
-        role_headers = {
-            "student", "employer", "administrator", "evaluator", "admin",
-            "user", "manager", "developer", "tester", "analyst", "client",
-            "customer", "vendor", "stakeholder"
-        }
-        
-        # Enhanced verb detection
-        verbs = (
-            "submit", "save", "update", "view", "edit", "approve", "reject",
-            "authenticate", "import", "export", "delete", "add", "remove",
-            "transfer", "initialize", "set", "resend", "check", "validate",
-            "create", "modify", "cancel", "process", "generate", "send",
-            "receive", "notify", "assign", "complete", "review", "verify"
-        )
-        
-        # Enhanced infrastructure detection
-        infra_nouns = (
-            "server", "pc", "database", "sql", "shibboleth", "dns", "web",
-            "mail", "system", "api", "service", "application", "module",
-            "component", "interface", "gateway", "proxy", "cache"
-        )
-        
-        # Enhanced state detection
-        state_terms = {
-            "start", "end", "pending", "open", "closed", "saved", "submitted",
-            "archived", "completed", "accepted", "rejected", "approved",
-            "draft", "active", "inactive", "processing", "failed", "success"
-        }
-
-        def is_header(s: str) -> bool:
-            t = s.lower().strip(": -")
-            return t in role_headers and len(t.split()) <= 2
-
-        def is_action(s: str) -> bool:
-            t = s.lower()
-            has_verb = any(v in t for v in verbs)
-            reasonable_length = 5 <= len(s) <= 100
-            return has_verb and reasonable_length
-
-        def is_infrastructure(s: str) -> bool:
-            t = s.lower()
-            return any(noun in t for noun in infra_nouns)
-
-        def is_state(s: str) -> bool:
-            t = s.lower()
-            return any(state in t for state in state_terms)
-
-        # Group by role if headers present
-        groups = {}
-        current_role = None
-        any_header = any(is_header(l) for l in lines)
-        
-        if any_header:
-            for l in lines:
-                if is_header(l):
-                    current_role = l.title()
-                    groups.setdefault(current_role, [])
-                else:
-                    if is_action(l) or is_infrastructure(l) or is_state(l):
-                        r = current_role or "General"
-                        groups.setdefault(r, []).append(l)
-        else:
-            # No headers; collect actionable and important lines
-            actions = []
-            infrastructure = []
-            states = []
-            seen = set()
-            
-            for l in lines:
-                k = l.strip().lower()
-                if k in seen:
-                    continue
-                seen.add(k)
-                
-                if is_action(l):
-                    actions.append(l)
-                elif is_infrastructure(l):
-                    infrastructure.append(l)
-                elif is_state(l):
-                    states.append(l)
-            
-            if actions:
-                groups["Actions"] = actions[:10]
-            if infrastructure:
-                groups["Infrastructure"] = infrastructure[:8]
-            if states:
-                groups["States"] = states[:8]
-
-        if not groups:
-            # Fallback: return first meaningful lines
-            meaningful = [l for l in lines if len(l) > 10][:6]
-            if meaningful:
-                return "\n".join("• " + m for m in meaningful)
-            return "(no structured content detected)"
-
-        # Format output
-        output_lines = []
-        for role, items in groups.items():
-            if items:
-                output_lines.append(f"{role}:")
-                for item in items[:8]:  # Limit items per group
-                    output_lines.append(f"  • {item}")
-        
-        return "\n".join(output_lines) if output_lines else "(no content)"
+    """Legacy function - processes raw OCR text."""
+    if not ocr_text or len(ocr_text.strip()) < 10:
+        return "(no text detected)"
     
-    except Exception as e:
-        print(f"Enhanced OCR summarize error: {e}")
-        return (ocr_text or "").strip()[:200] or "(no text)"
+    lines = [l.strip() for l in ocr_text.splitlines() if l.strip() and len(l.strip()) > 2]
+    
+    # Group by patterns
+    role_headers = {'student', 'employer', 'admin', 'user', 'manager', 'customer'}
+    action_verbs = ['submit', 'save', 'update', 'view', 'edit', 'approve', 'create', 'delete']
+    
+    def is_header(s): 
+        return s.lower().strip(': -') in role_headers
+    
+    def is_action(s): 
+        return any(v in s.lower() for v in action_verbs) and 5 <= len(s) <= 100
+    
+    groups = {}
+    current_role = None
+    
+    for line in lines:
+        if is_header(line):
+            current_role = line.title()
+            groups.setdefault(current_role, [])
+        elif is_action(line):
+            role = current_role or "Actions"
+            groups.setdefault(role, []).append(line)
+    
+    if not groups:
+        meaningful = [l for l in lines if len(l) > 10][:6]
+        return '\n'.join('• ' + m for m in meaningful) if meaningful else ocr_text[:200]
+    
+    output = []
+    for role, items in groups.items():
+        if items:
+            output.append(f"{role}:")
+            for item in items[:8]:
+                output.append(f"  • {item}")
+    
+    return '\n'.join(output) if output else ocr_text[:200]
 
+
+def fast_extract_image(image_path: str, image_id: str) -> Dict:
+    """Fast OCR extraction for upload phase."""
+    ocr_result = advanced_ocr_extract(image_path)
+    type_info = detect_image_type_advanced(image_path, ocr_result['text'])
+    
+    return {
+        'image_id': image_id,
+        'image_path': image_path,
+        'ocr_text': ocr_result['text'],
+        'ocr_confidence': ocr_result['confidence'],
+        'image_type': type_info['type'],
+        'has_text': len(ocr_result['text']) > 10,
+        'characteristics': type_info.get('characteristics', [])
+    }

@@ -85,11 +85,14 @@ app.add_middleware(
 )
 
 # Include routers
-from routes import auth_routes, upload_routes, dashboard_routes, training_routes
+from routes import auth_routes, upload_routes, dashboard_routes, training_routes, approval_routes
+from routes.approval_routes import parse_and_save_features
+
 app.include_router(auth_routes.router)
 app.include_router(upload_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(training_routes.router)
+app.include_router(approval_routes.router)
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -265,18 +268,26 @@ def _get_env_bool(name: str, default: bool = False) -> bool:
     return v.strip().lower() in {"1", "true", "yes", "on"}
 
 def _vlm_summarize(image_path: str, context: str) -> str:
-    """Legacy function - now uses enhanced service."""
-    from services.image_service import enhanced_vlm_summarize
-    # Try to detect image type from context
-    image_type = "unknown"
-    context_lower = context.lower() if context else ""
-    if any(word in context_lower for word in ["diagram", "architecture", "component"]):
-        image_type = "diagram"
-    elif any(word in context_lower for word in ["chart", "graph", "plot", "data"]):
-        image_type = "chart"
-    elif any(word in context_lower for word in ["workflow", "process", "state", "transition"]):
-        image_type = "workflow"
-    return enhanced_vlm_summarize(image_path, context, image_type)
+    """Enhanced function - uses comprehensive image interpretation."""
+    from services.image_service import comprehensive_image_interpretation
+    
+    try:
+        # Use comprehensive interpretation for much better results
+        result = comprehensive_image_interpretation(image_path, context)
+        return result['full_interpretation']
+    except Exception as e:
+        print(f"⚠️  Comprehensive interpretation failed, falling back: {e}")
+        # Fallback to basic
+        from services.image_service import enhanced_vlm_summarize
+        image_type = "unknown"
+        context_lower = context.lower() if context else ""
+        if any(word in context_lower for word in ["diagram", "architecture", "component"]):
+            image_type = "diagram"
+        elif any(word in context_lower for word in ["chart", "graph", "plot", "data"]):
+            image_type = "chart"
+        elif any(word in context_lower for word in ["workflow", "process", "state", "transition"]):
+            image_type = "workflow"
+        return enhanced_vlm_summarize(image_path, context, image_type)
 
 # ==============================================================
 # MAIN ANALYZE FUNCTION
@@ -3322,8 +3333,16 @@ async def _analyze_with_agent_internal(
             tracker.complete()
             print(f"✅ Processing complete: {tracker.get_progress()['progress']}%")
         
+        # Debug logging
+        print(f"🔍 Requirements result status: {requirements_result.get('status')}")
+        print(f"🔍 Requirements result keys: {list(requirements_result.keys())}")
+        if requirements_result.get("message"):
+            print(f"🔍 Error message: {requirements_result.get('message')}")
+        
         if requirements_result.get("status") != "success":
-            raise HTTPException(status_code=500, detail=requirements_result.get("message") or "Requirement extraction failed")
+            error_msg = requirements_result.get("message") or "Requirement extraction failed"
+            print(f"❌ Extraction failed: {error_msg}")
+            raise HTTPException(status_code=500, detail=error_msg)
 
         # Save to database - ensure session is closed promptly
         try:
@@ -3373,6 +3392,14 @@ async def _analyze_with_agent_internal(
 
         # Build quick lookup of context for images within this request is not tracked separately here,
         # so pass empty context for now; summarized meanings rely on OCR wording for agent runs
+        
+        # Parse and save features for approval
+        try:
+            extracted_response = requirements_result.get("response", "")
+            features_count = parse_and_save_features(extracted_response, user_id, record.id, db)
+            print(f"📋 Saved {features_count} features for user approval")
+        except Exception as e:
+            print(f"⚠️ Failed to save features: {e}")
         
         # Save to REQUIREMENTS_VIEWS for backward compatibility
         REQUIREMENTS_VIEWS[view_id] = {

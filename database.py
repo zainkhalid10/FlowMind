@@ -68,6 +68,24 @@ class User(Base):
     is_active = Column(Integer, default=1)  # 1 for active, 0 for inactive
 
 
+# -------------------- Feature Table --------------------
+class Feature(Base):
+    __tablename__ = "features"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    file_id = Column(Integer, ForeignKey("parsed_files.id"), nullable=True, index=True)
+    category = Column(String(100))  # functional, non-functional, user, business
+    description = Column(Text, nullable=False)
+    status = Column(String(20), default="pending")  # pending, approved, denied
+    quality_score = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", backref="features")
+    file = relationship("ParsedFile", backref="features")
+
+
 # -------------------- Initialize Database --------------------
 def init_db():
     Base.metadata.create_all(bind=engine)

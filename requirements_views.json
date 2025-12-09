@@ -16,5 +16,957 @@
     "summary": "Extracted 325 words and 0 image(s)",
     "response": "Functional Requirements:\n- 21 Slot Assignment Bot must not modify slot lengths\n- 11 Payment Handling Bot must collect customer card details\n- 15 Quotation Logic Bot must fetch mileage using Google Maps API\n- 13 Quotation Logic Bot must gather origin city from the customer\n- 14 Quotation Logic Bot must gather destination city from the customer\n- 23 Admin Requirements Bot must support purchase flow for retail subscriptions\n- 20 Slot Assignment Bot must book slots exactly as they appear on the calendar\n- 16 Quotation Logic Bot must produce a price quote using the company rate sheet\n- 18 Holiday/Scheduling Bot must skip major holidays (full list needed from client)\n- 24 Admin Requirements System must use client’s financial/card info for subscription purchases\n- 7 Appointment Booking Bot must avoid booking on major holidays (Christmas, New Year’s Day, etc.)\n- Holiday/Scheduling Bot must ensure availability for the entire load -> transport -> unload period\n- 3 Appointment Booking If a date/time slot is available on the calendar, the bot must allow booking\n- 17 Quotation Logic Bot must differentiate pricing for local, city-to-city, and long-distance moves\n- 9 Long-Distance Moves Bot must calculate travel time/mileage using Google Maps between origin & destination\n- 8 Long-Distance Moves Bot must verify multi-day consecutive availability (e.g., 5+ days for East Coast moves)\n- # # Functional Area Functional Area Requirement Description Requirement Description 1 Appointment Booking Bot must check availability from a shared calendar\n- 2 Appointment Booking Bot should only consider worker availability, not truck availability\n- must be reserved only for short jobs\n- 22 Slot Assignment Bot ignores truck availability; only worker thresholds matter\n\nNon-Functional Requirements:\n(none)\n\nUser Requirements / Stories:\n(none)\n\nBusiness Requirements:\n(none)",
     "images": []
+  },
+  "e98038a9-552f-4763-9c76-b7849ac1037c": {
+    "filename": "FYP1-FinalReport-F25_387-D-Flowmind.pdf",
+    "summary": "Extracted 8299 words and 33 image(s)",
+    "response": "Functional Requirements (47 items (Avg Quality: 69/100)):\n- ✅ 3.4 Security • User roles and uploaded documents shall be secured using role-based authentica- tion\n- ✅ FR1: The system shall display extracted requirements and summaries through an interactive web dashboard\n- ✅ FR3: The system shall generate visual summaries using Vision-Language Models (Qwen2.5-VL and LLaV A-13B)\n- ✅ FR3: The system shall allow exporting results to external files (CSV , JSON)\n- ✅ FR3: The system shall store structured requirement data in a SQLite database\n- ✅ Project Requirements 2.3.1 Reliability • The system shall have a Mean Time Between Failures (MTBF) of at least 120 hours during continuous operation\n- ⚠️  FR2: The system shall integrate with Trello and Jira for automated task creation\n- ⚠️  The system shall ensure graceful degradation in case of OCR, VLM, or database errors\n- ⚠️  FR2: The system shall classify extracted information into Functional, Non-Functional, System, and Business requirements\n- ⚠️  Users must manu- ally read documents and cre- ate tasks\n- ⚠️  Sensitive configuration data must be stored in environment variables (.env)\n- ⚠️  Each requirement category shall be color-coded for enhanced readability on the dashboard\n- ❌ User created in SQLite DB with berypt hashed password User should be authenticated and token should be valid for 30 days As Expected, user created successfully [IMAGE IMG-6015733a52-32-1] OCR: Test Objective Precondition Steps Test data Expected result Post- condition Actual Result Pass/fail Verify PDF upload with image extraction and OCR processing User authenticated with valid JWT token\n- ⚠️  Through its dashboard, project managers can visualize summaries, view extracted requirements, and export tasks directly to project management platforms, sig- nificantly reducing manual effort and improving accuracy\n- ✅ Extract using heuristic + semantic Document with requirements: - Functional ~ Non-functional ~ Business ~ System requirements Requirements categorized into 6 types\n- ✅ 88 3.1 System Architecture Diagram of FlowMind (Source: Mid Report)\n- ✅ 1 Architectural Design The architecture of FlowMind is based on a multi-tiered, modular design that separates concerns across major system components\n- ⚠️  Include email, username, and password in request body 3\n- ⚠️  Chroma: Open-source embedding database for llm applications\n- ⚠️  System 2 Brief description of what Sys- tem 2 does and its primary features.Highlight the shortcomings or issues with System 2\n- ⚠️  It summarizes the system context, overall functionality, major design decisions, and internal structure based on the FYP-1 Mid Report\n- ⚠️  FlowMind improves upon these systems by integrating OCR, VLM-based understanding, semantic retrieval, automated classification, and task exporting into a single unified work- 2.3.1 Reliability\n- ⚠️  System Overview 3.4.2 Class Diagram The class diagram from the Mid Report outlines key system classes such as DocumentU- ploader, DocumentParser, OCREngine, RequirementExtractor, and DashboardManager\n- ⚠️  They ensure that the system ful- fills its intended purpose of automated document processing, requirement extraction, and dashboard visualization\n- ⚠️  Existing tools either provide basic text extraction, limited OCR capabilities, or manual task management, but none offer a fully integrated solution that understands both textual and visual content\n- ⚠️  The requirements are derived from user interactions, system workflows, and expected operational behavior\n- ⚠️  The system transforms unstructured documents into structured requirement sets categorized as Functional, Non-Functional, Business, and System-level requirements\n- ⚠️  Key entities derived from the Mid Report include: •User: Represents clients, project managers, system administrators, and team mem- bers who interact with FlowMind\n- ⚠️  Integration Layer: Supports automated task creation using Jira and Trello APIs, enabling seamless transition from extracted requirements to project management platforms\n- ⚠️  Vision-Language Model processing for diagrams, charts, or visual workflows\n- ⚠️  The system supports multiple document formats such as PDF, DOCX, PPTX, PNG, and JPG, enabling users to upload and analyze diverse content\n- ⚠️  The Iteration 2 activity flow includes upload, pars- ing, OCR, VLM summarization, embedding generation, requirement classification, and dashboard rendering\n- ⚠️  The following layers collaborate to deliver the overall functionality: •Frontend Interface: A web application that enables users to upload documents, monitor progress, and view extracted summaries and requirement classifications\n- ⚠️  The scope includes the following capabilities: • Automated parsing and preprocessing of uploaded documents\n- ⚠️  It includes file upload, OCR, VLM processing, embedding retrieval, classification, and dashboard visualization\n- ⚠️  Although many platforms exist for document processing, project manage- ment, or OCR, very few offer an end-to-end automated pipeline for requirement extraction and classification\n- ⚠️  FlowMind addresses these limitations by combining OCR, hybrid VLM processing, embedding- based Retrieval-Augmented Generation (RAG), and automated requirement classification into a unified platform\n- ⚠️  Project management platforms like Jira, Asana, and ClickUp allow task tracking but depend entirely on manual task creation\n- ⚠️  FlowMind supports the following major interactions (as described in the Mid Report): • Upload and manage project-related documents\n- ⚠️  IBM DOORS A professional requirements management tool supporting traceability and versioning.Does not automatically ex- tract requirements from raw documents; requires exten- sive manual input\n- ImageMeta records with OCR text System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en 5.0 Generate Dashboard / D1: SQLite Database D2: ChromaDB Vector Store Report 5.1 Show Dashboard os ‘ul Dashboard View / Output Report [IMAGE IMG-88e5507f9c-44-1] OCR: Client / Project Manager § Submit File oo 1.0 Document Upjpad & OCR 1.1 Upload File Validated File Vv 1.2 Validate File Type & Format Pass for Extraction Vv 1.3 Extract Text and Images Send to Requirement Extraction Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- This significantly reduces the time, cost, and effort required for requirement analysis while improving ac- curacy, consistency, and scalability\n- DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization The tests were executed usingpytest, ensuring modular and isolated validation of each feature\n- ❌ FlowMind addresses this challenge by providing an automated pipeline that takes project documents as input, extracts both text and image-based information, understands visual and contextual cues through Vision-Language Models, applies embedding-based retrieval for requirement extraction, classifies the extracted information into well-defined require- ment categories, and provides a dashboard for easy review and export\n- ❌ Vector Store: ChromaDB SQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx [IMAGE IMG-aec845db14-37-2] OCR: Database Layer Machine Learning Engine SQLite - Metadata Results Vectors ChromaDB - Embeddings Backend Processing (FastAPI) Integration Layer Task Data > Trello API Task Data > Jira API Frontend Interface Structured Data File Upload UI Document Web Dashboard Upload Request \\ Visualization Panel Semantic Search” [IMAGE IMG-66aa8258bf-39-1] OCR: DocumentUploader accuracy, and improve traceability when analyzing complex client documents\n- ❌ API/SDK Description Purpose Endpoint / Function Used Tesseract OCR Open-source OCR engine Extract text from images and scanned documents pytesseract.image_to_string HuggingFace Transformers NLP and VLM model serving Running MiniLM embeddings and VLM inference pipeline(), AutoModel.from_pretrained() ChromaDB Vector embedding database Store and retrieve document embeddings for RAG chromadb.Client(), collection.query() Trello API Project management automation Export requirements as tasks /1/cards, /1/lists Jira REST API Task creation in Jira projects Integration with enterprise PM tools /rest/api/3/issue Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- ❌ any ParsedFile + IMAGE_SUMMARIZATION VLM Summarization Complete VA FINALIZING RAG/Extraction Complete + COMPLETE © [IMAGE IMG-d99d8f986e-42-1] OCR: Unsupported markdown: list» Uploads Directory Unsupported markdown: list» SQLite Database FlowMind System\\n(Document Client / Project Manager ¢ Unsupported markdown: list_y Upload & Processing) \\ Unsupported markdown: list > ChromaDB Vector Store Unsupported markdown: list Unsupported markdown: list oS Dashboard View / Report ‘af Unsupported markdown: list System Admin § [IMAGE IMG-f384394a44-43-1] OCR: Client / Project Manager ¢ 1.1 Upload File ee mori System 1.0 Upload Document a _~ 1.3 Send File for Processing 1.2 Saved File 2.0 Preprocess & OCR 2.1 OCR Text & Images Config / Env Settings a 3.0 Requirement Extraction D3: Uploads Folder System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization • Embedding-based requirement extraction • Classification and storage • Dashboard rendering and task integration 17 3\n\nNon-Functional Requirements (3 items (Avg Quality: 70/100)):\n- ⚠️  3.2 Usability • The user interface shall be clean, intuitive, and accessible across major web browsers\n- ⚠️  3 Non-Functional Requirements Non-functional requirements define the system’s quality attributes such as reliability, us- ability, performance, and security\n- This combination ensures flexibility and performance: SQLite provides reliability and relational guarantees, while ChromaDB ensures efficient semantic search capabilities re- quired for intelligent requirement extraction\n\nUser Requirements / Stories:\n(none)\n\nBusiness Requirements (1 items (Avg Quality: 70/100)):\n- ⚠️  It bridges system requirements with design decisions and ensures that all stakeholder interactions are clearly represented",
+    "images": [
+      {
+        "image_id": "IMG-e92ed22853-1-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e92ed22853-1-1.png",
+        "page": 1,
+        "ocr": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®",
+        "summary": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®"
+      },
+      {
+        "image_id": "IMG-9dd9eb55f8-14-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-9dd9eb55f8-14-1.png",
+        "page": 14,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "Actions:\n  • Generate Dashboard View"
+      },
+      {
+        "image_id": "IMG-cce50cbfdc-18-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cce50cbfdc-18-1.png",
+        "page": 18,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "• Database Layer\n• Machine Learning Engine\n• SQLite - Metadata\n• Vectors ChromaDB - Embeddings\n• Backend Processing (FastAPI)\n• Integration Layer"
+      },
+      {
+        "image_id": "IMG-f04d5dab33-20-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f04d5dab33-20-1.png",
+        "page": 20,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "Actions:\n  • + email : string + updated_at : datetime"
+      },
+      {
+        "image_id": "IMG-2d5032b311-21-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-2d5032b311-21-1.png",
+        "page": 21,
+        "ocr": "",
+        "summary": "(no text detected)"
+      },
+      {
+        "image_id": "IMG-4896729f6e-22-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-4896729f6e-22-1.png",
+        "page": 22,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "Actions:\n  • +save_file()\n  • t+update_settings()\n  • update status\n  • +generate_view()"
+      },
+      {
+        "image_id": "IMG-f3dfa76441-23-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f3dfa76441-23-1.png",
+        "page": 23,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "Actions:\n  • Update dashboard with results\n  • Dashboard View\n  • Dashboard View"
+      },
+      {
+        "image_id": "IMG-45c2280375-24-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-45c2280375-24-1.png",
+        "page": 24,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "Actions:\n  • Dashboard View / Report ‘af"
+      },
+      {
+        "image_id": "IMG-5e156397f1-24-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e156397f1-24-2.png",
+        "page": 24,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "Actions:\n  • 1.3 Send File for Processing 1.2 Saved File\n  • 5.2 View Results\n  • 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n  • ‘ul Dashboard View / Output"
+      },
+      {
+        "image_id": "IMG-51125680f4-25-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-51125680f4-25-1.png",
+        "page": 25,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "Actions:\n  • Submit File oo\n  • 1.5 Save Processed Output\n  • Save Files Store Extracted Content Output Text & Images"
+      },
+      {
+        "image_id": "IMG-884f70ecae-26-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-884f70ecae-26-1.png",
+        "page": 26,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "• Parsed Text & Image Data\n• Provide Parsed Text ae\n• 2.0 aeauteni Extraction\n• 2b.1 Segment & Chunk Text\n• Chunked Data\n• 2b.2 Generate Embeddings"
+      },
+      {
+        "image_id": "IMG-7d79e46da6-27-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-7d79e46da6-27-1.png",
+        "page": 27,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "Actions:\n  • Request Analysis View\n  • 2c.2 Generate Dashboard View\n  • (/view_requirements)\n  • 2c.4 Update Status & Logs\n  • Update UI\n  • User View / Feedback"
+      },
+      {
+        "image_id": "IMG-8b6c9090dc-29-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-8b6c9090dc-29-1.png",
+        "page": 29,
+        "ocr": "Algorithm 1 Document Upload and Preprocessing\n\nInput: File F uploaded by user\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite",
+        "summary": "• Algorithm 1 Document Upload and Preprocessing\n• Input: File F uploaded by user\n• Output: Parsed text chunks and extracted images\n• 1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n• 2: if (format = DOC or PPT) then\n• 3: Convert using LibreOffice to DOCX/PPTX"
+      },
+      {
+        "image_id": "IMG-e9ebd9ffca-29-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e9ebd9ffca-29-2.png",
+        "page": 29,
+        "ocr": "Algorithm 2 OCR and Vision-Language Processing\n\nInput: Extracted image |\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table",
+        "summary": "• Algorithm 2 OCR and Vision-Language Processing\n• Input: Extracted image |\n• Output: /mage-level understanding\n• 1: Perform OCR using Tesseract to obtain text T\n• 2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n• 3: Generate visual summary"
+      },
+      {
+        "image_id": "IMG-082f8119cb-30-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-082f8119cb-30-1.png",
+        "page": 30,
+        "ocr": "Algorithm 3 Requirement Extraction using RAG\n\nInput: Preprocessed text T\nOutput: Structured requirement dataset\n\n: Split T into semantic chunks\n: Generate embeddings using MiniLM-L6-v2\n\n: Retrieve top-k relevant chunks for classification\n\n1\n2:\n3: Store embeddings in ChromaDB\n4\n5\n\n: Apply RAG reasoning to classify each chunk into:\n\n: ¢ Functional Requirements\n\n6:\n7: ¢ Non-functional Requirements\n8: « Business Requirements\n\n9:\n\n: « System Requirements\n\n10: Store all classified requirements in SQLite",
+        "summary": "• Algorithm 3 Requirement Extraction using RAG\n• Input: Preprocessed text T\n• Output: Structured requirement dataset\n• : Split T into semantic chunks\n• : Generate embeddings using MiniLM-L6-v2\n• : Retrieve top-k relevant chunks for classification"
+      },
+      {
+        "image_id": "IMG-08b09cbaa3-30-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-08b09cbaa3-30-2.png",
+        "page": 30,
+        "ocr": "Algorithm 4 Dashboard Rendering\n\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n5: ¢ Visual summaries\n6: ¢ Export options",
+        "summary": "• Algorithm 4 Dashboard Rendering\n• Input: Requirements dataset from SQLite\n• Output: Interactive dashboard for user\n• 1: Fetch categorized requirements\n• 2: Generate summary metrics\n• 3: Render UI components:"
+      },
+      {
+        "image_id": "IMG-809684d03d-31-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-809684d03d-31-1.png",
+        "page": 31,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify user\n\nsignup with\nvalid email\nand\n\npassword\n\nUser should\nnot exist in\ndatabase.\n\nFastAPl\nserver\nrunning on\nport 8000\n\n1. Send POST to\n/api/auth/signup\n2. Include email,\nusername, and\npassword in request\nbody\n\n3. Verify response\ncontains JWT token\n\nUsername:\n\ntestuser\n\nPassword:\nSecurePass123\n\nHTTP 200\nresponse with\nJWT token.\n\nUser created\nin SQLite DB\nwith berypt\nhashed\npassword\n\nUser should be\nauthenticated\nand token\nshould be valid\nfor 30 days\n\nAs Expected,\nuser created\nsuccessfully",
+        "summary": "Actions:\n  • User created\n  • user created"
+      },
+      {
+        "image_id": "IMG-6015733a52-32-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-6015733a52-32-1.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify PDF\nupload with\nimage\nextraction\nand OCR\nprocessing\n\nUser\nauthenticated\nwith valid JWT\n\ntoken.\n\nTesseract OCR\ninstalled and\nconfigured\n\n1. Upload PDF with\nimages to\n/api/upload/client\n\n2. Extract text using\nPyPDF\n\n3. Extract images\n\n4, Run Tesseract\nOCR on images\n\nFile: sample.pdf\nFormat: PDF\nSize: < SOMB\n\nContains: Text\nand embedded\nimages\n\nHTTP 200\nresponse.\n\nParsedFile\nrecord created\nin SQLite.\n\nImageMeta\nrecords with\nOCR text\n\nFile stored in\nJuploads\ndirectory.\n\nProgress\ntracker shows\n100%\ncompletion\n\nAs Expected,\nOCR text\nextracted\n\nsuccessfully",
+        "summary": "User:\n  • record created"
+      },
+      {
+        "image_id": "IMG-38b4c875e5-32-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-38b4c875e5-32-2.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify hybrid\nRAG\nrequirements\nextraction\nwith\nChromaDB\n\nChromaDB\ninitialized.\nMiniLM-L6-v2\nmodel\ndownloaded.\n\nUser has valid\nJWT token\n\n1. Upload document\nto /api/upload/agent\n\n2. Text split into\n1000-char chunks\n\n3. Generate\nembeddings\n\n4. Extract using\nheuristic + semantic\n\nDocument with\nrequirements:\n\n- Functional\n~ Non-functional\n~ Business\n~ System\n\nrequirements\n\nRequirements\ncategorized\ninto 6 types.\n\nVector\nembeddings\nstored in\nChromaDB.\n\nDeduplication\napplied\n\nAgent learns\npatterns and\nstores in user-\nspecific\ncollection.\n\nPerformance\nmetrics\nupdated\n\nAs Expected,\nrequirements\nextracted and\ncategorized\ncorrectly",
+        "summary": "Actions:\n  • updated"
+      },
+      {
+        "image_id": "IMG-cf1fe404fc-34-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cf1fe404fc-34-1.png",
+        "page": 34,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "Actions:\n  • Generate Dashboard View"
+      },
+      {
+        "image_id": "IMG-bcefde751c-35-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-bcefde751c-35-1.png",
+        "page": 35,
+        "ocr": "Validation: File\nSize/Extension Check [cite:\n144, 147]\n\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\n\nRequirements Extraction\n\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\n\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\n\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\n\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay Extracted\nRequirements",
+        "summary": "Actions:\n  • Finalization/Save Results"
+      },
+      {
+        "image_id": "IMG-5e871886aa-36-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e871886aa-36-1.png",
+        "page": 36,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "Actions:\n  • + email : string + updated_at : datetime"
+      },
+      {
+        "image_id": "IMG-1d1f473430-37-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-1d1f473430-37-1.png",
+        "page": 37,
+        "ocr": "User & API Layer\n\nCore AI Processing\n\nAI Agent Core:\nRequirements\nExtractionAgent\n\nAuthentication/JWT:\nbcrypt, python-jose\n\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx",
+        "summary": "• User & API Layer\n• Core AI Processing\n• AI Agent Core:\n• Requirements\n• ExtractionAgent\n• Authentication/JWT:"
+      },
+      {
+        "image_id": "IMG-aec845db14-37-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-aec845db14-37-2.png",
+        "page": 37,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "• Database Layer\n• Machine Learning Engine\n• SQLite - Metadata\n• Vectors ChromaDB - Embeddings\n• Backend Processing (FastAPI)\n• Integration Layer"
+      },
+      {
+        "image_id": "IMG-3a5c06d168-38-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-3a5c06d168-38-1.png",
+        "page": 38,
+        "ocr": "",
+        "summary": "(no text detected)"
+      },
+      {
+        "image_id": "IMG-66aa8258bf-39-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-66aa8258bf-39-1.png",
+        "page": 39,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "Actions:\n  • +save_file()\n  • t+update_settings()\n  • update status\n  • +generate_view()"
+      },
+      {
+        "image_id": "IMG-089b12e507-40-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-089b12e507-40-1.png",
+        "page": 40,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "Actions:\n  • Update dashboard with results\n  • Dashboard View\n  • Dashboard View"
+      },
+      {
+        "image_id": "IMG-23c5df42f6-41-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-23c5df42f6-41-1.png",
+        "page": 41,
+        "ocr": "UPLOADING\n\nValidation Success\n\nDocument Structure Read\n\nTEXT_EXTRACTION\n\nText Extracted\n\nIMAGE_DETECTION\n\nImages Detected\n\nOCR_PROCESSING\n\nNo Images Found OCR Text Extracted\n\n+\n\nIMAGE_SUMMARIZATION\n\nVLM Summarization\n\nComplete\n\nVA\n\nFINALIZING\n\nRAG/Extraction Complete\n\n+\n\nCOMPLETE\n\n©",
+        "summary": "• Validation Success\n• Document Structure Read\n• TEXT_EXTRACTION\n• Text Extracted\n• IMAGE_DETECTION\n• Images Detected"
+      },
+      {
+        "image_id": "IMG-d99d8f986e-42-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-d99d8f986e-42-1.png",
+        "page": 42,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "Actions:\n  • Dashboard View / Report ‘af"
+      },
+      {
+        "image_id": "IMG-f384394a44-43-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f384394a44-43-1.png",
+        "page": 43,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "Actions:\n  • 1.3 Send File for Processing 1.2 Saved File\n  • 5.2 View Results\n  • 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n  • ‘ul Dashboard View / Output"
+      },
+      {
+        "image_id": "IMG-88e5507f9c-44-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-88e5507f9c-44-1.png",
+        "page": 44,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "Actions:\n  • Submit File oo\n  • 1.5 Save Processed Output\n  • Save Files Store Extracted Content Output Text & Images"
+      },
+      {
+        "image_id": "IMG-54b8150bca-45-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-54b8150bca-45-1.png",
+        "page": 45,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "• Parsed Text & Image Data\n• Provide Parsed Text ae\n• 2.0 aeauteni Extraction\n• 2b.1 Segment & Chunk Text\n• Chunked Data\n• 2b.2 Generate Embeddings"
+      },
+      {
+        "image_id": "IMG-840316eba2-46-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-840316eba2-46-1.png",
+        "page": 46,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "Actions:\n  • Request Analysis View\n  • 2c.2 Generate Dashboard View\n  • (/view_requirements)\n  • 2c.4 Update Status & Logs\n  • Update UI\n  • User View / Feedback"
+      }
+    ]
+  },
+  "ab5b70a0-afc6-4a33-bbdc-229661c96cf1": {
+    "filename": "FYP1-FinalReport-F25_387-D-Flowmind.pdf",
+    "summary": "Extracted 8299 words and 33 image(s)",
+    "response": "Functional Requirements (47 items (Avg Quality: 69/100)):\n- ✅ 3.4 Security • User roles and uploaded documents shall be secured using role-based authentica- tion\n- ✅ FR1: The system shall display extracted requirements and summaries through an interactive web dashboard\n- ✅ FR3: The system shall generate visual summaries using Vision-Language Models (Qwen2.5-VL and LLaV A-13B)\n- ✅ FR3: The system shall allow exporting results to external files (CSV , JSON)\n- ✅ FR3: The system shall store structured requirement data in a SQLite database\n- ✅ Project Requirements 2.3.1 Reliability • The system shall have a Mean Time Between Failures (MTBF) of at least 120 hours during continuous operation\n- ⚠️  FR2: The system shall integrate with Trello and Jira for automated task creation\n- ⚠️  The system shall ensure graceful degradation in case of OCR, VLM, or database errors\n- ⚠️  FR2: The system shall classify extracted information into Functional, Non-Functional, System, and Business requirements\n- ⚠️  Users must manu- ally read documents and cre- ate tasks\n- ⚠️  Sensitive configuration data must be stored in environment variables (.env)\n- ⚠️  Each requirement category shall be color-coded for enhanced readability on the dashboard\n- ❌ User created in SQLite DB with berypt hashed password User should be authenticated and token should be valid for 30 days As Expected, user created successfully [IMAGE IMG-6015733a52-32-1] OCR: Test Objective Precondition Steps Test data Expected result Post- condition Actual Result Pass/fail Verify PDF upload with image extraction and OCR processing User authenticated with valid JWT token\n- ⚠️  Through its dashboard, project managers can visualize summaries, view extracted requirements, and export tasks directly to project management platforms, sig- nificantly reducing manual effort and improving accuracy\n- ✅ Extract using heuristic + semantic Document with requirements: - Functional ~ Non-functional ~ Business ~ System requirements Requirements categorized into 6 types\n- ✅ 88 3.1 System Architecture Diagram of FlowMind (Source: Mid Report)\n- ✅ 1 Architectural Design The architecture of FlowMind is based on a multi-tiered, modular design that separates concerns across major system components\n- ⚠️  Include email, username, and password in request body 3\n- ⚠️  Chroma: Open-source embedding database for llm applications\n- ⚠️  System 2 Brief description of what Sys- tem 2 does and its primary features.Highlight the shortcomings or issues with System 2\n- ⚠️  It summarizes the system context, overall functionality, major design decisions, and internal structure based on the FYP-1 Mid Report\n- ⚠️  FlowMind improves upon these systems by integrating OCR, VLM-based understanding, semantic retrieval, automated classification, and task exporting into a single unified work- 2.3.1 Reliability\n- ⚠️  System Overview 3.4.2 Class Diagram The class diagram from the Mid Report outlines key system classes such as DocumentU- ploader, DocumentParser, OCREngine, RequirementExtractor, and DashboardManager\n- ⚠️  They ensure that the system ful- fills its intended purpose of automated document processing, requirement extraction, and dashboard visualization\n- ⚠️  Existing tools either provide basic text extraction, limited OCR capabilities, or manual task management, but none offer a fully integrated solution that understands both textual and visual content\n- ⚠️  The requirements are derived from user interactions, system workflows, and expected operational behavior\n- ⚠️  The system transforms unstructured documents into structured requirement sets categorized as Functional, Non-Functional, Business, and System-level requirements\n- ⚠️  Key entities derived from the Mid Report include: •User: Represents clients, project managers, system administrators, and team mem- bers who interact with FlowMind\n- ⚠️  Integration Layer: Supports automated task creation using Jira and Trello APIs, enabling seamless transition from extracted requirements to project management platforms\n- ⚠️  Vision-Language Model processing for diagrams, charts, or visual workflows\n- ⚠️  The system supports multiple document formats such as PDF, DOCX, PPTX, PNG, and JPG, enabling users to upload and analyze diverse content\n- ⚠️  The Iteration 2 activity flow includes upload, pars- ing, OCR, VLM summarization, embedding generation, requirement classification, and dashboard rendering\n- ⚠️  The following layers collaborate to deliver the overall functionality: •Frontend Interface: A web application that enables users to upload documents, monitor progress, and view extracted summaries and requirement classifications\n- ⚠️  The scope includes the following capabilities: • Automated parsing and preprocessing of uploaded documents\n- ⚠️  It includes file upload, OCR, VLM processing, embedding retrieval, classification, and dashboard visualization\n- ⚠️  Although many platforms exist for document processing, project manage- ment, or OCR, very few offer an end-to-end automated pipeline for requirement extraction and classification\n- ⚠️  FlowMind addresses these limitations by combining OCR, hybrid VLM processing, embedding- based Retrieval-Augmented Generation (RAG), and automated requirement classification into a unified platform\n- ⚠️  Project management platforms like Jira, Asana, and ClickUp allow task tracking but depend entirely on manual task creation\n- ⚠️  FlowMind supports the following major interactions (as described in the Mid Report): • Upload and manage project-related documents\n- ⚠️  IBM DOORS A professional requirements management tool supporting traceability and versioning.Does not automatically ex- tract requirements from raw documents; requires exten- sive manual input\n- ImageMeta records with OCR text System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en 5.0 Generate Dashboard / D1: SQLite Database D2: ChromaDB Vector Store Report 5.1 Show Dashboard os ‘ul Dashboard View / Output Report [IMAGE IMG-88e5507f9c-44-1] OCR: Client / Project Manager § Submit File oo 1.0 Document Upjpad & OCR 1.1 Upload File Validated File Vv 1.2 Validate File Type & Format Pass for Extraction Vv 1.3 Extract Text and Images Send to Requirement Extraction Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- This significantly reduces the time, cost, and effort required for requirement analysis while improving ac- curacy, consistency, and scalability\n- DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization The tests were executed usingpytest, ensuring modular and isolated validation of each feature\n- ❌ FlowMind addresses this challenge by providing an automated pipeline that takes project documents as input, extracts both text and image-based information, understands visual and contextual cues through Vision-Language Models, applies embedding-based retrieval for requirement extraction, classifies the extracted information into well-defined require- ment categories, and provides a dashboard for easy review and export\n- ❌ Vector Store: ChromaDB SQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx [IMAGE IMG-aec845db14-37-2] OCR: Database Layer Machine Learning Engine SQLite - Metadata Results Vectors ChromaDB - Embeddings Backend Processing (FastAPI) Integration Layer Task Data > Trello API Task Data > Jira API Frontend Interface Structured Data File Upload UI Document Web Dashboard Upload Request \\ Visualization Panel Semantic Search” [IMAGE IMG-66aa8258bf-39-1] OCR: DocumentUploader accuracy, and improve traceability when analyzing complex client documents\n- ❌ API/SDK Description Purpose Endpoint / Function Used Tesseract OCR Open-source OCR engine Extract text from images and scanned documents pytesseract.image_to_string HuggingFace Transformers NLP and VLM model serving Running MiniLM embeddings and VLM inference pipeline(), AutoModel.from_pretrained() ChromaDB Vector embedding database Store and retrieve document embeddings for RAG chromadb.Client(), collection.query() Trello API Project management automation Export requirements as tasks /1/cards, /1/lists Jira REST API Task creation in Jira projects Integration with enterprise PM tools /rest/api/3/issue Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- ❌ any ParsedFile + IMAGE_SUMMARIZATION VLM Summarization Complete VA FINALIZING RAG/Extraction Complete + COMPLETE © [IMAGE IMG-d99d8f986e-42-1] OCR: Unsupported markdown: list» Uploads Directory Unsupported markdown: list» SQLite Database FlowMind System\\n(Document Client / Project Manager ¢ Unsupported markdown: list_y Upload & Processing) \\ Unsupported markdown: list > ChromaDB Vector Store Unsupported markdown: list Unsupported markdown: list oS Dashboard View / Report ‘af Unsupported markdown: list System Admin § [IMAGE IMG-f384394a44-43-1] OCR: Client / Project Manager ¢ 1.1 Upload File ee mori System 1.0 Upload Document a _~ 1.3 Send File for Processing 1.2 Saved File 2.0 Preprocess & OCR 2.1 OCR Text & Images Config / Env Settings a 3.0 Requirement Extraction D3: Uploads Folder System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization • Embedding-based requirement extraction • Classification and storage • Dashboard rendering and task integration 17 3\n\nNon-Functional Requirements (3 items (Avg Quality: 70/100)):\n- ⚠️  3.2 Usability • The user interface shall be clean, intuitive, and accessible across major web browsers\n- ⚠️  3 Non-Functional Requirements Non-functional requirements define the system’s quality attributes such as reliability, us- ability, performance, and security\n- This combination ensures flexibility and performance: SQLite provides reliability and relational guarantees, while ChromaDB ensures efficient semantic search capabilities re- quired for intelligent requirement extraction\n\nUser Requirements / Stories:\n(none)\n\nBusiness Requirements (1 items (Avg Quality: 70/100)):\n- ⚠️  It bridges system requirements with design decisions and ensures that all stakeholder interactions are clearly represented",
+    "images": [
+      {
+        "image_id": "IMG-e92ed22853-1-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e92ed22853-1-1.png",
+        "page": 1,
+        "ocr": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®",
+        "summary": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®"
+      },
+      {
+        "image_id": "IMG-9dd9eb55f8-14-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-9dd9eb55f8-14-1.png",
+        "page": 14,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "Actions:\n  • Generate Dashboard View"
+      },
+      {
+        "image_id": "IMG-cce50cbfdc-18-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cce50cbfdc-18-1.png",
+        "page": 18,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "• Database Layer\n• Machine Learning Engine\n• SQLite - Metadata\n• Vectors ChromaDB - Embeddings\n• Backend Processing (FastAPI)\n• Integration Layer"
+      },
+      {
+        "image_id": "IMG-f04d5dab33-20-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f04d5dab33-20-1.png",
+        "page": 20,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "Actions:\n  • + email : string + updated_at : datetime"
+      },
+      {
+        "image_id": "IMG-2d5032b311-21-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-2d5032b311-21-1.png",
+        "page": 21,
+        "ocr": "",
+        "summary": "(no text detected)"
+      },
+      {
+        "image_id": "IMG-4896729f6e-22-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-4896729f6e-22-1.png",
+        "page": 22,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "Actions:\n  • +save_file()\n  • t+update_settings()\n  • update status\n  • +generate_view()"
+      },
+      {
+        "image_id": "IMG-f3dfa76441-23-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f3dfa76441-23-1.png",
+        "page": 23,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "Actions:\n  • Update dashboard with results\n  • Dashboard View\n  • Dashboard View"
+      },
+      {
+        "image_id": "IMG-45c2280375-24-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-45c2280375-24-1.png",
+        "page": 24,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "Actions:\n  • Dashboard View / Report ‘af"
+      },
+      {
+        "image_id": "IMG-5e156397f1-24-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e156397f1-24-2.png",
+        "page": 24,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "Actions:\n  • 1.3 Send File for Processing 1.2 Saved File\n  • 5.2 View Results\n  • 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n  • ‘ul Dashboard View / Output"
+      },
+      {
+        "image_id": "IMG-51125680f4-25-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-51125680f4-25-1.png",
+        "page": 25,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "Actions:\n  • Submit File oo\n  • 1.5 Save Processed Output\n  • Save Files Store Extracted Content Output Text & Images"
+      },
+      {
+        "image_id": "IMG-884f70ecae-26-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-884f70ecae-26-1.png",
+        "page": 26,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "• Parsed Text & Image Data\n• Provide Parsed Text ae\n• 2.0 aeauteni Extraction\n• 2b.1 Segment & Chunk Text\n• Chunked Data\n• 2b.2 Generate Embeddings"
+      },
+      {
+        "image_id": "IMG-7d79e46da6-27-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-7d79e46da6-27-1.png",
+        "page": 27,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "Actions:\n  • Request Analysis View\n  • 2c.2 Generate Dashboard View\n  • (/view_requirements)\n  • 2c.4 Update Status & Logs\n  • Update UI\n  • User View / Feedback"
+      },
+      {
+        "image_id": "IMG-8b6c9090dc-29-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-8b6c9090dc-29-1.png",
+        "page": 29,
+        "ocr": "Algorithm 1 Document Upload and Preprocessing\n\nInput: File F uploaded by user\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite",
+        "summary": "• Algorithm 1 Document Upload and Preprocessing\n• Input: File F uploaded by user\n• Output: Parsed text chunks and extracted images\n• 1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n• 2: if (format = DOC or PPT) then\n• 3: Convert using LibreOffice to DOCX/PPTX"
+      },
+      {
+        "image_id": "IMG-e9ebd9ffca-29-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e9ebd9ffca-29-2.png",
+        "page": 29,
+        "ocr": "Algorithm 2 OCR and Vision-Language Processing\n\nInput: Extracted image |\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table",
+        "summary": "• Algorithm 2 OCR and Vision-Language Processing\n• Input: Extracted image |\n• Output: /mage-level understanding\n• 1: Perform OCR using Tesseract to obtain text T\n• 2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n• 3: Generate visual summary"
+      },
+      {
+        "image_id": "IMG-082f8119cb-30-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-082f8119cb-30-1.png",
+        "page": 30,
+        "ocr": "Algorithm 3 Requirement Extraction using RAG\n\nInput: Preprocessed text T\nOutput: Structured requirement dataset\n\n: Split T into semantic chunks\n: Generate embeddings using MiniLM-L6-v2\n\n: Retrieve top-k relevant chunks for classification\n\n1\n2:\n3: Store embeddings in ChromaDB\n4\n5\n\n: Apply RAG reasoning to classify each chunk into:\n\n: ¢ Functional Requirements\n\n6:\n7: ¢ Non-functional Requirements\n8: « Business Requirements\n\n9:\n\n: « System Requirements\n\n10: Store all classified requirements in SQLite",
+        "summary": "• Algorithm 3 Requirement Extraction using RAG\n• Input: Preprocessed text T\n• Output: Structured requirement dataset\n• : Split T into semantic chunks\n• : Generate embeddings using MiniLM-L6-v2\n• : Retrieve top-k relevant chunks for classification"
+      },
+      {
+        "image_id": "IMG-08b09cbaa3-30-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-08b09cbaa3-30-2.png",
+        "page": 30,
+        "ocr": "Algorithm 4 Dashboard Rendering\n\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n5: ¢ Visual summaries\n6: ¢ Export options",
+        "summary": "• Algorithm 4 Dashboard Rendering\n• Input: Requirements dataset from SQLite\n• Output: Interactive dashboard for user\n• 1: Fetch categorized requirements\n• 2: Generate summary metrics\n• 3: Render UI components:"
+      },
+      {
+        "image_id": "IMG-809684d03d-31-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-809684d03d-31-1.png",
+        "page": 31,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify user\n\nsignup with\nvalid email\nand\n\npassword\n\nUser should\nnot exist in\ndatabase.\n\nFastAPl\nserver\nrunning on\nport 8000\n\n1. Send POST to\n/api/auth/signup\n2. Include email,\nusername, and\npassword in request\nbody\n\n3. Verify response\ncontains JWT token\n\nUsername:\n\ntestuser\n\nPassword:\nSecurePass123\n\nHTTP 200\nresponse with\nJWT token.\n\nUser created\nin SQLite DB\nwith berypt\nhashed\npassword\n\nUser should be\nauthenticated\nand token\nshould be valid\nfor 30 days\n\nAs Expected,\nuser created\nsuccessfully",
+        "summary": "Actions:\n  • User created\n  • user created"
+      },
+      {
+        "image_id": "IMG-6015733a52-32-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-6015733a52-32-1.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify PDF\nupload with\nimage\nextraction\nand OCR\nprocessing\n\nUser\nauthenticated\nwith valid JWT\n\ntoken.\n\nTesseract OCR\ninstalled and\nconfigured\n\n1. Upload PDF with\nimages to\n/api/upload/client\n\n2. Extract text using\nPyPDF\n\n3. Extract images\n\n4, Run Tesseract\nOCR on images\n\nFile: sample.pdf\nFormat: PDF\nSize: < SOMB\n\nContains: Text\nand embedded\nimages\n\nHTTP 200\nresponse.\n\nParsedFile\nrecord created\nin SQLite.\n\nImageMeta\nrecords with\nOCR text\n\nFile stored in\nJuploads\ndirectory.\n\nProgress\ntracker shows\n100%\ncompletion\n\nAs Expected,\nOCR text\nextracted\n\nsuccessfully",
+        "summary": "User:\n  • record created"
+      },
+      {
+        "image_id": "IMG-38b4c875e5-32-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-38b4c875e5-32-2.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify hybrid\nRAG\nrequirements\nextraction\nwith\nChromaDB\n\nChromaDB\ninitialized.\nMiniLM-L6-v2\nmodel\ndownloaded.\n\nUser has valid\nJWT token\n\n1. Upload document\nto /api/upload/agent\n\n2. Text split into\n1000-char chunks\n\n3. Generate\nembeddings\n\n4. Extract using\nheuristic + semantic\n\nDocument with\nrequirements:\n\n- Functional\n~ Non-functional\n~ Business\n~ System\n\nrequirements\n\nRequirements\ncategorized\ninto 6 types.\n\nVector\nembeddings\nstored in\nChromaDB.\n\nDeduplication\napplied\n\nAgent learns\npatterns and\nstores in user-\nspecific\ncollection.\n\nPerformance\nmetrics\nupdated\n\nAs Expected,\nrequirements\nextracted and\ncategorized\ncorrectly",
+        "summary": "Actions:\n  • updated"
+      },
+      {
+        "image_id": "IMG-cf1fe404fc-34-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cf1fe404fc-34-1.png",
+        "page": 34,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "Actions:\n  • Generate Dashboard View"
+      },
+      {
+        "image_id": "IMG-bcefde751c-35-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-bcefde751c-35-1.png",
+        "page": 35,
+        "ocr": "Validation: File\nSize/Extension Check [cite:\n144, 147]\n\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\n\nRequirements Extraction\n\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\n\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\n\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\n\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay Extracted\nRequirements",
+        "summary": "Actions:\n  • Finalization/Save Results"
+      },
+      {
+        "image_id": "IMG-5e871886aa-36-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e871886aa-36-1.png",
+        "page": 36,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "Actions:\n  • + email : string + updated_at : datetime"
+      },
+      {
+        "image_id": "IMG-1d1f473430-37-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-1d1f473430-37-1.png",
+        "page": 37,
+        "ocr": "User & API Layer\n\nCore AI Processing\n\nAI Agent Core:\nRequirements\nExtractionAgent\n\nAuthentication/JWT:\nbcrypt, python-jose\n\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx",
+        "summary": "• User & API Layer\n• Core AI Processing\n• AI Agent Core:\n• Requirements\n• ExtractionAgent\n• Authentication/JWT:"
+      },
+      {
+        "image_id": "IMG-aec845db14-37-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-aec845db14-37-2.png",
+        "page": 37,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "• Database Layer\n• Machine Learning Engine\n• SQLite - Metadata\n• Vectors ChromaDB - Embeddings\n• Backend Processing (FastAPI)\n• Integration Layer"
+      },
+      {
+        "image_id": "IMG-3a5c06d168-38-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-3a5c06d168-38-1.png",
+        "page": 38,
+        "ocr": "",
+        "summary": "(no text detected)"
+      },
+      {
+        "image_id": "IMG-66aa8258bf-39-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-66aa8258bf-39-1.png",
+        "page": 39,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "Actions:\n  • +save_file()\n  • t+update_settings()\n  • update status\n  • +generate_view()"
+      },
+      {
+        "image_id": "IMG-089b12e507-40-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-089b12e507-40-1.png",
+        "page": 40,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "Actions:\n  • Update dashboard with results\n  • Dashboard View\n  • Dashboard View"
+      },
+      {
+        "image_id": "IMG-23c5df42f6-41-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-23c5df42f6-41-1.png",
+        "page": 41,
+        "ocr": "UPLOADING\n\nValidation Success\n\nDocument Structure Read\n\nTEXT_EXTRACTION\n\nText Extracted\n\nIMAGE_DETECTION\n\nImages Detected\n\nOCR_PROCESSING\n\nNo Images Found OCR Text Extracted\n\n+\n\nIMAGE_SUMMARIZATION\n\nVLM Summarization\n\nComplete\n\nVA\n\nFINALIZING\n\nRAG/Extraction Complete\n\n+\n\nCOMPLETE\n\n©",
+        "summary": "• Validation Success\n• Document Structure Read\n• TEXT_EXTRACTION\n• Text Extracted\n• IMAGE_DETECTION\n• Images Detected"
+      },
+      {
+        "image_id": "IMG-d99d8f986e-42-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-d99d8f986e-42-1.png",
+        "page": 42,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "Actions:\n  • Dashboard View / Report ‘af"
+      },
+      {
+        "image_id": "IMG-f384394a44-43-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f384394a44-43-1.png",
+        "page": 43,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "Actions:\n  • 1.3 Send File for Processing 1.2 Saved File\n  • 5.2 View Results\n  • 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n  • ‘ul Dashboard View / Output"
+      },
+      {
+        "image_id": "IMG-88e5507f9c-44-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-88e5507f9c-44-1.png",
+        "page": 44,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "Actions:\n  • Submit File oo\n  • 1.5 Save Processed Output\n  • Save Files Store Extracted Content Output Text & Images"
+      },
+      {
+        "image_id": "IMG-54b8150bca-45-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-54b8150bca-45-1.png",
+        "page": 45,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "• Parsed Text & Image Data\n• Provide Parsed Text ae\n• 2.0 aeauteni Extraction\n• 2b.1 Segment & Chunk Text\n• Chunked Data\n• 2b.2 Generate Embeddings"
+      },
+      {
+        "image_id": "IMG-840316eba2-46-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-840316eba2-46-1.png",
+        "page": 46,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "Actions:\n  • Request Analysis View\n  • 2c.2 Generate Dashboard View\n  • (/view_requirements)\n  • 2c.4 Update Status & Logs\n  • Update UI\n  • User View / Feedback"
+      }
+    ]
+  },
+  "f5c2bd00-ec9e-43b3-b783-efa336e97cd0": {
+    "filename": "FYP1-FinalReport-F25_387-D-Flowmind.pdf",
+    "summary": "Extracted 8299 words and 33 image(s)",
+    "response": "Functional Requirements (47 items (Avg Quality: 69/100)):\n- ✅ 3.4 Security • User roles and uploaded documents shall be secured using role-based authentica- tion\n- ✅ FR1: The system shall display extracted requirements and summaries through an interactive web dashboard\n- ✅ FR3: The system shall generate visual summaries using Vision-Language Models (Qwen2.5-VL and LLaV A-13B)\n- ✅ FR3: The system shall allow exporting results to external files (CSV , JSON)\n- ✅ FR3: The system shall store structured requirement data in a SQLite database\n- ✅ Project Requirements 2.3.1 Reliability • The system shall have a Mean Time Between Failures (MTBF) of at least 120 hours during continuous operation\n- ⚠️  FR2: The system shall integrate with Trello and Jira for automated task creation\n- ⚠️  The system shall ensure graceful degradation in case of OCR, VLM, or database errors\n- ⚠️  FR2: The system shall classify extracted information into Functional, Non-Functional, System, and Business requirements\n- ⚠️  Users must manu- ally read documents and cre- ate tasks\n- ⚠️  Sensitive configuration data must be stored in environment variables (.env)\n- ⚠️  Each requirement category shall be color-coded for enhanced readability on the dashboard\n- ❌ User created in SQLite DB with berypt hashed password User should be authenticated and token should be valid for 30 days As Expected, user created successfully [IMAGE IMG-6015733a52-32-1] OCR: Test Objective Precondition Steps Test data Expected result Post- condition Actual Result Pass/fail Verify PDF upload with image extraction and OCR processing User authenticated with valid JWT token\n- ⚠️  Through its dashboard, project managers can visualize summaries, view extracted requirements, and export tasks directly to project management platforms, sig- nificantly reducing manual effort and improving accuracy\n- ✅ Extract using heuristic + semantic Document with requirements: - Functional ~ Non-functional ~ Business ~ System requirements Requirements categorized into 6 types\n- ✅ 88 3.1 System Architecture Diagram of FlowMind (Source: Mid Report)\n- ✅ 1 Architectural Design The architecture of FlowMind is based on a multi-tiered, modular design that separates concerns across major system components\n- ⚠️  Include email, username, and password in request body 3\n- ⚠️  Chroma: Open-source embedding database for llm applications\n- ⚠️  System 2 Brief description of what Sys- tem 2 does and its primary features.Highlight the shortcomings or issues with System 2\n- ⚠️  It summarizes the system context, overall functionality, major design decisions, and internal structure based on the FYP-1 Mid Report\n- ⚠️  FlowMind improves upon these systems by integrating OCR, VLM-based understanding, semantic retrieval, automated classification, and task exporting into a single unified work- 2.3.1 Reliability\n- ⚠️  System Overview 3.4.2 Class Diagram The class diagram from the Mid Report outlines key system classes such as DocumentU- ploader, DocumentParser, OCREngine, RequirementExtractor, and DashboardManager\n- ⚠️  They ensure that the system ful- fills its intended purpose of automated document processing, requirement extraction, and dashboard visualization\n- ⚠️  Existing tools either provide basic text extraction, limited OCR capabilities, or manual task management, but none offer a fully integrated solution that understands both textual and visual content\n- ⚠️  The requirements are derived from user interactions, system workflows, and expected operational behavior\n- ⚠️  The system transforms unstructured documents into structured requirement sets categorized as Functional, Non-Functional, Business, and System-level requirements\n- ⚠️  Key entities derived from the Mid Report include: •User: Represents clients, project managers, system administrators, and team mem- bers who interact with FlowMind\n- ⚠️  Integration Layer: Supports automated task creation using Jira and Trello APIs, enabling seamless transition from extracted requirements to project management platforms\n- ⚠️  Vision-Language Model processing for diagrams, charts, or visual workflows\n- ⚠️  The system supports multiple document formats such as PDF, DOCX, PPTX, PNG, and JPG, enabling users to upload and analyze diverse content\n- ⚠️  The Iteration 2 activity flow includes upload, pars- ing, OCR, VLM summarization, embedding generation, requirement classification, and dashboard rendering\n- ⚠️  The following layers collaborate to deliver the overall functionality: •Frontend Interface: A web application that enables users to upload documents, monitor progress, and view extracted summaries and requirement classifications\n- ⚠️  The scope includes the following capabilities: • Automated parsing and preprocessing of uploaded documents\n- ⚠️  It includes file upload, OCR, VLM processing, embedding retrieval, classification, and dashboard visualization\n- ⚠️  Although many platforms exist for document processing, project manage- ment, or OCR, very few offer an end-to-end automated pipeline for requirement extraction and classification\n- ⚠️  FlowMind addresses these limitations by combining OCR, hybrid VLM processing, embedding- based Retrieval-Augmented Generation (RAG), and automated requirement classification into a unified platform\n- ⚠️  Project management platforms like Jira, Asana, and ClickUp allow task tracking but depend entirely on manual task creation\n- ⚠️  FlowMind supports the following major interactions (as described in the Mid Report): • Upload and manage project-related documents\n- ⚠️  IBM DOORS A professional requirements management tool supporting traceability and versioning.Does not automatically ex- tract requirements from raw documents; requires exten- sive manual input\n- ImageMeta records with OCR text System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en 5.0 Generate Dashboard / D1: SQLite Database D2: ChromaDB Vector Store Report 5.1 Show Dashboard os ‘ul Dashboard View / Output Report [IMAGE IMG-88e5507f9c-44-1] OCR: Client / Project Manager § Submit File oo 1.0 Document Upjpad & OCR 1.1 Upload File Validated File Vv 1.2 Validate File Type & Format Pass for Extraction Vv 1.3 Extract Text and Images Send to Requirement Extraction Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- This significantly reduces the time, cost, and effort required for requirement analysis while improving ac- curacy, consistency, and scalability\n- DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization The tests were executed usingpytest, ensuring modular and isolated validation of each feature\n- ❌ FlowMind addresses this challenge by providing an automated pipeline that takes project documents as input, extracts both text and image-based information, understands visual and contextual cues through Vision-Language Models, applies embedding-based retrieval for requirement extraction, classifies the extracted information into well-defined require- ment categories, and provides a dashboard for easy review and export\n- ❌ Vector Store: ChromaDB SQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx [IMAGE IMG-aec845db14-37-2] OCR: Database Layer Machine Learning Engine SQLite - Metadata Results Vectors ChromaDB - Embeddings Backend Processing (FastAPI) Integration Layer Task Data > Trello API Task Data > Jira API Frontend Interface Structured Data File Upload UI Document Web Dashboard Upload Request \\ Visualization Panel Semantic Search” [IMAGE IMG-66aa8258bf-39-1] OCR: DocumentUploader accuracy, and improve traceability when analyzing complex client documents\n- ❌ API/SDK Description Purpose Endpoint / Function Used Tesseract OCR Open-source OCR engine Extract text from images and scanned documents pytesseract.image_to_string HuggingFace Transformers NLP and VLM model serving Running MiniLM embeddings and VLM inference pipeline(), AutoModel.from_pretrained() ChromaDB Vector embedding database Store and retrieve document embeddings for RAG chromadb.Client(), collection.query() Trello API Project management automation Export requirements as tasks /1/cards, /1/lists Jira REST API Task creation in Jira projects Integration with enterprise PM tools /rest/api/3/issue Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- ❌ any ParsedFile + IMAGE_SUMMARIZATION VLM Summarization Complete VA FINALIZING RAG/Extraction Complete + COMPLETE © [IMAGE IMG-d99d8f986e-42-1] OCR: Unsupported markdown: list» Uploads Directory Unsupported markdown: list» SQLite Database FlowMind System\\n(Document Client / Project Manager ¢ Unsupported markdown: list_y Upload & Processing) \\ Unsupported markdown: list > ChromaDB Vector Store Unsupported markdown: list Unsupported markdown: list oS Dashboard View / Report ‘af Unsupported markdown: list System Admin § [IMAGE IMG-f384394a44-43-1] OCR: Client / Project Manager ¢ 1.1 Upload File ee mori System 1.0 Upload Document a _~ 1.3 Send File for Processing 1.2 Saved File 2.0 Preprocess & OCR 2.1 OCR Text & Images Config / Env Settings a 3.0 Requirement Extraction D3: Uploads Folder System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization • Embedding-based requirement extraction • Classification and storage • Dashboard rendering and task integration 17 3\n\nNon-Functional Requirements (3 items (Avg Quality: 70/100)):\n- ⚠️  3.2 Usability • The user interface shall be clean, intuitive, and accessible across major web browsers\n- ⚠️  3 Non-Functional Requirements Non-functional requirements define the system’s quality attributes such as reliability, us- ability, performance, and security\n- This combination ensures flexibility and performance: SQLite provides reliability and relational guarantees, while ChromaDB ensures efficient semantic search capabilities re- quired for intelligent requirement extraction\n\nUser Requirements / Stories:\n(none)\n\nBusiness Requirements (1 items (Avg Quality: 70/100)):\n- ⚠️  It bridges system requirements with design decisions and ensures that all stakeholder interactions are clearly represented",
+    "images": [
+      {
+        "image_id": "IMG-e92ed22853-1-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e92ed22853-1-1.png",
+        "page": 1,
+        "ocr": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®",
+        "summary": "**Image Type**: Unknown\n**Characteristics**: multiple_rectangles\n\n**Extracted Text** (Confidence: 18%):\nemg\nANAL UW d\nb/s \"UNA\nfF: - a\nAp Yonmreog ;\nrm NS"
+      },
+      {
+        "image_id": "IMG-9dd9eb55f8-14-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-9dd9eb55f8-14-1.png",
+        "page": 14,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nUpload Documents\nPerform OCR & Text Extraction\nAun Bisiifemend Exraaton Iw\n‘Classify Requirements [Sy\nFlowMind System LF\nGenerate Dashboard View\nClient / Project Manager\nOur System\nIntegrate with Treo / Jira Manage Configuration\nTeams in the Company"
+      },
+      {
+        "image_id": "IMG-cce50cbfdc-18-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cce50cbfdc-18-1.png",
+        "page": 18,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nMachine Learning Engine | Database Layer\n| SQLite - Metadata\nChromaDB - Embeddings\nBackend Processing (FastAPI)\nVLM Summarizer - Qwen2.5- RAG-based Requirement | —— }\nFile Parser +9}_»-———————————_- [__ Text Extractor OCR Engine - Tesseract ———> ——> 4\nVL/ LLaVA-13B Extractor -\nIntegration Layer\n‘Task Data Trello API\nRequest Handler |\ney Task Datal Jira API\nFrontend Interface\nStructured Data\nFile Upload Ul }-—Document Web Dashboard }—Upload Request \\ Visualization Panel\nSemantic Search ”"
+      },
+      {
+        "image_id": "IMG-f04d5dab33-20-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f04d5dab33-20-1.png",
+        "page": 20,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "**Image Type**: Ui Mockup\n**Characteristics**: structured_lines, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 59%):\n+ user_id : int + config_id : int\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n| |\nuploads configures\nmany\nN\\ Y. sany\nParsedFile\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\nY \\\ncontains generates elhbedded in linked via\nay many Y many | many J many\nImageMeta Requiremen .\nVectorStori Taskintegratio\n+ image_id : int + req_id: int wo: . en\noa an + vector_id : int "
+      },
+      {
+        "image_id": "IMG-2d5032b311-21-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-2d5032b311-21-1.png",
+        "page": 21,
+        "ocr": "",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nUpload Document\nPreprocess File: PDF / DOCX /\nPPTX / Image\nPerform OCR & Text Extraction :\nNo\nRun Requirement Extraction\nAgent\nRequirements Extracted?\nYes\nClassify Requirements:\nFunctional / Non-Functional /\nBusiness\nStore Results in Database\nGenerate Dashboard View\nIntegrate Tasks with Trello / Jira\nDisplay Output to User"
+      },
+      {
+        "image_id": "IMG-4896729f6e-22-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-4896729f6e-22-1.png",
+        "page": 22,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 23%):\nDocumentUploader\n+upload(file)\n+validate()\n+save_file()\nprovides file\n+extract_text()\n+extract_images()\n+detect_format()\npasses images\nOCREngine ConfigManager\n+run_tesseract() tload_env()\n+image_to_text() t+update_settings()\nsends extracted text manages config\nRequirementExtractor\n| manages API keys\n+split_chunks()\n+embed()\n+extract_requirements()\nstores embeddings sends tasks\nVectorStore Taskintegration\na eer Pp\n+store_embeddings() +push_to_trello()\n+search(query) +push_to_jira()\nupdate status\n"
+      },
+      {
+        "image_id": "IMG-f3dfa76441-23-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f3dfa76441-23-1.png",
+        "page": 23,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vector Store Dashboard View\nUpload project document\nPOST /upload_agent_doc\nExtract text and images\nReturn OCR results\nPass parsed content for requirement extraction\nStore embeddings & requirements\nAcknowledge storage\nReturn structured requirements\nUpdate dashboard with results\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vec"
+      },
+      {
+        "image_id": "IMG-45c2280375-24-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-45c2280375-24-1.png",
+        "page": 24,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nUnsupported markdown: list ———}> Uploads Directory\nUnsupported markdown: list» SQLite Database\nU ted markdown: list —\nlen. hajeeiMenere7 nsupporied markgown. 's > FlowMind System\\n(Document\nUpload & Processing)\n\\ a Unsupported markdown: list —P | Gp -omapB Vector Store\nUnsupported markdown: list\nUnsupported markdown: list\noS\nSystem Admin § Dashboard View / Report ‘af\nUnsupported markdown: list"
+      },
+      {
+        "image_id": "IMG-5e156397f1-24-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e156397f1-24-2.png",
+        "page": 24,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nClient / Project Manager ¢\n1.1 Upload File\nmori System\n1.0 Upload Document\n1.3 Send File for Processing 1.2 Saved File\n2.0 Preprocess & OCR D3: Uploads Folder System Admin §\n2.1 OCR Text & Images Config / Env Settings\n3.0 Requirement Extraction ;\n5.2 View Results\n(RAG Agent)\n3.1 Extracted Requirements\n4.0 Store & Index Data\n4.3 Generate Dashboard Data 4.1 StoreinDB 4.2 Create Embeddings\n5.0 Generate Dashboard / ie ee\nReport D1: SQLite Database D2: ChromaDB Vector Store\n5.1 Show Dashboard\nooo il "
+      },
+      {
+        "image_id": "IMG-51125680f4-25-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-51125680f4-25-1.png",
+        "page": 25,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nSubmit Pe\n1.0 Document _ & OCR\nae File\nPass wt\nSend to Requirement Extraction\noe OCR\n+ Pillow)\nOCR vel Output\nv\n|\nSave Files Store Extracted Content Output Text & Images\nv v ‘N\\,\n> Se"
+      },
+      {
+        "image_id": "IMG-884f70ecae-26-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-884f70ecae-26-1.png",
+        "page": 26,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nParsed Text & Image Data §\nProvide Parsed Text\n2.0 —e Extraction\n2b.1 Segment & Chunk Text\nChunked Data\n2b.2 Generate Embeddings\n(LangChain + MiniLM)\nSend Chunks to Models Embeddings\n2b.3 Query VLM Ensemble Displ Dashboard\n(Ollama Models) D1: ChromaDB Vector Store splay on Rasnboar\nModel Summaries\n2b.4 Merge and Refine\nExtracted Requirements\nExtracted Requirements\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\nStore Results Generate Output\nD2: SQLite Database Classified Require"
+      },
+      {
+        "image_id": "IMG-7d79e46da6-27-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-7d79e46da6-27-1.png",
+        "page": 27,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nClient / Project Manager D1: SQLite Database\nRequest Analysis View\n3.0 safer & Integration\n2c.1 Fetch Classified\nRequirements from Database\nRequirements Data\n2c.2 Generate Dashboard View\n(/view_requirements)\nTasks for Export\n2c.3 Push Tasks to Trello / Jira ;\n. User View / Feedback\n(API Integration)\nTask API Call\nRendered Dashboard Trello / Jira Platform ©*\nResponse / Status\n2c.4 Update Status & Logs\nUpdate UI Store Logs\nidl Interactive Dashboard\nDisplay D2: Task Integration Log"
+      },
+      {
+        "image_id": "IMG-8b6c9090dc-29-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-8b6c9090dc-29-1.png",
+        "page": 29,
+        "ocr": "Algorithm 1 Document Upload and Preprocessing\n\nInput: File F uploaded by user\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 68%):\nAlgorithm 1 Document Upload and Preprocessing\nInput: File F uploaded by user\n\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite"
+      },
+      {
+        "image_id": "IMG-e9ebd9ffca-29-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e9ebd9ffca-29-2.png",
+        "page": 29,
+        "ocr": "Algorithm 2 OCR and Vision-Language Processing\n\nInput: Extracted image |\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 65%):\nAlgorithm 2 OCR and Vision-Language Processing\nInput: Extracted image |\n\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table"
+      },
+      {
+        "image_id": "IMG-082f8119cb-30-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-082f8119cb-30-1.png",
+        "page": 30,
+        "ocr": "Algorithm 3 Requirement Extraction using RAG\n\nInput: Preprocessed text T\nOutput: Structured requirement dataset\n\n: Split T into semantic chunks\n: Generate embeddings using MiniLM-L6-v2\n\n: Retrieve top-k relevant chunks for classification\n\n1\n2:\n3: Store embeddings in ChromaDB\n4\n5\n\n: Apply RAG reasoning to classify each chunk into:\n\n: ¢ Functional Requirements\n\n6:\n7: ¢ Non-functional Requirements\n8: « Business Requirements\n\n9:\n\n: « System Requirements\n\n10: Store all classified requirements in SQLite",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 56%):\nAlgorithm 3 Requirement Extraction using RAG\nInput: Preprocessed text T\n\nOutput: Structured requirement dataset\n\n1: Split T into semantic chunks\n\n2: Generate embeddings using MiniLM-L6-v2\n\n3: Store embeddings in ChromaDB\n\n4: Retrieve top-k relevant chunks for classification\n5: Apply RAG reasoning to classify each chunk into:\n6: ¢ Functional Requirements\n\n7: ¢ Non-functional Requirements\n\n8: « Business Requirements\n\n9: « System Requirements\n\n10: Store all classified requirements in SQLite"
+      },
+      {
+        "image_id": "IMG-08b09cbaa3-30-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-08b09cbaa3-30-2.png",
+        "page": 30,
+        "ocr": "Algorithm 4 Dashboard Rendering\n\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n5: ¢ Visual summaries\n6: ¢ Export options",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 57%):\nAlgorithm 4 Dashboard Rendering\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n\n5: « Visual summaries\n\n6: ¢ Export options"
+      },
+      {
+        "image_id": "IMG-809684d03d-31-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-809684d03d-31-1.png",
+        "page": 31,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify user\n\nsignup with\nvalid email\nand\n\npassword\n\nUser should\nnot exist in\ndatabase.\n\nFastAPl\nserver\nrunning on\nport 8000\n\n1. Send POST to\n/api/auth/signup\n2. Include email,\nusername, and\npassword in request\nbody\n\n3. Verify response\ncontains JWT token\n\nUsername:\n\ntestuser\n\nPassword:\nSecurePass123\n\nHTTP 200\nresponse with\nJWT token.\n\nUser created\nin SQLite DB\nwith berypt\nhashed\npassword\n\nUser should be\nauthenticated\nand token\nshould be valid\nfor 30 days\n\nAs Expected,\nuser created\nsuccessfully",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 41%):\nTest Test Precondition Test data Expected ie aca Pass/fail\ncase ID Objective\n1. Send POST to ;\n, Email: HTTP 200\nUser should Japi/auth/signup\nVerify user ot exist in ; test@flowmind.ai response with User should be\nsignup with database 2. Include email, JWT token. authenticated\nvalid email . username, and Username: User created and token As Expected,\nC001 and FastAPl password in request testuser in SOlite DB should be valid user created\nserver body . successfully\npassword password: with baypt for"
+      },
+      {
+        "image_id": "IMG-6015733a52-32-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-6015733a52-32-1.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify PDF\nupload with\nimage\nextraction\nand OCR\nprocessing\n\nUser\nauthenticated\nwith valid JWT\n\ntoken.\n\nTesseract OCR\ninstalled and\nconfigured\n\n1. Upload PDF with\nimages to\n/api/upload/client\n\n2. Extract text using\nPyPDF\n\n3. Extract images\n\n4, Run Tesseract\nOCR on images\n\nFile: sample.pdf\nFormat: PDF\nSize: < SOMB\n\nContains: Text\nand embedded\nimages\n\nHTTP 200\nresponse.\n\nParsedFile\nrecord created\nin SQLite.\n\nImageMeta\nrecords with\nOCR text\n\nFile stored in\nJuploads\ndirectory.\n\nProgress\ntracker shows\n100%\ncompletion\n\nAs Expected,\nOCR text\nextracted\n\nsuccessfully",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 40%):\nTest Test Precondition Test data Expected Post- Actual Pass/fail\ncase ID Objective result condition Result teh\n1. Upload PDF with\nUser images to «i lepaf HTTP 200\nile: .\nVerify PDF authenticated /api/upload/client sampleP response. File stored in\nupload with with valid JWT 2 Extract text using Format: PDF ParsedFile Juploads\nimage token. PyPDF Size: < 50MB record created directory. As Expected,\nC002 extraction x in SQLite. PI OCR text\nand OCR hee on 3. Extract images Contains: Text : leche extra"
+      },
+      {
+        "image_id": "IMG-38b4c875e5-32-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-38b4c875e5-32-2.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify hybrid\nRAG\nrequirements\nextraction\nwith\nChromaDB\n\nChromaDB\ninitialized.\nMiniLM-L6-v2\nmodel\ndownloaded.\n\nUser has valid\nJWT token\n\n1. Upload document\nto /api/upload/agent\n\n2. Text split into\n1000-char chunks\n\n3. Generate\nembeddings\n\n4. Extract using\nheuristic + semantic\n\nDocument with\nrequirements:\n\n- Functional\n~ Non-functional\n~ Business\n~ System\n\nrequirements\n\nRequirements\ncategorized\ninto 6 types.\n\nVector\nembeddings\nstored in\nChromaDB.\n\nDeduplication\napplied\n\nAgent learns\npatterns and\nstores in user-\nspecific\ncollection.\n\nPerformance\nmetrics\nupdated\n\nAs Expected,\nrequirements\nextracted and\ncategorized\ncorrectly",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nPrecondition Test data Expected Post Actual Pass/fail\nty objective result condition Result\n1. Upload document -\n, . Requirements\nChromabB to /api/upload/agent Document with ; ‘Agent learns\nVerify hybrid initialized. 7 cements: categorized 9\nRac initialized. 2. Text split into requirements: into 6 types. patterns and\n: MiniLM-L6-v2 1000-char chunks - Functional stores in user- As Expected,\nrequirements “el Non functional Vector specific requirements\n: model 3, Generate ~ Non-functiona .\nextractio"
+      },
+      {
+        "image_id": "IMG-cf1fe404fc-34-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cf1fe404fc-34-1.png",
+        "page": 34,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nUpload Documents\nPerform OCR & Text Extraction\nAun Bisiifemend Exraaton Iw\n‘Classify Requirements [Sy\nFlowMind System LF\nGenerate Dashboard View\nClient / Project Manager\nOur System\nIntegrate with Treo / Jira Manage Configuration\nTeams in the Company"
+      },
+      {
+        "image_id": "IMG-bcefde751c-35-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-bcefde751c-35-1.png",
+        "page": 35,
+        "ocr": "Validation: File\nSize/Extension Check [cite:\n144, 147]\n\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\n\nRequirements Extraction\n\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\n\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\n\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\n\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay Extracted\nRequirements",
+        "summary": "**Image Type**: Diagram\n**Characteristics**: structured_lines, multiple_rectangles\n\n**Extracted Text** (Confidence: 53%):\nUser Initiates Upload\n(routes/upload_agent_doc)\nValidation: File\nSize/Extension Check [cite:\n144, 147]\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\nRequirements Extraction\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay "
+      },
+      {
+        "image_id": "IMG-5e871886aa-36-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e871886aa-36-1.png",
+        "page": 36,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "**Image Type**: Ui Mockup\n**Characteristics**: structured_lines, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 59%):\n+ user_id : int + config_id : int\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n| |\nuploads configures\nmany\nN\\ Y. sany\nParsedFile\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\nY \\\ncontains generates elhbedded in linked via\nay many Y many | many J many\nImageMeta Requiremen .\nVectorStori Taskintegratio\n+ image_id : int + req_id: int wo: . en\noa an + vector_id : int "
+      },
+      {
+        "image_id": "IMG-1d1f473430-37-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-1d1f473430-37-1.png",
+        "page": 37,
+        "ocr": "User & API Layer\n\nCore AI Processing\n\nAI Agent Core:\nRequirements\nExtractionAgent\n\nAuthentication/JWT:\nbcrypt, python-jose\n\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nUser & API Layer\nCore AI Processing\n. ue AI Agent Core:\nAuthentication/JWT: gen ore\n. Requirements\nbcrypt, python-jose .\nExtractionAgent\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx"
+      },
+      {
+        "image_id": "IMG-aec845db14-37-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-aec845db14-37-2.png",
+        "page": 37,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nMachine Learning Engine | Database Layer\n| SQLite - Metadata\nChromaDB - Embeddings\nBackend Processing (FastAPI)\nVLM Summarizer - Qwen2.5- RAG-based Requirement | —— }\nFile Parser +9}_»-———————————_- [__ Text Extractor OCR Engine - Tesseract ———> ——> 4\nVL/ LLaVA-13B Extractor -\nIntegration Layer\n‘Task Data Trello API\nRequest Handler |\ney Task Datal Jira API\nFrontend Interface\nStructured Data\nFile Upload Ul }-—Document Web Dashboard }—Upload Request \\ Visualization Panel\nSemantic Search ”"
+      },
+      {
+        "image_id": "IMG-3a5c06d168-38-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-3a5c06d168-38-1.png",
+        "page": 38,
+        "ocr": "",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nUpload Document\nPreprocess File: PDF / DOCX /\nPPTX / Image\nPerform OCR & Text Extraction :\nNo\nRun Requirement Extraction\nAgent\nRequirements Extracted?\nYes\nClassify Requirements:\nFunctional / Non-Functional /\nBusiness\nStore Results in Database\nGenerate Dashboard View\nIntegrate Tasks with Trello / Jira\nDisplay Output to User"
+      },
+      {
+        "image_id": "IMG-66aa8258bf-39-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-66aa8258bf-39-1.png",
+        "page": 39,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 23%):\nDocumentUploader\n+upload(file)\n+validate()\n+save_file()\nprovides file\n+extract_text()\n+extract_images()\n+detect_format()\npasses images\nOCREngine ConfigManager\n+run_tesseract() tload_env()\n+image_to_text() t+update_settings()\nsends extracted text manages config\nRequirementExtractor\n| manages API keys\n+split_chunks()\n+embed()\n+extract_requirements()\nstores embeddings sends tasks\nVectorStore Taskintegration\na eer Pp\n+store_embeddings() +push_to_trello()\n+search(query) +push_to_jira()\nupdate status\n"
+      },
+      {
+        "image_id": "IMG-089b12e507-40-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-089b12e507-40-1.png",
+        "page": 40,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vector Store Dashboard View\nUpload project document\nPOST /upload_agent_doc\nExtract text and images\nReturn OCR results\nPass parsed content for requirement extraction\nStore embeddings & requirements\nAcknowledge storage\nReturn structured requirements\nUpdate dashboard with results\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vec"
+      },
+      {
+        "image_id": "IMG-23c5df42f6-41-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-23c5df42f6-41-1.png",
+        "page": 41,
+        "ocr": "UPLOADING\n\nValidation Success\n\nDocument Structure Read\n\nTEXT_EXTRACTION\n\nText Extracted\n\nIMAGE_DETECTION\n\nImages Detected\n\nOCR_PROCESSING\n\nNo Images Found OCR Text Extracted\n\n+\n\nIMAGE_SUMMARIZATION\n\nVLM Summarization\n\nComplete\n\nVA\n\nFINALIZING\n\nRAG/Extraction Complete\n\n+\n\nCOMPLETE\n\n©",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 34%):\nUPLOADING\nValidation Success\nStage Values: |\nUPLOADING, PARSING,\nTEXT_EXTRACTION,\nIMAGE_DETECTION, { Parsins |\nOCR_PROCESSING,\nIMAGE_SUMMARIZATION,\nFINALIZING\nDocument Structure Read\nTEXT_EXTRACTION\nText Extracted\nIMAGE_DETECTION\nImages Detected\nOCR_PROCESSING\nNo Images Found OCR Text Extracted\nIMAGE_SUMMARIZATION\nVLM Summarization\nComplete\nFINALIZING\nRAG/Extraction Complete\nCOMPLETE\n©"
+      },
+      {
+        "image_id": "IMG-d99d8f986e-42-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-d99d8f986e-42-1.png",
+        "page": 42,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nUnsupported markdown: list ———}> Uploads Directory\nUnsupported markdown: list» SQLite Database\nU ted markdown: list —\nlen. hajeeiMenere7 nsupporied markgown. 's > FlowMind System\\n(Document\nUpload & Processing)\n\\ a Unsupported markdown: list —P | Gp -omapB Vector Store\nUnsupported markdown: list\nUnsupported markdown: list\noS\nSystem Admin § Dashboard View / Report ‘af\nUnsupported markdown: list"
+      },
+      {
+        "image_id": "IMG-f384394a44-43-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f384394a44-43-1.png",
+        "page": 43,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nClient / Project Manager ¢\n1.1 Upload File\nmori System\n1.0 Upload Document\n1.3 Send File for Processing 1.2 Saved File\n2.0 Preprocess & OCR D3: Uploads Folder System Admin §\n2.1 OCR Text & Images Config / Env Settings\n3.0 Requirement Extraction ;\n5.2 View Results\n(RAG Agent)\n3.1 Extracted Requirements\n4.0 Store & Index Data\n4.3 Generate Dashboard Data 4.1 StoreinDB 4.2 Create Embeddings\n5.0 Generate Dashboard / ie ee\nReport D1: SQLite Database D2: ChromaDB Vector Store\n5.1 Show Dashboard\nooo il "
+      },
+      {
+        "image_id": "IMG-88e5507f9c-44-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-88e5507f9c-44-1.png",
+        "page": 44,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nSubmit Pe\n1.0 Document _ & OCR\nae File\nPass wt\nSend to Requirement Extraction\noe OCR\n+ Pillow)\nOCR vel Output\nv\n|\nSave Files Store Extracted Content Output Text & Images\nv v ‘N\\,\n> Se"
+      },
+      {
+        "image_id": "IMG-54b8150bca-45-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-54b8150bca-45-1.png",
+        "page": 45,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nParsed Text & Image Data §\nProvide Parsed Text\n2.0 —e Extraction\n2b.1 Segment & Chunk Text\nChunked Data\n2b.2 Generate Embeddings\n(LangChain + MiniLM)\nSend Chunks to Models Embeddings\n2b.3 Query VLM Ensemble Displ Dashboard\n(Ollama Models) D1: ChromaDB Vector Store splay on Rasnboar\nModel Summaries\n2b.4 Merge and Refine\nExtracted Requirements\nExtracted Requirements\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\nStore Results Generate Output\nD2: SQLite Database Classified Require"
+      },
+      {
+        "image_id": "IMG-840316eba2-46-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-840316eba2-46-1.png",
+        "page": 46,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nClient / Project Manager D1: SQLite Database\nRequest Analysis View\n3.0 safer & Integration\n2c.1 Fetch Classified\nRequirements from Database\nRequirements Data\n2c.2 Generate Dashboard View\n(/view_requirements)\nTasks for Export\n2c.3 Push Tasks to Trello / Jira ;\n. User View / Feedback\n(API Integration)\nTask API Call\nRendered Dashboard Trello / Jira Platform ©*\nResponse / Status\n2c.4 Update Status & Logs\nUpdate UI Store Logs\nidl Interactive Dashboard\nDisplay D2: Task Integration Log"
+      }
+    ]
+  },
+  "bba61c9d-607e-430a-8604-32287e86ae54": {
+    "filename": "FYP1-FinalReport-F25_387-D-Flowmind.pdf",
+    "summary": "Extracted 8299 words and 33 image(s)",
+    "response": "Functional Requirements (47 items (Avg Quality: 69/100)):\n- ✅ 3.4 Security • User roles and uploaded documents shall be secured using role-based authentica- tion\n- ✅ FR1: The system shall display extracted requirements and summaries through an interactive web dashboard\n- ✅ FR3: The system shall generate visual summaries using Vision-Language Models (Qwen2.5-VL and LLaV A-13B)\n- ✅ FR3: The system shall allow exporting results to external files (CSV , JSON)\n- ✅ FR3: The system shall store structured requirement data in a SQLite database\n- ✅ Project Requirements 2.3.1 Reliability • The system shall have a Mean Time Between Failures (MTBF) of at least 120 hours during continuous operation\n- ⚠️  FR2: The system shall integrate with Trello and Jira for automated task creation\n- ⚠️  The system shall ensure graceful degradation in case of OCR, VLM, or database errors\n- ⚠️  FR2: The system shall classify extracted information into Functional, Non-Functional, System, and Business requirements\n- ⚠️  Users must manu- ally read documents and cre- ate tasks\n- ⚠️  Sensitive configuration data must be stored in environment variables (.env)\n- ⚠️  Each requirement category shall be color-coded for enhanced readability on the dashboard\n- ❌ User created in SQLite DB with berypt hashed password User should be authenticated and token should be valid for 30 days As Expected, user created successfully [IMAGE IMG-6015733a52-32-1] OCR: Test Objective Precondition Steps Test data Expected result Post- condition Actual Result Pass/fail Verify PDF upload with image extraction and OCR processing User authenticated with valid JWT token\n- ⚠️  Through its dashboard, project managers can visualize summaries, view extracted requirements, and export tasks directly to project management platforms, sig- nificantly reducing manual effort and improving accuracy\n- ✅ Extract using heuristic + semantic Document with requirements: - Functional ~ Non-functional ~ Business ~ System requirements Requirements categorized into 6 types\n- ✅ 88 3.1 System Architecture Diagram of FlowMind (Source: Mid Report)\n- ✅ 1 Architectural Design The architecture of FlowMind is based on a multi-tiered, modular design that separates concerns across major system components\n- ⚠️  Include email, username, and password in request body 3\n- ⚠️  Chroma: Open-source embedding database for llm applications\n- ⚠️  System 2 Brief description of what Sys- tem 2 does and its primary features.Highlight the shortcomings or issues with System 2\n- ⚠️  It summarizes the system context, overall functionality, major design decisions, and internal structure based on the FYP-1 Mid Report\n- ⚠️  FlowMind improves upon these systems by integrating OCR, VLM-based understanding, semantic retrieval, automated classification, and task exporting into a single unified work- 2.3.1 Reliability\n- ⚠️  System Overview 3.4.2 Class Diagram The class diagram from the Mid Report outlines key system classes such as DocumentU- ploader, DocumentParser, OCREngine, RequirementExtractor, and DashboardManager\n- ⚠️  They ensure that the system ful- fills its intended purpose of automated document processing, requirement extraction, and dashboard visualization\n- ⚠️  Existing tools either provide basic text extraction, limited OCR capabilities, or manual task management, but none offer a fully integrated solution that understands both textual and visual content\n- ⚠️  The requirements are derived from user interactions, system workflows, and expected operational behavior\n- ⚠️  The system transforms unstructured documents into structured requirement sets categorized as Functional, Non-Functional, Business, and System-level requirements\n- ⚠️  Key entities derived from the Mid Report include: •User: Represents clients, project managers, system administrators, and team mem- bers who interact with FlowMind\n- ⚠️  Integration Layer: Supports automated task creation using Jira and Trello APIs, enabling seamless transition from extracted requirements to project management platforms\n- ⚠️  Vision-Language Model processing for diagrams, charts, or visual workflows\n- ⚠️  The system supports multiple document formats such as PDF, DOCX, PPTX, PNG, and JPG, enabling users to upload and analyze diverse content\n- ⚠️  The Iteration 2 activity flow includes upload, pars- ing, OCR, VLM summarization, embedding generation, requirement classification, and dashboard rendering\n- ⚠️  The following layers collaborate to deliver the overall functionality: •Frontend Interface: A web application that enables users to upload documents, monitor progress, and view extracted summaries and requirement classifications\n- ⚠️  The scope includes the following capabilities: • Automated parsing and preprocessing of uploaded documents\n- ⚠️  It includes file upload, OCR, VLM processing, embedding retrieval, classification, and dashboard visualization\n- ⚠️  Although many platforms exist for document processing, project manage- ment, or OCR, very few offer an end-to-end automated pipeline for requirement extraction and classification\n- ⚠️  FlowMind addresses these limitations by combining OCR, hybrid VLM processing, embedding- based Retrieval-Augmented Generation (RAG), and automated requirement classification into a unified platform\n- ⚠️  Project management platforms like Jira, Asana, and ClickUp allow task tracking but depend entirely on manual task creation\n- ⚠️  FlowMind supports the following major interactions (as described in the Mid Report): • Upload and manage project-related documents\n- ⚠️  IBM DOORS A professional requirements management tool supporting traceability and versioning.Does not automatically ex- tract requirements from raw documents; requires exten- sive manual input\n- ImageMeta records with OCR text System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en 5.0 Generate Dashboard / D1: SQLite Database D2: ChromaDB Vector Store Report 5.1 Show Dashboard os ‘ul Dashboard View / Output Report [IMAGE IMG-88e5507f9c-44-1] OCR: Client / Project Manager § Submit File oo 1.0 Document Upjpad & OCR 1.1 Upload File Validated File Vv 1.2 Validate File Type & Format Pass for Extraction Vv 1.3 Extract Text and Images Send to Requirement Extraction Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- This significantly reduces the time, cost, and effort required for requirement analysis while improving ac- curacy, consistency, and scalability\n- DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization The tests were executed usingpytest, ensuring modular and isolated validation of each feature\n- ❌ FlowMind addresses this challenge by providing an automated pipeline that takes project documents as input, extracts both text and image-based information, understands visual and contextual cues through Vision-Language Models, applies embedding-based retrieval for requirement extraction, classifies the extracted information into well-defined require- ment categories, and provides a dashboard for easy review and export\n- ❌ Vector Store: ChromaDB SQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx [IMAGE IMG-aec845db14-37-2] OCR: Database Layer Machine Learning Engine SQLite - Metadata Results Vectors ChromaDB - Embeddings Backend Processing (FastAPI) Integration Layer Task Data > Trello API Task Data > Jira API Frontend Interface Structured Data File Upload UI Document Web Dashboard Upload Request \\ Visualization Panel Semantic Search” [IMAGE IMG-66aa8258bf-39-1] OCR: DocumentUploader accuracy, and improve traceability when analyzing complex client documents\n- ❌ API/SDK Description Purpose Endpoint / Function Used Tesseract OCR Open-source OCR engine Extract text from images and scanned documents pytesseract.image_to_string HuggingFace Transformers NLP and VLM model serving Running MiniLM embeddings and VLM inference pipeline(), AutoModel.from_pretrained() ChromaDB Vector embedding database Store and retrieve document embeddings for RAG chromadb.Client(), collection.query() Trello API Project management automation Export requirements as tasks /1/cards, /1/lists Jira REST API Task creation in Jira projects Integration with enterprise PM tools /rest/api/3/issue Images for OCR Vv 1.4 Perform OCR (pytesseract + Pillow) OCR Text Output Vv 1.5 Save Processed Output Save Files Store Extracted Content Output Text & Images :\n- ❌ any ParsedFile + IMAGE_SUMMARIZATION VLM Summarization Complete VA FINALIZING RAG/Extraction Complete + COMPLETE © [IMAGE IMG-d99d8f986e-42-1] OCR: Unsupported markdown: list» Uploads Directory Unsupported markdown: list» SQLite Database FlowMind System\\n(Document Client / Project Manager ¢ Unsupported markdown: list_y Upload & Processing) \\ Unsupported markdown: list > ChromaDB Vector Store Unsupported markdown: list Unsupported markdown: list oS Dashboard View / Report ‘af Unsupported markdown: list System Admin § [IMAGE IMG-f384394a44-43-1] OCR: Client / Project Manager ¢ 1.1 Upload File ee mori System 1.0 Upload Document a _~ 1.3 Send File for Processing 1.2 Saved File 2.0 Preprocess & OCR 2.1 OCR Text & Images Config / Env Settings a 3.0 Requirement Extraction D3: Uploads Folder System Admin § 5.2 View Results (RAG Agent) 3.1 Extracted Requirements v 4.0 Store & Index Data a 4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings : ee en DFD Level 0, Level 1, Level 2a, Level 2b, and Level 2c diagrams were included in the Mid Report and cover: • Document upload and validation • OCR and VLM summarization • Embedding-based requirement extraction • Classification and storage • Dashboard rendering and task integration 17 3\n\nNon-Functional Requirements (3 items (Avg Quality: 70/100)):\n- ⚠️  3.2 Usability • The user interface shall be clean, intuitive, and accessible across major web browsers\n- ⚠️  3 Non-Functional Requirements Non-functional requirements define the system’s quality attributes such as reliability, us- ability, performance, and security\n- This combination ensures flexibility and performance: SQLite provides reliability and relational guarantees, while ChromaDB ensures efficient semantic search capabilities re- quired for intelligent requirement extraction\n\nUser Requirements / Stories:\n(none)\n\nBusiness Requirements (1 items (Avg Quality: 70/100)):\n- ⚠️  It bridges system requirements with design decisions and ensures that all stakeholder interactions are clearly represented",
+    "images": [
+      {
+        "image_id": "IMG-e92ed22853-1-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e92ed22853-1-1.png",
+        "page": 1,
+        "ocr": "Ms\n\n<a UNiyg\n\nie TTI, 4\nWs? Mey\n\n4 sag\n\n>\n\n %\nWousyye®",
+        "summary": "**Image Type**: Unknown\n**Characteristics**: multiple_rectangles\n\n**Extracted Text** (Confidence: 18%):\nemg\nANAL UW d\nb/s \"UNA\nfF: - a\nAp Yonmreog ;\nrm NS"
+      },
+      {
+        "image_id": "IMG-9dd9eb55f8-14-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-9dd9eb55f8-14-1.png",
+        "page": 14,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nUpload Documents\nPerform OCR & Text Extraction\nAun Bisiifemend Exraaton Iw\n‘Classify Requirements [Sy\nFlowMind System LF\nGenerate Dashboard View\nClient / Project Manager\nOur System\nIntegrate with Treo / Jira Manage Configuration\nTeams in the Company"
+      },
+      {
+        "image_id": "IMG-cce50cbfdc-18-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cce50cbfdc-18-1.png",
+        "page": 18,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nMachine Learning Engine | Database Layer\n| SQLite - Metadata\nChromaDB - Embeddings\nBackend Processing (FastAPI)\nVLM Summarizer - Qwen2.5- RAG-based Requirement | —— }\nFile Parser +9}_»-———————————_- [__ Text Extractor OCR Engine - Tesseract ———> ——> 4\nVL/ LLaVA-13B Extractor -\nIntegration Layer\n‘Task Data Trello API\nRequest Handler |\ney Task Datal Jira API\nFrontend Interface\nStructured Data\nFile Upload Ul }-—Document Web Dashboard }—Upload Request \\ Visualization Panel\nSemantic Search ”"
+      },
+      {
+        "image_id": "IMG-f04d5dab33-20-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f04d5dab33-20-1.png",
+        "page": 20,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "**Image Type**: Ui Mockup\n**Characteristics**: structured_lines, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 59%):\n+ user_id : int + config_id : int\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n| |\nuploads configures\nmany\nN\\ Y. sany\nParsedFile\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\nY \\\ncontains generates elhbedded in linked via\nay many Y many | many J many\nImageMeta Requiremen .\nVectorStori Taskintegratio\n+ image_id : int + req_id: int wo: . en\noa an + vector_id : int "
+      },
+      {
+        "image_id": "IMG-2d5032b311-21-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-2d5032b311-21-1.png",
+        "page": 21,
+        "ocr": "",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nUpload Document\nPreprocess File: PDF / DOCX /\nPPTX / Image\nPerform OCR & Text Extraction :\nNo\nRun Requirement Extraction\nAgent\nRequirements Extracted?\nYes\nClassify Requirements:\nFunctional / Non-Functional /\nBusiness\nStore Results in Database\nGenerate Dashboard View\nIntegrate Tasks with Trello / Jira\nDisplay Output to User"
+      },
+      {
+        "image_id": "IMG-4896729f6e-22-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-4896729f6e-22-1.png",
+        "page": 22,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 23%):\nDocumentUploader\n+upload(file)\n+validate()\n+save_file()\nprovides file\n+extract_text()\n+extract_images()\n+detect_format()\npasses images\nOCREngine ConfigManager\n+run_tesseract() tload_env()\n+image_to_text() t+update_settings()\nsends extracted text manages config\nRequirementExtractor\n| manages API keys\n+split_chunks()\n+embed()\n+extract_requirements()\nstores embeddings sends tasks\nVectorStore Taskintegration\na eer Pp\n+store_embeddings() +push_to_trello()\n+search(query) +push_to_jira()\nupdate status\n"
+      },
+      {
+        "image_id": "IMG-f3dfa76441-23-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f3dfa76441-23-1.png",
+        "page": 23,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vector Store Dashboard View\nUpload project document\nPOST /upload_agent_doc\nExtract text and images\nReturn OCR results\nPass parsed content for requirement extraction\nStore embeddings & requirements\nAcknowledge storage\nReturn structured requirements\nUpdate dashboard with results\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vec"
+      },
+      {
+        "image_id": "IMG-45c2280375-24-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-45c2280375-24-1.png",
+        "page": 24,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nUnsupported markdown: list ———}> Uploads Directory\nUnsupported markdown: list» SQLite Database\nU ted markdown: list —\nlen. hajeeiMenere7 nsupporied markgown. 's > FlowMind System\\n(Document\nUpload & Processing)\n\\ a Unsupported markdown: list —P | Gp -omapB Vector Store\nUnsupported markdown: list\nUnsupported markdown: list\noS\nSystem Admin § Dashboard View / Report ‘af\nUnsupported markdown: list"
+      },
+      {
+        "image_id": "IMG-5e156397f1-24-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e156397f1-24-2.png",
+        "page": 24,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nClient / Project Manager ¢\n1.1 Upload File\nmori System\n1.0 Upload Document\n1.3 Send File for Processing 1.2 Saved File\n2.0 Preprocess & OCR D3: Uploads Folder System Admin §\n2.1 OCR Text & Images Config / Env Settings\n3.0 Requirement Extraction ;\n5.2 View Results\n(RAG Agent)\n3.1 Extracted Requirements\n4.0 Store & Index Data\n4.3 Generate Dashboard Data 4.1 StoreinDB 4.2 Create Embeddings\n5.0 Generate Dashboard / ie ee\nReport D1: SQLite Database D2: ChromaDB Vector Store\n5.1 Show Dashboard\nooo il "
+      },
+      {
+        "image_id": "IMG-51125680f4-25-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-51125680f4-25-1.png",
+        "page": 25,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nSubmit Pe\n1.0 Document _ & OCR\nae File\nPass wt\nSend to Requirement Extraction\noe OCR\n+ Pillow)\nOCR vel Output\nv\n|\nSave Files Store Extracted Content Output Text & Images\nv v ‘N\\,\n> Se"
+      },
+      {
+        "image_id": "IMG-884f70ecae-26-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-884f70ecae-26-1.png",
+        "page": 26,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nParsed Text & Image Data §\nProvide Parsed Text\n2.0 —e Extraction\n2b.1 Segment & Chunk Text\nChunked Data\n2b.2 Generate Embeddings\n(LangChain + MiniLM)\nSend Chunks to Models Embeddings\n2b.3 Query VLM Ensemble Displ Dashboard\n(Ollama Models) D1: ChromaDB Vector Store splay on Rasnboar\nModel Summaries\n2b.4 Merge and Refine\nExtracted Requirements\nExtracted Requirements\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\nStore Results Generate Output\nD2: SQLite Database Classified Require"
+      },
+      {
+        "image_id": "IMG-7d79e46da6-27-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-7d79e46da6-27-1.png",
+        "page": 27,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nClient / Project Manager D1: SQLite Database\nRequest Analysis View\n3.0 safer & Integration\n2c.1 Fetch Classified\nRequirements from Database\nRequirements Data\n2c.2 Generate Dashboard View\n(/view_requirements)\nTasks for Export\n2c.3 Push Tasks to Trello / Jira ;\n. User View / Feedback\n(API Integration)\nTask API Call\nRendered Dashboard Trello / Jira Platform ©*\nResponse / Status\n2c.4 Update Status & Logs\nUpdate UI Store Logs\nidl Interactive Dashboard\nDisplay D2: Task Integration Log"
+      },
+      {
+        "image_id": "IMG-8b6c9090dc-29-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-8b6c9090dc-29-1.png",
+        "page": 29,
+        "ocr": "Algorithm 1 Document Upload and Preprocessing\n\nInput: File F uploaded by user\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 68%):\nAlgorithm 1 Document Upload and Preprocessing\nInput: File F uploaded by user\n\nOutput: Parsed text chunks and extracted images\n\n1: Validate file format (PDF, DOCX, PPTX, JPG, PNG)\n\n2: if (format = DOC or PPT) then\n\n3: Convert using LibreOffice to DOCX/PPTX\n\n4: end if\n\n5: Extract raw text using file-type-specific parser\n\n6: Extract embedded images (if any)\n\n7: Store metadata in SQLite"
+      },
+      {
+        "image_id": "IMG-e9ebd9ffca-29-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-e9ebd9ffca-29-2.png",
+        "page": 29,
+        "ocr": "Algorithm 2 OCR and Vision-Language Processing\n\nInput: Extracted image |\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 65%):\nAlgorithm 2 OCR and Vision-Language Processing\nInput: Extracted image |\n\nOutput: /mage-level understanding\n\n1: Perform OCR using Tesseract to obtain text T\n\n2: Pass image through VLM models (Qwen2.5-VL, LLaVA-13B)\n\n3: Generate visual summary\n\n4: Merge OCR text with VLM summary\n\n5: Store output in Image Meta table"
+      },
+      {
+        "image_id": "IMG-082f8119cb-30-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-082f8119cb-30-1.png",
+        "page": 30,
+        "ocr": "Algorithm 3 Requirement Extraction using RAG\n\nInput: Preprocessed text T\nOutput: Structured requirement dataset\n\n: Split T into semantic chunks\n: Generate embeddings using MiniLM-L6-v2\n\n: Retrieve top-k relevant chunks for classification\n\n1\n2:\n3: Store embeddings in ChromaDB\n4\n5\n\n: Apply RAG reasoning to classify each chunk into:\n\n: ¢ Functional Requirements\n\n6:\n7: ¢ Non-functional Requirements\n8: « Business Requirements\n\n9:\n\n: « System Requirements\n\n10: Store all classified requirements in SQLite",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 56%):\nAlgorithm 3 Requirement Extraction using RAG\nInput: Preprocessed text T\n\nOutput: Structured requirement dataset\n\n1: Split T into semantic chunks\n\n2: Generate embeddings using MiniLM-L6-v2\n\n3: Store embeddings in ChromaDB\n\n4: Retrieve top-k relevant chunks for classification\n5: Apply RAG reasoning to classify each chunk into:\n6: ¢ Functional Requirements\n\n7: ¢ Non-functional Requirements\n\n8: « Business Requirements\n\n9: « System Requirements\n\n10: Store all classified requirements in SQLite"
+      },
+      {
+        "image_id": "IMG-08b09cbaa3-30-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-08b09cbaa3-30-2.png",
+        "page": 30,
+        "ocr": "Algorithm 4 Dashboard Rendering\n\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n5: ¢ Visual summaries\n6: ¢ Export options",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 57%):\nAlgorithm 4 Dashboard Rendering\nInput: Requirements dataset from SQLite\nOutput: Interactive dashboard for user\n\n1: Fetch categorized requirements\n\n2: Generate summary metrics\n\n3: Render UI components:\n\n4: « Requirements list\n\n5: « Visual summaries\n\n6: ¢ Export options"
+      },
+      {
+        "image_id": "IMG-809684d03d-31-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-809684d03d-31-1.png",
+        "page": 31,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify user\n\nsignup with\nvalid email\nand\n\npassword\n\nUser should\nnot exist in\ndatabase.\n\nFastAPl\nserver\nrunning on\nport 8000\n\n1. Send POST to\n/api/auth/signup\n2. Include email,\nusername, and\npassword in request\nbody\n\n3. Verify response\ncontains JWT token\n\nUsername:\n\ntestuser\n\nPassword:\nSecurePass123\n\nHTTP 200\nresponse with\nJWT token.\n\nUser created\nin SQLite DB\nwith berypt\nhashed\npassword\n\nUser should be\nauthenticated\nand token\nshould be valid\nfor 30 days\n\nAs Expected,\nuser created\nsuccessfully",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 41%):\nTest Test Precondition Test data Expected ie aca Pass/fail\ncase ID Objective\n1. Send POST to ;\n, Email: HTTP 200\nUser should Japi/auth/signup\nVerify user ot exist in ; test@flowmind.ai response with User should be\nsignup with database 2. Include email, JWT token. authenticated\nvalid email . username, and Username: User created and token As Expected,\nC001 and FastAPl password in request testuser in SOlite DB should be valid user created\nserver body . successfully\npassword password: with baypt for"
+      },
+      {
+        "image_id": "IMG-6015733a52-32-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-6015733a52-32-1.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify PDF\nupload with\nimage\nextraction\nand OCR\nprocessing\n\nUser\nauthenticated\nwith valid JWT\n\ntoken.\n\nTesseract OCR\ninstalled and\nconfigured\n\n1. Upload PDF with\nimages to\n/api/upload/client\n\n2. Extract text using\nPyPDF\n\n3. Extract images\n\n4, Run Tesseract\nOCR on images\n\nFile: sample.pdf\nFormat: PDF\nSize: < SOMB\n\nContains: Text\nand embedded\nimages\n\nHTTP 200\nresponse.\n\nParsedFile\nrecord created\nin SQLite.\n\nImageMeta\nrecords with\nOCR text\n\nFile stored in\nJuploads\ndirectory.\n\nProgress\ntracker shows\n100%\ncompletion\n\nAs Expected,\nOCR text\nextracted\n\nsuccessfully",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 40%):\nTest Test Precondition Test data Expected Post- Actual Pass/fail\ncase ID Objective result condition Result teh\n1. Upload PDF with\nUser images to «i lepaf HTTP 200\nile: .\nVerify PDF authenticated /api/upload/client sampleP response. File stored in\nupload with with valid JWT 2 Extract text using Format: PDF ParsedFile Juploads\nimage token. PyPDF Size: < 50MB record created directory. As Expected,\nC002 extraction x in SQLite. PI OCR text\nand OCR hee on 3. Extract images Contains: Text : leche extra"
+      },
+      {
+        "image_id": "IMG-38b4c875e5-32-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-38b4c875e5-32-2.png",
+        "page": 32,
+        "ocr": "Test\nObjective\n\nPrecondition\n\nSteps\n\nTest data\n\nExpected\nresult\n\nPost-\ncondition\n\nActual\nResult\n\nPass/fail\n\nVerify hybrid\nRAG\nrequirements\nextraction\nwith\nChromaDB\n\nChromaDB\ninitialized.\nMiniLM-L6-v2\nmodel\ndownloaded.\n\nUser has valid\nJWT token\n\n1. Upload document\nto /api/upload/agent\n\n2. Text split into\n1000-char chunks\n\n3. Generate\nembeddings\n\n4. Extract using\nheuristic + semantic\n\nDocument with\nrequirements:\n\n- Functional\n~ Non-functional\n~ Business\n~ System\n\nrequirements\n\nRequirements\ncategorized\ninto 6 types.\n\nVector\nembeddings\nstored in\nChromaDB.\n\nDeduplication\napplied\n\nAgent learns\npatterns and\nstores in user-\nspecific\ncollection.\n\nPerformance\nmetrics\nupdated\n\nAs Expected,\nrequirements\nextracted and\ncategorized\ncorrectly",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nPrecondition Test data Expected Post Actual Pass/fail\nty objective result condition Result\n1. Upload document -\n, . Requirements\nChromabB to /api/upload/agent Document with ; ‘Agent learns\nVerify hybrid initialized. 7 cements: categorized 9\nRac initialized. 2. Text split into requirements: into 6 types. patterns and\n: MiniLM-L6-v2 1000-char chunks - Functional stores in user- As Expected,\nrequirements “el Non functional Vector specific requirements\n: model 3, Generate ~ Non-functiona .\nextractio"
+      },
+      {
+        "image_id": "IMG-cf1fe404fc-34-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-cf1fe404fc-34-1.png",
+        "page": 34,
+        "ocr": "Client / Project Manager\n\nTeams in the Company\n\nUpload Documents\n\nRun Requirement Extraction\n\nClassily Requirements\nFlowMind System\nGenerate Dashboard View\n\nIntegrate with Trello / Jira Manage Configuration\n\nPerform OOR & Text Extraction\n\n‘Monitor Records & Vector Store\n\nOur System",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nUpload Documents\nPerform OCR & Text Extraction\nAun Bisiifemend Exraaton Iw\n‘Classify Requirements [Sy\nFlowMind System LF\nGenerate Dashboard View\nClient / Project Manager\nOur System\nIntegrate with Treo / Jira Manage Configuration\nTeams in the Company"
+      },
+      {
+        "image_id": "IMG-bcefde751c-35-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-bcefde751c-35-1.png",
+        "page": 35,
+        "ocr": "Validation: File\nSize/Extension Check [cite:\n144, 147]\n\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\n\nRequirements Extraction\n\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\n\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\n\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\n\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay Extracted\nRequirements",
+        "summary": "**Image Type**: Diagram\n**Characteristics**: structured_lines, multiple_rectangles\n\n**Extracted Text** (Confidence: 53%):\nUser Initiates Upload\n(routes/upload_agent_doc)\nValidation: File\nSize/Extension Check [cite:\n144, 147]\nDocument Parsing (PyPDF,\ndocx, pptx) [cite: 319, 320,\n321]\n\nText Chunking (Recursive\nCharacter TextSplitter)\n[cite: 286, 438]\nRequirements Extraction\n(Hybrid: Heuristic +\nSemantic) [cite: 574, 575,\n581]\nDeduplication (Near-\nDuplicate Filter, Threshold\n0.92) [cite: 627, 630]\nSelf-Learning: Apply\nLearned Patterns [cite:\n283, 599]\nFinalization/Save Results\n(LLM/DB persistence) [cite:\n66]\n\nDisplay "
+      },
+      {
+        "image_id": "IMG-5e871886aa-36-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-5e871886aa-36-1.png",
+        "page": 36,
+        "ocr": "+ user_id : int + config_id : int\n\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n\n1| A\n\nuploads configures\n\nyn J. any\n\nParsedFile\n\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\n\ncontains generates ore in \"y via\n\nay many ay many | mens\n\nImageMeta\n\n+ image_id : int + req_id:\n+ file_id : int + file_id : int\n\n| any\n\n+ vector_id : int + integration_id : int\n+ file_id : int + platform : string\n\n+ embedding_path : string + task_ref : string\n\n+ index_name : string + status : string\n\n+ path : string + category : string\n+ ocr_text : text + description : text\n+ vim_summary : text + priority : string",
+        "summary": "**Image Type**: Ui Mockup\n**Characteristics**: structured_lines, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 59%):\n+ user_id : int + config_id : int\n+ name : string + key : string\n+ role : string + value : string\n+ email : string + updated_at : datetime\n| |\nuploads configures\nmany\nN\\ Y. sany\nParsedFile\n+ file_id : int\n+ filename : string\n+ file_type : string\n+ upload_date : datetime\n1 + summary : text\n+ status : string 4\nY \\\ncontains generates elhbedded in linked via\nay many Y many | many J many\nImageMeta Requiremen .\nVectorStori Taskintegratio\n+ image_id : int + req_id: int wo: . en\noa an + vector_id : int "
+      },
+      {
+        "image_id": "IMG-1d1f473430-37-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-1d1f473430-37-1.png",
+        "page": 37,
+        "ocr": "User & API Layer\n\nCore AI Processing\n\nAI Agent Core:\nRequirements\nExtractionAgent\n\nAuthentication/JWT:\nbcrypt, python-jose\n\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nUser & API Layer\nCore AI Processing\n. ue AI Agent Core:\nAuthentication/JWT: gen ore\n. Requirements\nbcrypt, python-jose .\nExtractionAgent\nDatabase: LLM/VLM Service: Document Processing:\n. Vector Store: ChromaDB\nSQLAlchemy/SQLite Ollama/OpenRouter PyPDF/python-docx"
+      },
+      {
+        "image_id": "IMG-aec845db14-37-2",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-aec845db14-37-2.png",
+        "page": 37,
+        "ocr": "Database Layer\n\nMachine Learning Engine\n\nSQLite - Metadata\n\nResults\n\nVectors ChromaDB - Embeddings\n\nBackend Processing (FastAPI)\n\nIntegration Layer\n\nTask Data >  Trello API\nTask Data > Jira API\n\nFrontend Interface\n\nStructured Data\nFile Upload UI Document Web Dashboard Upload Request \\ Visualization Panel\nSemantic Search”",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nMachine Learning Engine | Database Layer\n| SQLite - Metadata\nChromaDB - Embeddings\nBackend Processing (FastAPI)\nVLM Summarizer - Qwen2.5- RAG-based Requirement | —— }\nFile Parser +9}_»-———————————_- [__ Text Extractor OCR Engine - Tesseract ———> ——> 4\nVL/ LLaVA-13B Extractor -\nIntegration Layer\n‘Task Data Trello API\nRequest Handler |\ney Task Datal Jira API\nFrontend Interface\nStructured Data\nFile Upload Ul }-—Document Web Dashboard }—Upload Request \\ Visualization Panel\nSemantic Search ”"
+      },
+      {
+        "image_id": "IMG-3a5c06d168-38-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-3a5c06d168-38-1.png",
+        "page": 38,
+        "ocr": "",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nUpload Document\nPreprocess File: PDF / DOCX /\nPPTX / Image\nPerform OCR & Text Extraction :\nNo\nRun Requirement Extraction\nAgent\nRequirements Extracted?\nYes\nClassify Requirements:\nFunctional / Non-Functional /\nBusiness\nStore Results in Database\nGenerate Dashboard View\nIntegrate Tasks with Trello / Jira\nDisplay Output to User"
+      },
+      {
+        "image_id": "IMG-66aa8258bf-39-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-66aa8258bf-39-1.png",
+        "page": 39,
+        "ocr": "DocumentUploader\n\n+upload(file)\n+validate()\n\n+save_file()\n\nprovides file\n\ny\n\nDocumentParser\n\n+extract_text()\n+extract_images()\n\n+detect_format()\n\npasses images\n\ny\n\nOCREngine\n\n+run_tesseract()\n\n+image_to_text()\n\nsends extracted text\n\n\\\n\nConfigManager\n\ntload_env()\n\nt+update_settings()\n\nmanages config\n\n\"A\n\nRequirementExtractor\n\n+split_chunks()\n\n+embed()\n\n+extract_requirements()\n\nstores embeddings\n\nY\n\nVectorStore\n\n+store_embeddings()\n\n+search(query)\n\nsends\n\n\\\n\nsends tasks\n\nN\\\n\nmanages API keys\n\nv\n\nTaskintegration\n\nresults\n\n+push_to_trello()\n\n+push_to_jira()\n\n\\\n\n|\n\nupdate status\n\nx\n\nDashboard\n\n+generate_view()\n\n+display_summary()",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 23%):\nDocumentUploader\n+upload(file)\n+validate()\n+save_file()\nprovides file\n+extract_text()\n+extract_images()\n+detect_format()\npasses images\nOCREngine ConfigManager\n+run_tesseract() tload_env()\n+image_to_text() t+update_settings()\nsends extracted text manages config\nRequirementExtractor\n| manages API keys\n+split_chunks()\n+embed()\n+extract_requirements()\nstores embeddings sends tasks\nVectorStore Taskintegration\na eer Pp\n+store_embeddings() +push_to_trello()\n+search(query) +push_to_jira()\nupdate status\n"
+      },
+      {
+        "image_id": "IMG-089b12e507-40-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-089b12e507-40-1.png",
+        "page": 40,
+        "ocr": "Client / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nUpload project document\n\n>\nPOST /upload_agent_doc\n\n>\n\nExtract text and images\n\nReturn OCR results\n\nPass parsed content for requirement extraction\n\nDatabase / Vector Store\n\nStore embeddings & requirements\n\nReturn structured requirements\n\nAcknowledge storage\n\nUpdate dashboard with results\n\nDashboard View\n\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent\n\nDatabase / Vector Store\n\nDashboard View",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 50%):\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vector Store Dashboard View\nUpload project document\nPOST /upload_agent_doc\nExtract text and images\nReturn OCR results\nPass parsed content for requirement extraction\nStore embeddings & requirements\nAcknowledge storage\nReturn structured requirements\nUpdate dashboard with results\nDisplay classified requirements and summaries\n\nClient / Project Manager Frontend (UI) FastAPI Server OCR Module RAG Agent Database / Vec"
+      },
+      {
+        "image_id": "IMG-23c5df42f6-41-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-23c5df42f6-41-1.png",
+        "page": 41,
+        "ocr": "UPLOADING\n\nValidation Success\n\nDocument Structure Read\n\nTEXT_EXTRACTION\n\nText Extracted\n\nIMAGE_DETECTION\n\nImages Detected\n\nOCR_PROCESSING\n\nNo Images Found OCR Text Extracted\n\n+\n\nIMAGE_SUMMARIZATION\n\nVLM Summarization\n\nComplete\n\nVA\n\nFINALIZING\n\nRAG/Extraction Complete\n\n+\n\nCOMPLETE\n\n©",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 34%):\nUPLOADING\nValidation Success\nStage Values: |\nUPLOADING, PARSING,\nTEXT_EXTRACTION,\nIMAGE_DETECTION, { Parsins |\nOCR_PROCESSING,\nIMAGE_SUMMARIZATION,\nFINALIZING\nDocument Structure Read\nTEXT_EXTRACTION\nText Extracted\nIMAGE_DETECTION\nImages Detected\nOCR_PROCESSING\nNo Images Found OCR Text Extracted\nIMAGE_SUMMARIZATION\nVLM Summarization\nComplete\nFINALIZING\nRAG/Extraction Complete\nCOMPLETE\n©"
+      },
+      {
+        "image_id": "IMG-d99d8f986e-42-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-d99d8f986e-42-1.png",
+        "page": 42,
+        "ocr": "Unsupported markdown: list» Uploads Directory\n\nUnsupported markdown: list» SQLite Database\n\nFlowMind System\\n(Document\n\nClient / Project Manager ¢ Unsupported markdown: list_y\n\nUpload & Processing)\n\\ Unsupported markdown: list > ChromaDB Vector Store\n\nUnsupported markdown: list\n\nUnsupported markdown: list\n\noS\nDashboard View / Report ‘af\nUnsupported markdown: list\n\nSystem Admin §",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nUnsupported markdown: list ———}> Uploads Directory\nUnsupported markdown: list» SQLite Database\nU ted markdown: list —\nlen. hajeeiMenere7 nsupporied markgown. 's > FlowMind System\\n(Document\nUpload & Processing)\n\\ a Unsupported markdown: list —P | Gp -omapB Vector Store\nUnsupported markdown: list\nUnsupported markdown: list\noS\nSystem Admin § Dashboard View / Report ‘af\nUnsupported markdown: list"
+      },
+      {
+        "image_id": "IMG-f384394a44-43-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-f384394a44-43-1.png",
+        "page": 43,
+        "ocr": "Client / Project Manager ¢\n\n1.1 Upload File ee\n\nmori System\n1.0 Upload Document\n\na _~\n\n1.3 Send File for Processing 1.2 Saved File\n\n2.0 Preprocess & OCR\n\n2.1 OCR Text & Images Config / Env Settings\n\na\n\n3.0 Requirement Extraction\n\nD3: Uploads Folder\n\nSystem Admin §\n\n5.2 View Results\n\n(RAG Agent)\n\n3.1 Extracted Requirements\n\nv\n\n4.0 Store & Index Data\n\na\n\n4.3 Generate Dashboard Data 4.1 wile in DB pos 2 Create Embeddings\n\n: ee en\n\n5.0 Generate Dashboard /\n\nD1: SQLite Database D2: ChromaDB Vector Store\n\nReport\n\n5.1 Show Dashboard\n\nos\n\n‘ul Dashboard View / Output\n\nReport",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nClient / Project Manager ¢\n1.1 Upload File\nmori System\n1.0 Upload Document\n1.3 Send File for Processing 1.2 Saved File\n2.0 Preprocess & OCR D3: Uploads Folder System Admin §\n2.1 OCR Text & Images Config / Env Settings\n3.0 Requirement Extraction ;\n5.2 View Results\n(RAG Agent)\n3.1 Extracted Requirements\n4.0 Store & Index Data\n4.3 Generate Dashboard Data 4.1 StoreinDB 4.2 Create Embeddings\n5.0 Generate Dashboard / ie ee\nReport D1: SQLite Database D2: ChromaDB Vector Store\n5.1 Show Dashboard\nooo il "
+      },
+      {
+        "image_id": "IMG-88e5507f9c-44-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-88e5507f9c-44-1.png",
+        "page": 44,
+        "ocr": "Client / Project Manager §\nSubmit File oo\n\n1.0 Document Upjpad & OCR\n\n1.1 Upload File\n\nValidated File\nVv\n\n1.2 Validate File Type & Format\n\nPass for Extraction\n\nVv\n\n1.3 Extract Text and Images Send to Requirement Extraction\n\nImages for OCR\nVv\n\n1.4 Perform OCR (pytesseract\n\n+ Pillow)\n\nOCR Text Output\nVv\n\n1.5 Save Processed Output\n\nSave Files Store Extracted Content Output Text & Images\n\n: . N\\\nParsed Text & Image Data\n\nD1: Uploads Folder D2: Temporary Parsed Data",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 49%):\nSubmit Pe\n1.0 Document _ & OCR\nae File\nPass wt\nSend to Requirement Extraction\noe OCR\n+ Pillow)\nOCR vel Output\nv\n|\nSave Files Store Extracted Content Output Text & Images\nv v ‘N\\,\n> Se"
+      },
+      {
+        "image_id": "IMG-54b8150bca-45-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-54b8150bca-45-1.png",
+        "page": 45,
+        "ocr": "Parsed Text & Image Data\nProvide Parsed Text ae\n\n2.0 aeauteni Extraction\n\n2b.1 Segment & Chunk Text\n\nChunked Data\n\n2b.2 Generate Embeddings\n\n(LangChain + MiniLM)\n\nSend Chunks to Models Embeddings\n\n2b.3 Query VLM Ensemble\n\nDisplay on Dashboard\n(Ollama Models)\n\nD1: ChromaDB Vector Store\n\nModel Summaries\n\nv\n\n2b.4 Merge and Refine\nExtracted Requirements\n\nExtracted Requirements\n\nv\n\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\n\n(>\n\nStore Results Generate Output\n\nv\n\nD2: SQLite Database Classified Requirements\n\n(Requirements Table) Summary —",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, table_structure, multiple_rectangles\n\n**Extracted Text** (Confidence: 44%):\nParsed Text & Image Data §\nProvide Parsed Text\n2.0 —e Extraction\n2b.1 Segment & Chunk Text\nChunked Data\n2b.2 Generate Embeddings\n(LangChain + MiniLM)\nSend Chunks to Models Embeddings\n2b.3 Query VLM Ensemble Displ Dashboard\n(Ollama Models) D1: ChromaDB Vector Store splay on Rasnboar\nModel Summaries\n2b.4 Merge and Refine\nExtracted Requirements\nExtracted Requirements\n2b.5 Classify (Functional / Non-\nFunctional / Business / System)\nStore Results Generate Output\nD2: SQLite Database Classified Require"
+      },
+      {
+        "image_id": "IMG-840316eba2-46-1",
+        "path": "uploads/FYP1-FinalReport-F25_387-D-Flowmind.pdf_IMG-840316eba2-46-1.png",
+        "page": 46,
+        "ocr": "Client / Project Manager D1: SQLite Database\n\na\n\nRequest Analysis View\n\n3.0 Dashbgard & Integration\n\n2c.1 Fetch Classified\n\nRequirements from Database\n\nRequirements Data\n\nVv\n\n2c.2 Generate Dashboard View\n(/view_requirements)\n\nTasks for Export\n\nv\n\n2c.3 Push Tasks to Trello / Jira\n\n(API Integration)\n\nTask API Call\nRendered Dashboard\n\nResponse / Status\n\nv\n\n2c.4 Update Status & Logs\n\nUpdate UI\n\nS\n\nidl Interactive Dashboard\n\nDisplay\n\nUser View / Feedback\n\nTrello / Jira Platform ©*\n\nD2: Task Integration Log",
+        "summary": "**Image Type**: Flowchart\n**Characteristics**: structured_lines, flowchart_keywords, chart_keywords, ui_elements, multiple_rectangles\n\n**Extracted Text** (Confidence: 39%):\nClient / Project Manager D1: SQLite Database\nRequest Analysis View\n3.0 safer & Integration\n2c.1 Fetch Classified\nRequirements from Database\nRequirements Data\n2c.2 Generate Dashboard View\n(/view_requirements)\nTasks for Export\n2c.3 Push Tasks to Trello / Jira ;\n. User View / Feedback\n(API Integration)\nTask API Call\nRendered Dashboard Trello / Jira Platform ©*\nResponse / Status\n2c.4 Update Status & Logs\nUpdate UI Store Logs\nidl Interactive Dashboard\nDisplay D2: Task Integration Log"
+      }
+    ]
   }
 }
