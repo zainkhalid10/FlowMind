@@ -20,6 +20,76 @@
             min-height: 100vh;
             color: #1e293b;
         }
+
+        .section-shell {
+            background: white;
+            padding: 64px 24px;
+            margin: 40px 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.45);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 22px 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.04);
+        }
+
+        .info-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .info-card p {
+            color: #475569;
+            line-height: 1.6;
+            margin: 0;
+            font-size: 0.98rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.04);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+
+        .metric-label {
+            margin-top: 6px;
+            font-weight: 600;
+            color: #475569;
+            letter-spacing: 0.2px;
+        }
         
         .hero-section {
             padding: 80px 20px;
@@ -490,6 +560,51 @@
         <p>Intelligent Document Analysis & Requirements Extraction</p>
     </div>
     
+    <div class="section-shell" aria-label="About FlowMind">
+        <h2 style="text-align: center; font-size: 2.5rem; font-weight: 700; color: #1e293b; margin-bottom: 2rem;">
+            <i class="fas fa-info-circle"></i> What FlowMind Does
+        </h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3><i class="fas fa-bolt"></i> What is FlowMind?</h3>
+                <p>FlowMind is an intelligent document analysis platform that turns messy PDFs, slides, and docs into structured insights, cleanly grouped requirements, and AI-ready context.</p>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-shield-alt"></i> No Login Needed to Learn</h3>
+                <p>Explore what FlowMind does right on this page. The overview and live stats are visible to everyone—log in only when you’re ready to extract and approve.</p>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-brain"></i> RAG + OCR + Vision</h3>
+                <p>Hybrid RAG, OCR, and image understanding work together to pull text, visuals, and hidden patterns so you can approve features faster.</p>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-check-circle"></i> Ready for Teams</h3>
+                <p>Role-aware approvals, dashboards, and training loops keep teams aligned while FlowMind continuously learns from your feedback.</p>
+            </div>
+        </div>
+        <h2 style="text-align: center; font-size: 2.5rem; font-weight: 700; color: #1e293b; margin-top: 3rem; margin-bottom: 2rem;">
+            <i class="fas fa-chart-bar"></i> Our Impact
+        </h2>
+        <div class="metrics-grid" aria-label="FlowMind Stats">
+            <div class="metric-card">
+                <div class="metric-value" id="stat-documents">-</div>
+                <div class="metric-label">Documents Scanned</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="stat-clients">-</div>
+                <div class="metric-label">Clients</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="stat-patterns">-</div>
+                <div class="metric-label">Patterns Learned</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="stat-accuracy">-</div>
+                <div class="metric-label">Extraction Accuracy</div>
+            </div>
+        </div>
+    </div>
+    
     <div class="features-section">
         <div class="container">
             <div class="row">
@@ -608,6 +723,52 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Load public statistics on page load
+        async function loadPublicStats() {
+            try {
+                const response = await fetch('/api/public/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Format and display documents
+                    const docs = data.documents_scanned || 0;
+                    document.getElementById('stat-documents').textContent = docs.toLocaleString() + (docs > 0 ? '+' : '');
+                    
+                    // Format and display clients
+                    const clients = data.clients || 0;
+                    document.getElementById('stat-clients').textContent = clients.toLocaleString() + (clients > 0 ? '+' : '');
+                    
+                    // Format and display patterns
+                    const patterns = data.patterns_learned || 0;
+                    let patternsText = patterns.toLocaleString();
+                    if (patterns >= 1000) {
+                        patternsText = (patterns / 1000).toFixed(1) + 'K';
+                    }
+                    document.getElementById('stat-patterns').textContent = patternsText;
+                    
+                    // Format and display accuracy
+                    const accuracy = data.accuracy || 0;
+                    document.getElementById('stat-accuracy').textContent = accuracy.toFixed(1) + '%';
+                } else {
+                    // Fallback to default values if API fails
+                    document.getElementById('stat-documents').textContent = '0';
+                    document.getElementById('stat-clients').textContent = '0';
+                    document.getElementById('stat-patterns').textContent = '0';
+                    document.getElementById('stat-accuracy').textContent = '0%';
+                }
+            } catch (error) {
+                console.error('Error loading public stats:', error);
+                // Fallback to default values on error
+                document.getElementById('stat-documents').textContent = '0';
+                document.getElementById('stat-clients').textContent = '0';
+                document.getElementById('stat-patterns').textContent = '0';
+                document.getElementById('stat-accuracy').textContent = '0%';
+            }
+        }
+        
+        // Load stats when page loads
+        window.addEventListener('DOMContentLoaded', loadPublicStats);
+        
         function showTab(tab) {
             // Update tabs
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));

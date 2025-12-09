@@ -1,5 +1,5 @@
 """File upload and extraction routes"""
-from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, BackgroundTasks, Form
 from sqlalchemy.orm import Session
 from database import SessionLocal, ParsedFile, User
 from auth import get_current_user, get_db
@@ -74,10 +74,14 @@ async def upload_client_doc(
 @router.post("/upload_agent_doc")
 async def upload_agent_doc(
     file: UploadFile = File(...),
+    basic_extraction_text: str = Form(None),
+    basic_extraction_full_text: str = Form(None),
+    basic_extraction_image_summaries: str = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """JSON response for AI agent document analysis. Requires authentication."""
+    """JSON response for AI agent document analysis. Requires authentication.
+    Optionally accepts Basic Extraction data to merge with AI analysis."""
     # Validate file extension
     if not validate_file_extension(file.filename):
         raise HTTPException(
@@ -99,13 +103,37 @@ async def upload_agent_doc(
     # Reset file pointer for processing
     await file.seek(0)
     
+    # Parse Basic Extraction image summaries if provided
+    basic_extraction_data = None
+    if basic_extraction_text or basic_extraction_full_text or basic_extraction_image_summaries:
+        import json
+        image_summaries = []
+        if basic_extraction_image_summaries:
+            try:
+                image_summaries = json.loads(basic_extraction_image_summaries)
+            except:
+                pass
+        
+        basic_extraction_data = {
+            "extracted_text": basic_extraction_text or "",
+            "full_text": basic_extraction_full_text or "",
+            "image_summaries": image_summaries
+        }
+        print(f"✅ Received Basic Extraction data: {len(basic_extraction_text or '')} chars text, {len(image_summaries)} image summaries")
+    
     # Create progress tracker
     tracker_id, tracker = create_progress_tracker()
     tracker.start()
     
     try:
-        # Process document with progress tracking
-        result = await analyze_with_agent(file, current_user.id, db, progress_tracker_id=tracker_id)
+        # Process document with progress tracking and Basic Extraction data
+        result = await analyze_with_agent(
+            file, 
+            current_user.id, 
+            db, 
+            progress_tracker_id=tracker_id,
+            basic_extraction_data=basic_extraction_data
+        )
         # Add tracker ID to response
         result["progress_tracker_id"] = tracker_id
         return result

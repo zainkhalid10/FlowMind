@@ -159,21 +159,26 @@
         
         .btn {
             width: 100%;
-            padding: 16px 20px;
+            padding: 14px 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: 2px solid transparent;
-            border-radius: 12px;
+            border-radius: 10px;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 15px;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             border-color: rgba(255, 255, 255, 0.3);
         }
         
@@ -185,11 +190,17 @@
         
         .btn-success {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.2);
         }
         
         .btn-success:hover {
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .navbar .btn {
+            width: auto;
+            min-width: 120px;
+            padding: 12px 24px;
         }
         
         .progress-container {
@@ -559,9 +570,9 @@
                     return;
                 }
                 
-                // Add timeout to prevent hanging
+                // Add timeout to prevent hanging (increased to 10 seconds)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                 
                 const response = await fetch('/api/training-status', {
                     headers: {
@@ -874,6 +885,15 @@
                     output.classList.add('show');
                     showSuccess('basic-alert', 'Extraction completed successfully!');
                     
+                    // Store Basic Extraction results for use with Analyze with AI
+                    window.lastBasicExtraction = {
+                        extracted_text: data.extracted_text || '',
+                        image_summaries: data.image_summaries || [],
+                        full_text: data.full_text || '',
+                        filename: data.filename || fileInput.files[0].name
+                    };
+                    console.log('✅ Basic Extraction results stored for AI analysis');
+                    
                     // Final progress update
                     progressBar.style.width = '100%';
                     progressText.textContent = 'Complete!';
@@ -965,6 +985,21 @@
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 
+                // Add Basic Extraction results if available
+                if (window.lastBasicExtraction) {
+                    formData.append('basic_extraction_text', window.lastBasicExtraction.extracted_text || '');
+                    formData.append('basic_extraction_full_text', window.lastBasicExtraction.full_text || '');
+                    if (window.lastBasicExtraction.image_summaries && window.lastBasicExtraction.image_summaries.length > 0) {
+                        formData.append('basic_extraction_image_summaries', JSON.stringify(window.lastBasicExtraction.image_summaries));
+                    }
+                    console.log('✅ Passing Basic Extraction data to AI analysis');
+                    console.log('   - Text length:', window.lastBasicExtraction.extracted_text?.length || 0);
+                    console.log('   - Full text length:', window.lastBasicExtraction.full_text?.length || 0);
+                    console.log('   - Image summaries:', window.lastBasicExtraction.image_summaries?.length || 0);
+                } else {
+                    console.log('⚠️ No Basic Extraction data available - AI will process independently');
+                }
+                
                 let progressPollInterval = null;
                 
                 try {
@@ -988,9 +1023,19 @@
                 
                 console.log('Extract Agent: Response headers:', [...response.headers.entries()]);
                 console.log('Extract Agent: Response status:', response.status);
+                console.log('Extract Agent: Response ok:', response.ok);
                 
                 if (response.ok) {
-                    const data = await response.json();
+                    let data;
+                    try {
+                        const responseText = await response.text();
+                        console.log('Extract Agent: Response text length:', responseText.length);
+                        console.log('Extract Agent: Response text preview:', responseText.substring(0, 500));
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error('Extract Agent: JSON parse error:', parseError);
+                        throw new Error('Failed to parse server response. The server may have returned an error.');
+                    }
                     
                     console.log('Extract Agent: Result received:', data);
                     console.log('Extract Agent: Result type:', typeof data);
@@ -1016,20 +1061,38 @@
                         progressText.textContent = 'Processing... 90%';
                     }
                     
-                    // Display results
+                    // Display results - check for any response data
+                    console.log('📊 Full response data:', JSON.stringify(data, null, 2));
+                    console.log('📊 Data keys:', Object.keys(data || {}));
+                    
                     if (data && data.requirements_extraction) {
                         console.log('✅ requirements_extraction exists:', data.requirements_extraction);
+                        console.log('✅ requirements_extraction keys:', Object.keys(data.requirements_extraction || {}));
                         console.log('✅ requirements_extraction.response:', data.requirements_extraction.response);
                         console.log('✅ requirements_extraction.response length:', data.requirements_extraction.response?.length || 0);
+                        console.log('✅ requirements_extraction.status:', data.requirements_extraction.status);
                         
                         output.innerHTML = formatAIResults(data, 'agent');
                         output.classList.add('show');
                         showSuccess('agent-alert', 'AI analysis completed successfully!');
                         // Reload learning status after processing
                         loadLearningStatus();
+                    } else if (data && (data.extraction_summary || data.agent_processing)) {
+                        // Fallback: show what we have even if requirements_extraction is missing
+                        console.warn('⚠️ requirements_extraction missing, but other data exists');
+                        console.log('📊 Available data:', {
+                            extraction_summary: data.extraction_summary,
+                            agent_processing: data.agent_processing,
+                            filename: data.filename
+                        });
+                        output.innerHTML = formatAIResults(data, 'agent');
+                        output.classList.add('show');
+                        showSuccess('agent-alert', 'Processing completed! Some data may be missing.');
+                        loadLearningStatus();
                     } else {
-                        console.warn('⚠️ requirements_extraction missing from result');
-                        showError('agent-alert', 'Processing completed but no requirements were extracted. Please check the document.');
+                        console.error('❌ No valid data in response');
+                        console.error('📊 Response data:', data);
+                        showError('agent-alert', 'Processing completed but no results were returned. Please check the server logs.');
                     }
                     
                     // Finalize progress
@@ -1093,7 +1156,15 @@
                 }
             } catch (error) {
                 console.error('Extract Agent: Error:', error);
-                showError('agent-alert', 'Network error. Please check your connection.');
+                console.error('Extract Agent: Error stack:', error.stack);
+                console.error('Extract Agent: Error name:', error.name);
+                console.error('Extract Agent: Error message:', error.message);
+                
+                let errorMsg = 'Network error. Please check your connection.';
+                if (error.message) {
+                    errorMsg += ` (${error.message})`;
+                }
+                showError('agent-alert', errorMsg);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-magic"></i> Analyze with AI';
                 progressBar.style.width = '100%';

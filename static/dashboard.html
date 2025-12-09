@@ -192,22 +192,25 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 8px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 15px;
+            min-width: 120px;
+            height: 44px;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
         }
         
         .btn-dashboard:hover {
             transform: translateY(-2px);
             color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
         }
         
         .btn-dashboard i {
@@ -215,11 +218,23 @@
         }
         
         .btn-outline-danger {
-            border: 1px solid #dc3545;
-            padding: 10px 20px;
-            border-radius: 8px;
+            border: 2px solid #dc3545;
+            padding: 12px 24px;
+            border-radius: 10px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 15px;
+            min-width: 120px;
+            height: 44px;
+            background: transparent;
+            color: #dc3545;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-danger:hover {
+            background: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
         }
         
         @media (max-width: 768px) {

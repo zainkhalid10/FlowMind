@@ -1858,6 +1858,13 @@ Thought: {agent_scratchpad}""",
                 "features": "Named features or capabilities the product provides; specific functionalities; product capabilities; feature descriptions",
             }
 
+            # Limit sentence processing for very large documents to avoid timeout
+            max_sentences_to_process = 3000  # Limit to prevent timeout
+            if len(sentences) > max_sentences_to_process:
+                print(f"⚠️  Large document detected ({len(sentences)} sentences), limiting processing to {max_sentences_to_process} sentences")
+                # Take first and last sentences (often most important)
+                sentences = sentences[:max_sentences_to_process//2] + sentences[-max_sentences_to_process//2:]
+            
             # Compute embeddings
             sentence_embeddings = self.embeddings.embed_documents(sentences)
             category_names = list(categories.keys())
@@ -1924,7 +1931,8 @@ Thought: {agent_scratchpad}""",
                     score -= noise_matches * 0.05
                     
                     # Enhanced learned boost: if similar to any previously learned requirement
-                    if learned_collection is not None:
+                    # Skip for very long documents to avoid timeout (only check every 10th sentence)
+                    if learned_collection is not None and len(sentences) < 2000 and idx % 10 == 0:
                         try:
                             sim = learned_collection.similarity_search_with_score(s, k=1)
                             if sim and sim[0][1] is not None:
@@ -2205,11 +2213,20 @@ Thought: {agent_scratchpad}""",
             
             # Try multiple extraction methods - optimized order: fastest first
             # Heuristic is fastest (pattern matching), then pattern (learned), then semantic (embeddings - slowest)
+            # Skip semantic for very large texts to avoid timeout
+            text_length = len(text) if text else 0
+            skip_semantic = text_length > 100000  # Skip semantic for large documents (>100k chars) to avoid timeout
+            
             methods = [
                 ("heuristic", self._heuristic_extract),  # Fastest - pattern matching
                 ("pattern", self._advanced_pattern_extract),  # Medium - learned patterns
-                ("semantic", self._semantic_extract)  # Slowest - embedding-based, try last
             ]
+            
+            # Only add semantic if text is not too large
+            if not skip_semantic:
+                methods.append(("semantic", self._semantic_extract))  # Slowest - embedding-based, try last
+            else:
+                print(f"⚠️  Skipping semantic extraction (text too large: {text_length} chars, would be slow)")
             
             best_result = None
             best_score = 0
@@ -2219,7 +2236,20 @@ Thought: {agent_scratchpad}""",
             for method_name, method_func in methods:
                 try:
                     print(f"🔄 Trying {method_name} extraction method...")
+                    import time
+                    start_time = time.time()
                     result = method_func(text)
+                    elapsed = time.time() - start_time
+                    print(f"  ⏱️  {method_name} completed in {elapsed:.2f}s")
+                    
+                    # Early exit if we get a good result from a fast method
+                    if method_name in ["heuristic", "pattern"] and result.get("status") == "success" and result.get("response"):
+                        response = result.get("response", "")
+                        if len(response.strip()) > 200:  # Good enough result
+                            print(f"  ✅ Got good result from {method_name}, skipping slower methods")
+                            best_result = result
+                            method_used = method_name
+                            break
                     
                     # Debug: Show what we got
                     print(f"  📊 {method_name} result status: {result.get('status')}")
@@ -2269,6 +2299,9 @@ Thought: {agent_scratchpad}""",
                     }
                     method_used = "learned_patterns"
             
+            # Store result for potential partial return on timeout
+            self.last_extraction_result = best_result if best_result else None
+            
             if best_result:
                 # Ensure best_result has required fields
                 if not best_result.get("response"):
@@ -2276,43 +2309,55 @@ Thought: {agent_scratchpad}""",
                 if not best_result.get("status"):
                     best_result["status"] = "success"
                 
-                # Learn from successful extraction - merge learned results with extraction results
-                if self.enable_self_learning and text:
-                    # Parse the best result to extract sections for learning
-                    response_text = best_result.get("response", "")
-                    # Extract sections from formatted response
-                    sections_to_learn = self._parse_response_to_sections(response_text)
-                    # Merge with learned results
-                    merged_sections = {}
-                    for category, items in sections_to_learn.items():
-                        merged_sections[category] = list(set(items + learned_results.get(category, [])))
-                    
-                    # Learn from merged sections
-                    if merged_sections:
-                        total_before = sum(len(patterns['keywords']) + len(patterns['phrases']) + len(patterns['patterns']) for patterns in self.learned_patterns.values())
-                        self._learn_from_extraction(text, merged_sections, getattr(self, "last_source", ""))
-                        total_after = sum(len(patterns['keywords']) + len(patterns['phrases']) + len(patterns['patterns']) for patterns in self.learned_patterns.values())
-                        improvement = total_after - total_before
-                        if improvement > 0:
-                            print(f"📈 Knowledge base improved: +{improvement} new patterns (total: {total_after})")
-                
-                # Update performance metrics with enhanced tracking
-                success = best_result.get("status") == "success"
-                categories_found = list(learned_results.keys()) if learned_results else []
-                # Also extract categories from best result
-                response_text = best_result.get("response", "")
-                parsed_categories = self._parse_response_to_sections(response_text)
-                categories_found.extend(list(parsed_categories.keys()))
-                categories_found = list(set(categories_found))  # Remove duplicates
-                self._update_performance_metrics(method_used, success, categories_found)
-                
-                # Add learning info to result
+                # Add learning info to result FIRST (before learning, which might be slow)
                 best_result["extraction_method"] = method_used
                 best_result["learning_enabled"] = self.enable_self_learning
                 best_result["quality_score"] = best_score
                 
                 print(f"✅ Used {method_used} extraction method")
                 print(f"📊 Result status: {best_result.get('status')}, Response length: {len(str(best_result.get('response', '')))}")
+                print(f"📊 About to return best_result from extract_requirements...")
+                
+                # Do learning in background (non-blocking) - don't block return
+                import threading
+                
+                def do_learning():
+                    try:
+                        if self.enable_self_learning and text:
+                            # Parse the best result to extract sections for learning
+                            response_text = best_result.get("response", "")
+                            # Extract sections from formatted response
+                            sections_to_learn = self._parse_response_to_sections(response_text)
+                            # Merge with learned results
+                            merged_sections = {}
+                            for category, items in sections_to_learn.items():
+                                merged_sections[category] = list(set(items + learned_results.get(category, [])))
+                            
+                            # Learn from merged sections
+                            if merged_sections:
+                                total_before = sum(len(patterns['keywords']) + len(patterns['phrases']) + len(patterns['patterns']) for patterns in self.learned_patterns.values())
+                                self._learn_from_extraction(text, merged_sections, getattr(self, "last_source", ""))
+                                total_after = sum(len(patterns['keywords']) + len(patterns['phrases']) + len(patterns['patterns']) for patterns in self.learned_patterns.values())
+                                improvement = total_after - total_before
+                                if improvement > 0:
+                                    print(f"📈 Knowledge base improved: +{improvement} new patterns (total: {total_after})")
+                        
+                        # Update performance metrics
+                        success = best_result.get("status") == "success"
+                        categories_found = list(learned_results.keys()) if learned_results else []
+                        response_text = best_result.get("response", "")
+                        parsed_categories = self._parse_response_to_sections(response_text)
+                        categories_found.extend(list(parsed_categories.keys()))
+                        categories_found = list(set(categories_found))
+                        self._update_performance_metrics(method_used, success, categories_found)
+                    except Exception as learn_error:
+                        print(f"⚠️ Learning/performance update failed (non-critical): {learn_error}")
+                
+                # Start learning in background thread (non-blocking)
+                learning_thread = threading.Thread(target=do_learning, daemon=True)
+                learning_thread.start()
+                
+                print(f"📊 Returning best_result now (learning running in background)...")
                 return best_result
             
             # If all methods failed, return error

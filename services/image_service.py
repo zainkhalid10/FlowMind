@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 from typing import Optional, Dict, List
 import re
+import io
 
 
 def _get_env_bool(key: str, default: bool = False) -> bool:
@@ -274,13 +275,82 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
     
     try:
         with open(image_path, 'rb') as f:
-            b64 = base64.b64encode(f.read()).decode('utf-8')
+            image_data = f.read()
+            # Optimize: Check image size and warn if very large
+            image_size_mb = len(image_data) / (1024 * 1024)
+            if image_size_mb > 10:
+                print(f"   ⚠️  Large image detected ({image_size_mb:.1f} MB) - processing may take longer")
+            b64 = base64.b64encode(image_data).decode('utf-8')
         
         # Build smart prompt based on image type
         prompt = build_smart_prompt(image_type, ocr_text, context)
         
-        print(f"   📤 Sending image to VLM... (this may take 10-30 seconds)")
+        # Get timeout from environment or use default (60 seconds - reduced for faster failure)
+        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
         
+        # Check if VLM is enabled (can be disabled if models are slow/unavailable)
+        vlm_enabled = os.getenv("FLOWMIND_USE_VLM", "true").lower() == "true"
+        if not vlm_enabled:
+            print(f"   ⚠️  VLM is disabled (FLOWMIND_USE_VLM=false), skipping VLM analysis")
+            return {
+                'interpretation': '',
+                'requirements': [],
+                'components': [],
+                'confidence': 0
+            }
+        
+        # Quick health check - test if model responds quickly (skip if slow)
+        print(f"   🔍 Quick VLM health check (15s timeout)...")
+        try:
+            # Test with tiny image first
+            test_img = Image.new('RGB', (5, 5), color='red')
+            test_buf = io.BytesIO()
+            test_img.save(test_buf, format='PNG')
+            test_b64 = base64.b64encode(test_buf.getvalue()).decode()
+            
+            test_resp = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": model,
+                    "prompt": "OK",
+                    "images": [test_b64],
+                    "stream": False,
+                    "options": {"num_predict": 5, "temperature": 0.1}
+                },
+                timeout=15  # Quick 15s test
+            )
+            if not test_resp.ok:
+                print(f"   ⚠️  VLM model {model} is not responding (HTTP {test_resp.status_code}), skipping")
+                return {
+                    'interpretation': '',
+                    'requirements': [],
+                    'components': [],
+                    'confidence': 0
+                }
+            print(f"   ✅ VLM health check passed")
+        except requests.exceptions.Timeout:
+            print(f"   ⚠️  VLM model {model} timed out on health check (15s), skipping VLM analysis")
+            print(f"   💡 VLM models appear to be slow or unavailable")
+            print(f"   💡 Set FLOWMIND_USE_VLM=false in .env to disable VLM permanently")
+            return {
+                'interpretation': '',
+                'requirements': [],
+                'components': [],
+                'confidence': 0
+            }
+        except Exception as e:
+            print(f"   ⚠️  VLM health check failed: {type(e).__name__}: {str(e)[:50]}, skipping VLM")
+            return {
+                'interpretation': '',
+                'requirements': [],
+                'components': [],
+                'confidence': 0
+            }
+        
+        print(f"   📤 Sending image to VLM... (this may take 30-120 seconds, timeout: {vlm_timeout}s)")
+        print(f"   ⏳ Please wait, VLM models can take time to process images...")
+        
+        # Optimize request parameters - reduce for faster processing
         resp = requests.post(
             "http://localhost:11434/api/generate",
             json={
@@ -289,12 +359,14 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
                 "images": [b64],
                 "stream": False,
                 "options": {
-                    "temperature": 0.3,
+                    "temperature": 0.2,
                     "top_p": 0.9,
-                    "num_predict": 500  # Max tokens
+                    "num_predict": 500,  # Reduced from 1000 for faster processing
+                    "num_ctx": 2048,  # Reduced from 4096
+                    "repeat_penalty": 1.1
                 }
             },
-            timeout=60.0  # Increased timeout for VLM processing
+            timeout=vlm_timeout
         )
         
         if resp.ok:
@@ -326,7 +398,11 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             print(f"   Error: {resp.text[:200]}")
             
     except requests.exceptions.Timeout:
-        print(f"   ⏱️  VLM request timed out (>60s)")
+        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+        print(f"   ⏱️  VLM request timed out after {vlm_timeout}s")
+        print(f"   ⚠️  VLM model {model} appears to be slow or unavailable")
+        print(f"   💡 To disable VLM: Set FLOWMIND_USE_VLM=false in .env")
+        print(f"   💡 To increase timeout: Set FLOWMIND_VLM_TIMEOUT=120 in .env")
     except Exception as e:
         print(f"   ❌ VLM analysis exception: {type(e).__name__}: {str(e)}")
         import traceback

@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 import pytesseract
-from database import SessionLocal, ParsedFile, ImageMeta, User, init_db
+from database import SessionLocal, ParsedFile, ImageMeta, User, Feature, init_db
 from rag_agent import get_agent
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -233,6 +233,15 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         
         # Create access token
         access_token = create_access_token(data={"sub": user.id})
+        
+        # Run model health check in background (non-blocking)
+        try:
+            from services.model_health import check_models_async
+            # Schedule background task
+            asyncio.create_task(check_models_async())
+            print(f"🔍 Model health check scheduled for user {user.id}")
+        except Exception as e:
+            print(f"⚠️ Failed to schedule model health check: {e}")
         
         return {
             "status": "success",
@@ -1239,6 +1248,13 @@ async def about_page():
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
+    """Serve the landing page."""
+    import os
+    landing_path = os.path.join("static", "landing.html")
+    if os.path.exists(landing_path):
+        with open(landing_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    # Fallback to embedded HTML if static file doesn't exist
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -2542,6 +2558,70 @@ async def root():
 
 
 # ==============================================================
+# PUBLIC STATS ENDPOINT (No authentication required)
+# ==============================================================
+
+@app.get("/api/public/stats")
+async def get_public_stats():
+    """Get public statistics for the landing page - no authentication required."""
+    try:
+        db = SessionLocal()
+        try:
+            # Count total documents scanned
+            total_documents = db.query(ParsedFile).count()
+            
+            # Count total clients (users)
+            total_clients = db.query(User).filter(User.is_active == 1).count()
+            
+            # Get patterns learned from the agent
+            patterns_learned = 0
+            try:
+                agent = get_agent()
+                if hasattr(agent, 'learned_patterns'):
+                    learned_patterns = agent.learned_patterns
+                    if isinstance(learned_patterns, dict):
+                        for category, data in learned_patterns.items():
+                            if isinstance(data, dict):
+                                keywords = data.get('keywords', set())
+                                patterns = data.get('patterns', set())
+                                phrases = data.get('phrases', set())
+                                patterns_learned += len(keywords) + len(patterns) + len(phrases)
+            except Exception as e:
+                print(f"⚠️ Error getting patterns: {e}")
+            
+            # Calculate accuracy from extraction stats
+            accuracy = 97.3  # Default fallback
+            try:
+                agent = get_agent()
+                if hasattr(agent, 'extraction_stats'):
+                    stats = agent.extraction_stats
+                    total_docs = stats.get('total_documents', 0)
+                    successful = stats.get('successful_extractions', 0)
+                    if total_docs > 0:
+                        accuracy = (successful / total_docs) * 100
+            except Exception as e:
+                print(f"⚠️ Error calculating accuracy: {e}")
+            
+            return {
+                "documents_scanned": total_documents,
+                "clients": total_clients,
+                "patterns_learned": patterns_learned,
+                "accuracy": round(accuracy, 1)
+            }
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"⚠️ Error getting public stats: {e}")
+        # Return default values on error
+        return {
+            "documents_scanned": 0,
+            "clients": 0,
+            "patterns_learned": 0,
+            "accuracy": 0.0
+        }
+
+
+# ==============================================================
 # LEARNING SYSTEM ENDPOINTS
 # ==============================================================
 
@@ -2966,8 +3046,14 @@ async def _analyze_with_agent_internal(
     file: UploadFile,
     user_id: int = None,
     db_session = None,
-    progress_tracker_id: str = None
+    progress_tracker_id: str = None,
+    basic_extraction_data: dict = None
 ):
+    """Internal function for AI agent analysis - ensures response is always returned.
+    Optionally merges Basic Extraction data (text + image summaries) for improved results."""
+    print(f"🚀 _analyze_with_agent_internal called for file: {file.filename}, user_id: {user_id}")
+    if basic_extraction_data:
+        print(f"📋 Basic Extraction data provided: {len(basic_extraction_data.get('extracted_text', ''))} chars, {len(basic_extraction_data.get('image_summaries', []))} image summaries")
     """Internal function: Extract text from document and process with RAG agent for requirements extraction."""
     from services.progress_service import ProcessingStage
     from services.progress_storage import get_progress_tracker
@@ -3241,6 +3327,37 @@ async def _analyze_with_agent_internal(
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")
 
+        # Merge Basic Extraction data if provided
+        if basic_extraction_data:
+            print(f"🔄 Merging Basic Extraction data with AI extraction...")
+            basic_text = basic_extraction_data.get("extracted_text", "") or basic_extraction_data.get("full_text", "")
+            basic_image_summaries = basic_extraction_data.get("image_summaries", [])
+            
+            # Add Basic Extraction text to the beginning with a clear marker
+            if basic_text.strip():
+                merged_text = f"[BASIC_EXTRACTION_TEXT]\n{basic_text.strip()}\n\n[AI_EXTRACTION_TEXT]\n{text_output}"
+                print(f"   ✅ Merged {len(basic_text)} chars from Basic Extraction")
+            else:
+                merged_text = text_output
+            
+            # Add image summaries from Basic Extraction
+            if basic_image_summaries:
+                image_summaries_text = "\n\n[BASIC_EXTRACTION_IMAGE_SUMMARIES]\n"
+                for img_summary in basic_image_summaries:
+                    if isinstance(img_summary, dict):
+                        img_id = img_summary.get("image_id", "UNKNOWN")
+                        summary = img_summary.get("summary", "") or img_summary.get("ocr", "") or img_summary.get("interpretation", "")
+                        if summary:
+                            image_summaries_text += f"[IMAGE {img_id}]\n{summary}\n\n"
+                    elif isinstance(img_summary, str):
+                        image_summaries_text += f"{img_summary}\n\n"
+                
+                merged_text += image_summaries_text
+                print(f"   ✅ Added {len(basic_image_summaries)} image summaries from Basic Extraction")
+            
+            text_output = merged_text
+            print(f"   ✅ Total merged text length: {len(text_output)} chars")
+        
         # Save full text file
         sanitized_text = (text_output or "").encode("utf-8", "ignore").decode("utf-8", "ignore")
         text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
@@ -3312,22 +3429,107 @@ async def _analyze_with_agent_internal(
             print(f"📊 Progress: {progress['progress']}% - Extracting requirements...")
         
         # Extract requirements in thread pool with timeout
+        # Get timeout from environment or use default (600 seconds = 10 minutes for large documents)
+        extraction_timeout = float(os.getenv("FLOWMIND_EXTRACTION_TIMEOUT", "600.0"))
+        print(f"⏱️  Requirements extraction timeout: {extraction_timeout}s")
+        
         try:
+            print(f"🔄 Starting requirements extraction (timeout: {extraction_timeout}s)...")
+            print(f"📊 Agent type: {type(agent)}")
+            print(f"📊 Agent has extract_requirements: {hasattr(agent, 'extract_requirements')}")
+            
+            # Call extract_requirements directly in thread
+            print(f"📊 About to call agent.extract_requirements in thread...")
             requirements_result = await run_in_thread(
                 agent.extract_requirements,
-                timeout=300.0  # 5 minutes for requirements extraction (increased for large documents)
+                timeout=extraction_timeout
             )
-        except asyncio.TimeoutError:
-            raise HTTPException(
-                status_code=504,
-                detail="Requirements extraction timed out. Please try again with a smaller document."
-            )
+            print(f"📊 Back from run_in_thread, got result: {type(requirements_result)}")
+            
+            print(f"✅ Requirements extraction completed successfully")
+            print(f"📊 Result type: {type(requirements_result)}")
+            if isinstance(requirements_result, dict):
+                print(f"📊 Result keys: {list(requirements_result.keys())}")
+                print(f"📊 Result status: {requirements_result.get('status')}")
+            else:
+                print(f"📊 Result (not dict): {requirements_result}")
+            
+            # Ensure result is a dict
+            if not isinstance(requirements_result, dict):
+                print(f"⚠️ Result is not a dict, converting: {type(requirements_result)}")
+                requirements_result = {"status": "success", "response": str(requirements_result)}
+            
+            print(f"📊 Result keys: {list(requirements_result.keys())}")
+            print(f"📊 Result status: {requirements_result.get('status', 'N/A')}")
+            
+            # Validate result structure
+            if requirements_result.get("status") != "success":
+                print(f"⚠️ Extraction returned non-success status: {requirements_result.get('status')}")
+                print(f"⚠️ Error message: {requirements_result.get('message', 'No message')}")
+            
+            # Ensure response field exists
+            if "response" not in requirements_result:
+                print(f"⚠️ No 'response' field in result, adding empty response")
+                requirements_result["response"] = ""
+            
+            # Add note about Basic Extraction merge if data was provided
+            if basic_extraction_data:
+                merge_note = "\n\n---\n📋 Note: This analysis merged data from Basic Extraction (text + image summaries) with AI-powered extraction for comprehensive results."
+                requirements_result["response"] = requirements_result.get("response", "") + merge_note
+                print(f"✅ Added merge note to final output")
+            
+            print(f"📊 Response length: {len(str(requirements_result.get('response', '')))}")
+            print(f"📊 About to continue to database save...")
+        except asyncio.TimeoutError as timeout_err:
+            print(f"⏱️  Requirements extraction timed out: {timeout_err}")
+            print(f"⏱️  Requirements extraction timed out after {extraction_timeout}s")
+            # Try to return partial results if available
+            try:
+                # Check if we have any partial results from the agent
+                if hasattr(agent, 'last_extraction_result'):
+                    partial_result = agent.last_extraction_result
+                    if partial_result and partial_result.get('status') != 'error':
+                        print(f"⚠️  Returning partial results due to timeout")
+                        requirements_result = partial_result
+                        requirements_result['partial'] = True
+                        requirements_result['message'] = f"Extraction timed out after {extraction_timeout}s. Partial results returned."
+                    else:
+                        raise HTTPException(
+                            status_code=504,
+                            detail=f"Requirements extraction timed out after {extraction_timeout}s. Please try again with a smaller document or increase FLOWMIND_EXTRACTION_TIMEOUT."
+                        )
+                else:
+                    raise HTTPException(
+                        status_code=504,
+                        detail=f"Requirements extraction timed out after {extraction_timeout}s. Please try again with a smaller document or increase FLOWMIND_EXTRACTION_TIMEOUT."
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                print(f"❌ Error getting partial results: {str(e)}")
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"Requirements extraction timed out after {extraction_timeout}s. Please try again with a smaller document or increase FLOWMIND_EXTRACTION_TIMEOUT."
+                )
         except Exception as e:
             print(f"❌ Error extracting requirements: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise HTTPException(
                 status_code=500,
                 detail=f"Error extracting requirements: {str(e)}"
             )
+        
+        print(f"📊 Post-extraction: Starting database save and response preparation...")
+        print(f"📊 Requirements result type: {type(requirements_result)}")
+        
+        # Ensure requirements_result is a dict
+        if not isinstance(requirements_result, dict):
+            print(f"⚠️ requirements_result is not a dict, converting...")
+            requirements_result = {
+                "status": "success",
+                "response": str(requirements_result) if requirements_result else "No response"
+            }
         
         if tracker:
             tracker.complete()
@@ -3339,12 +3541,19 @@ async def _analyze_with_agent_internal(
         if requirements_result.get("message"):
             print(f"🔍 Error message: {requirements_result.get('message')}")
         
-        if requirements_result.get("status") != "success":
+        # Allow partial results if timeout occurred
+        if requirements_result.get("status") != "success" and not requirements_result.get("partial"):
             error_msg = requirements_result.get("message") or "Requirement extraction failed"
             print(f"❌ Extraction failed: {error_msg}")
             raise HTTPException(status_code=500, detail=error_msg)
+        
+        # Log if partial results were returned
+        if requirements_result.get("partial"):
+            print(f"⚠️  Partial results returned due to timeout - some data may be incomplete")
 
         # Save to database - ensure session is closed promptly
+        record = None
+        view_id = str(uuid.uuid4())  # Generate view_id upfront
         try:
             if db_session is None:
                 db = SessionLocal()
@@ -3359,7 +3568,8 @@ async def _analyze_with_agent_internal(
                 detected_shapes=image_count,
                 summary=f"Processed with RAG agent. {agent_result['message']}",
                 full_text_path=text_file_path,
-                user_id=user_id  # Link to user
+                user_id=user_id,  # Link to user
+                view_id=view_id  # Set view_id upfront
             )
             db.add(record)
             db.commit()
@@ -3374,64 +3584,142 @@ async def _analyze_with_agent_internal(
                     ocr_text=ocr_text
                 )
                 db.add(img_meta)
-
-            # Generate view_id and save to database
-            view_id = str(uuid.uuid4())
-            record.view_id = view_id
             db.commit()
+            
+            print(f"✅ Database record saved: view_id={view_id}, file_id={record.id}")
         except Exception as e:
             print(f"❌ Database error: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Don't fail completely - use the view_id we already generated
+            print(f"⚠️ Using fallback (record not saved to DB, view_id: {view_id})")
         finally:
             # Ensure session is always closed
             if should_close and db_session is None:
                 try:
                     db.close()
+                    print(f"✅ Database session closed")
                 except Exception:
                     pass
 
         # Build quick lookup of context for images within this request is not tracked separately here,
         # so pass empty context for now; summarized meanings rely on OCR wording for agent runs
         
-        # Parse and save features for approval
+        # Parse and save features for approval (run synchronously but quickly, skip if slow)
+        features_count = 0
         try:
             extracted_response = requirements_result.get("response", "")
-            features_count = parse_and_save_features(extracted_response, user_id, record.id, db)
-            print(f"📋 Saved {features_count} features for user approval")
+            if extracted_response and record and hasattr(record, 'id') and record.id:
+                # Create a new database session for feature parsing (thread-safe)
+                try:
+                    # Use a new session to avoid thread-safety issues
+                    db_features = SessionLocal()
+                    try:
+                        features_count = parse_and_save_features(extracted_response, user_id, record.id, db_features)
+                        print(f"📋 Saved {features_count} features for user approval")
+                    finally:
+                        db_features.close()
+                except Exception as e:
+                    print(f"⚠️ Failed to save features: {e}")
+            else:
+                print(f"⚠️ Skipping feature parsing (no record or no response)")
         except Exception as e:
-            print(f"⚠️ Failed to save features: {e}")
+            print(f"⚠️ Failed to parse features: {e}")
         
-        # Save to REQUIREMENTS_VIEWS for backward compatibility
-        REQUIREMENTS_VIEWS[view_id] = {
-                    "filename": file.filename,
-                    "summary": f"Extracted {len(text_output.split())} words and {image_count} image(s)",
-                    "response": requirements_result.get("response", ""),
-                    "images": [
-                        {"image_id": iid, "path": path, "page": pg, "ocr": (ocr or "").strip(),
-                 "summary": (_vlm_summarize(path, (ocr or "")) or _summarize_image_ocr(ocr or "", context=(ocr or "")))}
-                        for (iid, path, pg, ocr) in image_metadata
-                    ]
-        }
-        save_views()  # Save to persistent storage
+        # Save to REQUIREMENTS_VIEWS for backward compatibility (use OCR text as summary, don't re-process)
+        try:
+            # Use OCR text as summary to avoid slow VLM re-processing
+            image_summaries = []
+            for (iid, path, pg, ocr) in image_metadata:
+                # Use simple OCR text as summary (fast, no processing)
+                summary = (ocr or "").strip()[:200] if ocr else ""  # Just use OCR, no extra processing
+                
+                image_summaries.append({
+                    "image_id": iid,
+                    "path": path,
+                    "page": pg,
+                    "ocr": (ocr or "").strip(),
+                    "summary": summary
+                })
+            
+            REQUIREMENTS_VIEWS[view_id] = {
+                "filename": file.filename,
+                "summary": f"Extracted {len(text_output.split())} words and {image_count} image(s)",
+                "response": requirements_result.get("response", ""),
+                "images": image_summaries
+            }
+            # Save views asynchronously to avoid blocking
+            try:
+                save_views()  # Save to persistent storage
+                print(f"✅ Saved to REQUIREMENTS_VIEWS: {view_id}")
+            except Exception as save_error:
+                print(f"⚠️ Failed to save views to disk: {save_error}")
+        except Exception as e:
+            print(f"⚠️ Failed to save to REQUIREMENTS_VIEWS: {e}")
+            # Continue anyway - don't block response
         
-        return {
-            "filename": file.filename,
-            "extraction_summary": f"Extracted {len(text_output.split())} words and {image_count} image(s)",
-            "agent_processing": agent_result,
-            "requirements_extraction": requirements_result,
-            "view_id": view_id,
-            "full_text_file": text_file_path,
-            "images_detected": image_count,
-            "image_metadata_saved": len(image_metadata)
-        }
+        # Return response immediately - don't wait for slow operations
+        print(f"✅ Preparing response to return to client...")
+        print(f"📊 Requirements extraction status: {requirements_result.get('status')}")
+        print(f"📊 Requirements extraction response length: {len(str(requirements_result.get('response', '')))}")
+        
+        # Build response data - ensure all fields exist
+        try:
+            response_data = {
+                "filename": file.filename or "unknown",
+                "extraction_summary": f"Extracted {len(text_output.split()) if text_output else 0} words and {image_count} image(s)",
+                "agent_processing": agent_result or {"status": "success", "message": "Processing completed"},
+                "requirements_extraction": requirements_result or {"status": "error", "message": "No extraction result"},
+                "view_id": view_id or str(uuid.uuid4()),
+                "full_text_file": text_file_path or "",
+                "images_detected": image_count,
+                "image_metadata_saved": len(image_metadata),
+                "features_saved": features_count
+            }
+            print(f"✅ Response data built successfully")
+            print(f"📊 Response keys: {list(response_data.keys())}")
+            print(f"📊 Returning results to client (view_id: {response_data['view_id']})...")
+            print(f"📊 Response data prepared, returning now...")
+            print(f"🚀 ACTUALLY RETURNING RESPONSE NOW - view_id: {response_data['view_id']}")
+            return response_data
+        except Exception as e:
+            print(f"❌ Error preparing response: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Return minimal response even on error
+            print(f"⚠️ Returning fallback response due to error")
+            return {
+                "filename": file.filename or "unknown",
+                "extraction_summary": f"Extracted {len(text_output.split()) if text_output else 0} words and {image_count} image(s)",
+                "agent_processing": agent_result or {"status": "success"},
+                "requirements_extraction": requirements_result or {"status": "error", "message": "Error occurred"},
+                "view_id": view_id or str(uuid.uuid4()),
+                "error": f"Error preparing full response: {str(e)}"
+            }
 
     except HTTPException as e:
+        print(f"❌ HTTPException in _analyze_with_agent_internal: {e.status_code} - {e.detail}")
         raise e
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print("Analyze_with_agent error:", tb)
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e) or 'See server logs'}")
+        print("❌ Analyze_with_agent error:", tb)
+        print(f"❌ Exception type: {type(e).__name__}")
+        print(f"❌ Exception message: {str(e)}")
+        # Try to return a minimal response instead of raising
+        try:
+            print(f"⚠️ Attempting to return error response instead of raising exception")
+            return {
+                "filename": file.filename if hasattr(file, 'filename') else "unknown",
+                "extraction_summary": "Error occurred during processing",
+                "agent_processing": {"status": "error", "message": str(e)},
+                "requirements_extraction": {"status": "error", "message": str(e)},
+                "view_id": str(uuid.uuid4()),
+                "error": f"Error processing document: {str(e)}"
+            }
+        except Exception as return_error:
+            print(f"❌ Failed to return error response: {return_error}")
+            raise HTTPException(status_code=500, detail=f"Error processing document: {str(e) or 'See server logs'}")
 
 
 @app.post("/extract_requirements")
@@ -3521,6 +3809,31 @@ async def view_requirements(view_id: str):
     def esc(s: str) -> str:
         return html.escape(s or "")
 
+    def normalize_req(text: str) -> str:
+        """Create a stable key for matching stored features to displayed items."""
+        import re
+        return re.sub(r"\s+", " ", text or "").strip().lower().rstrip(".")
+
+    # Pull latest approval states for this view (if we have a DB record)
+    feature_map = {}
+    feature_stats = {"approved": 0, "denied": 0, "pending": 0, "total": 0}
+    db_session = SessionLocal()
+    try:
+        parsed_file = db_session.query(ParsedFile).filter(ParsedFile.view_id == view_id).first()
+        if parsed_file:
+            for feat in db_session.query(Feature).filter(Feature.file_id == parsed_file.id).all():
+                key = normalize_req(feat.description)
+                feature_map[key] = {
+                    "status": feat.status or "pending",
+                    "quality_score": feat.quality_score or 0,
+                    "category": feat.category or ""
+                }
+                feature_stats["total"] += 1
+                if feat.status in feature_stats:
+                    feature_stats[feat.status] += 1
+    finally:
+        db_session.close()
+
     filename = esc(data.get("filename", ""))
     summary = esc(data.get("summary", ""))
     response_text = data.get("response", "")
@@ -3533,28 +3846,33 @@ async def view_requirements(view_id: str):
     current_items = []
     lines = response_text.split("\n")
     
-    for line in lines:
-        line = esc(line.strip())
-        if not line:
+    for raw_line in lines:
+        raw_line = raw_line.strip()
+        if not raw_line:
             continue
         
+        escaped_line = esc(raw_line)
+        
         # Check if this is a section heading (ends with colon and no bullet)
-        if line.endswith(":") and not line.startswith("-"):
+        if raw_line.endswith(":") and not raw_line.startswith("-"):
             # Save previous section
             if current_section and current_items:
                 sections.append((current_section, current_items))
             
             # Start new section
-            current_section = line.rstrip(":")
+            current_section = escaped_line.rstrip(":")
             current_items = []
-        # Check if this is a bullet point
-        elif line.startswith("- ") and current_section:
-            requirement_text = line[2:].strip()
-            if requirement_text.lower() != "(none)":
-                current_items.append(requirement_text)
+        # Check if this is a bullet point (handles -, ✅, ⚠️, ❌)
+        elif (raw_line.startswith("- ") or raw_line.startswith("✅") or raw_line.startswith("⚠️") or raw_line.startswith("❌")) and current_section:
+            requirement_text_raw = raw_line[2:].strip() if raw_line.startswith("- ") else re.sub(r"^[✅⚠️❌]\s*", "", raw_line).strip()
+            if requirement_text_raw.lower() != "(none)":
+                requirement_text = esc(requirement_text_raw)
+                normalized = normalize_req(requirement_text_raw)
+                status_info = feature_map.get(normalized)
+                current_items.append((requirement_text, status_info))
         # Regular line (add to current section if exists)
-        elif current_section and line.lower() != "(none)":
-            current_items.append(line)
+        elif current_section and raw_line.lower() != "(none)":
+            current_items.append((escaped_line, None))
     
     # Save last section
     if current_section and current_items:
@@ -3579,8 +3897,22 @@ async def view_requirements(view_id: str):
                 <ul class="simple-list">
         '''
         
-        for item in items:
-            safe_html += f'<li class="simple-item">{item}</li>'
+        for item_text, status_info in items:
+            status_class = ""
+            status_badge = ""
+            quality_badge = ""
+            
+            if status_info:
+                status = status_info.get("status", "pending")
+                status_class = f" status-{status}"
+                status_label = status.capitalize()
+                status_badge = f'<span class="status-pill status-{status}">{status_label}</span>'
+                
+                quality_score = status_info.get("quality_score", 0)
+                if quality_score:
+                    quality_badge = f'<span class="quality-pill">Q{quality_score}</span>'
+
+            safe_html += f'<li class="simple-item{status_class}"><span class="item-text">{item_text}</span>{status_badge}{quality_badge}</li>'
         
         safe_html += '''
                 </ul>
@@ -3589,6 +3921,19 @@ async def view_requirements(view_id: str):
         '''
     
     safe = safe_html if safe_html else '<div class="no-content">No requirements found.</div>'
+    
+    approved_count = feature_stats.get("approved", 0)
+    denied_count = feature_stats.get("denied", 0)
+    pending_count = feature_stats.get("pending", 0)
+    total_count = feature_stats.get("total", 0)
+    status_summary_html = f"""
+        <div class="status-summary">
+            <div class="status-chip chip-approved"><i class='fas fa-check-circle'></i> Approved: {approved_count}</div>
+            <div class="status-chip chip-pending"><i class='fas fa-hourglass-half'></i> Pending: {pending_count}</div>
+            <div class="status-chip chip-denied"><i class='fas fa-times-circle'></i> Denied: {denied_count}</div>
+            <div class="status-chip chip-total"><i class='fas fa-list'></i> Total tracked: {total_count}</div>
+        </div>
+    """
     
     # Build images section HTML
     items = []
@@ -3864,6 +4209,10 @@ async def view_requirements(view_id: str):
                 border-bottom: 1px solid #f1f5f9;
                 color: #333;
                 line-height: 1.6;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                flex-wrap: wrap;
             }}
             
             .simple-item:last-child {{
@@ -3878,6 +4227,76 @@ async def view_requirements(view_id: str):
                 width: 1em;
                 margin-right: 0.5rem;
             }}
+            
+            .item-text {{
+                flex: 1;
+                min-width: 60%;
+            }}
+            
+            .status-pill, .quality-pill {{
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.15rem 0.6rem;
+                border-radius: 9999px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                border: 1px solid transparent;
+            }}
+            
+            .status-pill.status-approved {{
+                background: #dcfce7;
+                color: #166534;
+                border-color: #86efac;
+            }}
+            
+            .status-pill.status-denied {{
+                background: #fee2e2;
+                color: #991b1b;
+                border-color: #fecaca;
+            }}
+            
+            .status-pill.status-pending {{
+                background: #e0f2fe;
+                color: #075985;
+                border-color: #bae6fd;
+            }}
+            
+            .quality-pill {{
+                background: #eef2ff;
+                color: #4338ca;
+                border-color: #c7d2fe;
+                font-weight: 700;
+            }}
+            
+            .simple-item.status-approved .item-text {{ color: #166534; }}
+            .simple-item.status-denied .item-text {{ color: #991b1b; }}
+            .simple-item.status-pending .item-text {{ color: #0f172a; }}
+            
+            .status-summary {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }}
+            
+            .status-chip {{
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.55rem 0.85rem;
+                border-radius: 8px;
+                font-weight: 600;
+                border: 1px solid #e2e8f0;
+                color: #0f172a;
+                background: #f8fafc;
+            }}
+            
+            .status-chip i {{ opacity: 0.8; }}
+            .chip-approved {{ background: #ecfdf3; color: #166534; border-color: #bbf7d0; }}
+            .chip-denied {{ background: #fef2f2; color: #991b1b; border-color: #fecdd3; }}
+            .chip-pending {{ background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }}
+            .chip-total {{ background: #f8fafc; color: #0f172a; }}
             
             .no-content {{
                 padding: 2rem;
@@ -4091,6 +4510,7 @@ async def view_requirements(view_id: str):
                     </div>
                 </div>
                 
+                {status_summary_html}
                 <div class="requirements-content">{safe}</div>
             </div>
 

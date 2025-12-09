@@ -34,18 +34,26 @@ async def run_in_thread(
         asyncio.TimeoutError: If the operation exceeds the timeout
         Exception: Any exception raised by func
     """
+    func_name = getattr(func, '__name__', str(func))
+    print(f"🔄 run_in_thread: Starting {func_name} with timeout {timeout}s")
     try:
         loop = asyncio.get_event_loop()
+        print(f"🔄 run_in_thread: About to await executor...")
         result = await asyncio.wait_for(
             loop.run_in_executor(_executor, functools.partial(func, *args, **kwargs)),
             timeout=timeout
         )
+        print(f"✅ run_in_thread: {func_name} completed, returning result (type: {type(result)})")
         return result
     except asyncio.TimeoutError:
-        logger.error(f"Operation {func.__name__} timed out after {timeout} seconds")
-        raise asyncio.TimeoutError(f"Operation {func.__name__} timed out after {timeout} seconds")
+        logger.error(f"Operation {func_name} timed out after {timeout} seconds")
+        print(f"⏱️ run_in_thread: {func_name} timed out after {timeout} seconds")
+        raise asyncio.TimeoutError(f"Operation {func_name} timed out after {timeout} seconds")
     except Exception as e:
-        logger.error(f"Error in {func.__name__}: {str(e)}")
+        logger.error(f"Error in {func_name}: {str(e)}")
+        print(f"❌ run_in_thread: Error in {func_name}: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

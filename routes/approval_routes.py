@@ -56,6 +56,7 @@ class BulkFeatureUpdate(BaseModel):
 async def get_features(
     status: Optional[str] = None,
     category: Optional[str] = None,
+    file_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -66,6 +67,8 @@ async def get_features(
         query = query.filter(Feature.status == status)
     if category:
         query = query.filter(Feature.category == category)
+    if file_id:
+        query = query.filter(Feature.file_id == file_id)
     
     features = query.order_by(Feature.created_at.desc()).all()
     
@@ -88,23 +91,19 @@ async def get_features(
 
 @router.get("/api/features/stats")
 async def get_feature_stats(
+    file_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get feature statistics for the current user."""
-    total = db.query(Feature).filter(Feature.user_id == current_user.id).count()
-    approved = db.query(Feature).filter(
-        Feature.user_id == current_user.id,
-        Feature.status == "approved"
-    ).count()
-    denied = db.query(Feature).filter(
-        Feature.user_id == current_user.id,
-        Feature.status == "denied"
-    ).count()
-    pending = db.query(Feature).filter(
-        Feature.user_id == current_user.id,
-        Feature.status == "pending"
-    ).count()
+    """Get feature statistics for the current user, optionally filtered by file_id."""
+    query = db.query(Feature).filter(Feature.user_id == current_user.id)
+    if file_id:
+        query = query.filter(Feature.file_id == file_id)
+    
+    total = query.count()
+    approved = query.filter(Feature.status == "approved").count()
+    denied = query.filter(Feature.status == "denied").count()
+    pending = query.filter(Feature.status == "pending").count()
     
     return {
         "total": total,
@@ -112,6 +111,33 @@ async def get_feature_stats(
         "denied": denied,
         "pending": pending
     }
+
+@router.get("/api/documents")
+async def get_user_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all documents for the current user that have features."""
+    # Get documents that have features
+    documents = db.query(ParsedFile).join(Feature).filter(
+        ParsedFile.user_id == current_user.id,
+        Feature.user_id == current_user.id
+    ).distinct().order_by(ParsedFile.created_at.desc()).all()
+    
+    result = []
+    for doc in documents:
+        feature_count = db.query(Feature).filter(
+            Feature.file_id == doc.id,
+            Feature.user_id == current_user.id
+        ).count()
+        result.append({
+            "id": doc.id,
+            "filename": doc.filename,
+            "created_at": doc.created_at.isoformat() if doc.created_at else None,
+            "feature_count": feature_count
+        })
+    
+    return {"documents": result}
 
 @router.put("/api/features/{feature_id}")
 async def update_feature_status(
