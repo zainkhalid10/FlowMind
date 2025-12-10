@@ -1,518 +1,671 @@
-# FlowMind - Function and Algorithm Location Reference
+# FlowMind - Complete Function Reference
 
-## Complete Function Mapping with Line Numbers
-
-This document provides a comprehensive mapping of all functions, classes, and algorithms in the FlowMind codebase with their exact line numbers and purposes.
+## Table of Contents
+1. [Core Application Functions](#core-application-functions)
+2. [RAG Agent Functions](#rag-agent-functions)
+3. [Authentication Functions](#authentication-functions)
+4. [Database Functions](#database-functions)
+5. [Document Processing Functions](#document-processing-functions)
+6. [Image Processing Functions](#image-processing-functions)
+7. [Route Handlers](#route-handlers)
+8. [Service Functions](#service-functions)
+9. [Utility Functions](#utility-functions)
 
 ---
 
-## CORE FILES
+## Core Application Functions
 
-### flowmind.py (Main Application File)
+### `flowmind.py`
 
-**Classes:**
-- None (uses imported classes)
+#### Document Analysis Functions
 
-**Functions:**
+**`_analyze_document_internal(file, user_id, db_session, progress_tracker_id)`**
+- **Purpose**: Internal function that extracts text, images, and OCR from uploaded documents
+- **Parameters**:
+  - `file`: UploadFile object
+  - `user_id`: Integer user ID
+  - `db_session`: SQLAlchemy session
+  - `progress_tracker_id`: Optional progress tracker ID
+- **Returns**: Dictionary with extracted text, image metadata, and summaries
+- **Key Features**:
+  - Supports PDF, DOCX, PPTX, TXT, and image files
+  - Extracts images and performs OCR
+  - Generates VLM summaries for images
+  - Saves results to database
+- **File Formats Supported**: PDF, DOCX, PPTX, TXT, PNG, JPG, JPEG
 
-**Line 46:** `_summarize_image_ocr(ocr_text, context)` 
-- **Purpose:** Legacy OCR summarization wrapper
-- **Task:** Delegates to enhanced OCR summarization service
-- **Algorithm:** Text summarization
+**`_analyze_with_agent_internal(file, user_id, db_session, progress_tracker_id, basic_extraction_data)`**
+- **Purpose**: AI-powered document analysis using RAG agent with optional basic extraction data merging
+- **Parameters**:
+  - `file`: UploadFile object
+  - `user_id`: Integer user ID
+  - `db_session`: SQLAlchemy session
+  - `progress_tracker_id`: Optional progress tracker ID
+  - `basic_extraction_data`: Optional dictionary with basic extraction results
+- **Returns**: Dictionary with AI-extracted requirements and features
+- **Key Features**:
+  - Merges basic extraction data with AI analysis
+  - Processes document with RAG agent
+  - Extracts requirements and saves features
+  - Returns comprehensive analysis results
 
-**Line 252:** `_vlm_summarize(image_path, context)`
-- **Purpose:** Visual Language Model image summarization wrapper
-- **Task:** Delegates to enhanced VLM summarization service
-- **Algorithm:** Multi-model VLM aggregation
+**`parse_and_save_features(requirements_text, user_id, file_id, db, image_summaries)`**
+- **Purpose**: Parse extracted requirements text and save as features in database
+- **Parameters**:
+  - `requirements_text`: String containing extracted requirements
+  - `user_id`: Integer user ID
+  - `file_id`: Integer file ID
+  - `db`: Database session
+  - `image_summaries`: Optional list of image summaries
+- **Returns**: Integer count of saved features
+- **Key Features**:
+  - Parses requirements by category
+  - Deduplicates features
+  - Calculates quality scores
+  - Saves to database with proper categorization
 
-**Line 285:** `_analyze_document_internal(file, user_id, db_session, progress_tracker_id)`
-- **Purpose:** Main document analysis function
-- **Task:** Extracts text, images, and OCR from uploaded documents
-- **Algorithms Used:**
-  - PDF text extraction (PyPDF)
-  - DOCX text extraction (python-docx)
-  - PPTX text extraction (python-pptx)
-  - Image extraction and OCR (Tesseract)
+#### Image Processing Functions
+
+**`_vlm_summarize(image_path, context)`**
+- **Purpose**: Generate AI summary of image using Vision-Language Model
+- **Parameters**:
+  - `image_path`: String path to image file
+  - `context`: Optional string context about the image
+- **Returns**: String summary of image content
+- **Key Features**:
+  - Uses Ollama VLM if available
+  - Falls back to OCR-based summarization
+  - Provides intelligent image interpretation
+
+**`_summarize_image_ocr(ocr_text, context)`**
+- **Purpose**: Legacy function that uses enhanced OCR summarization service
+- **Parameters**:
+  - `ocr_text`: String OCR text from image
+  - `context`: Optional string context
+- **Returns**: String enhanced summary
+
+#### Public API Functions
+
+**`@app.get("/api/public/stats")`**
+- **Purpose**: Get public statistics about learned patterns
+- **Returns**: JSON with total learned items (keywords, patterns, phrases)
+- **Key Features**:
+  - Aggregates from global and user-specific agents
+  - Falls back to database count if needed
+  - No authentication required
+
+---
+
+## RAG Agent Functions
+
+### `rag_agent.py`
+
+#### Core Agent Functions
+
+**`RequirementsExtractionAgent.__init__(api_key, user_id)`**
+- **Purpose**: Initialize the RAG agent for requirements extraction
+- **Parameters**:
+  - `api_key`: API key (not used currently)
+  - `user_id`: Optional user ID for user-specific learning
+- **Key Features**:
+  - Initializes embeddings (HuggingFace or fallback)
+  - Sets up ChromaDB vector store
+  - Configures text splitter
+  - Enables self-learning if configured
+
+**`process_document(text, filename)`**
+- **Purpose**: Process a document and add it to the vector store
+- **Parameters**:
+  - `text`: String document text
+  - `filename`: String filename
+- **Returns**: Dictionary with status and processing results
+- **Key Features**:
+  - Splits text into chunks
+  - Creates embeddings
+  - Stores in ChromaDB
+  - Returns processing statistics
+
+**`extract_requirements(query)`**
+- **Purpose**: Extract requirements from processed documents using multiple methods
+- **Parameters**:
+  - `query`: Optional query string
+- **Returns**: Dictionary with extracted requirements
+- **Key Features**:
+  - Tries multiple extraction methods (heuristic, pattern, semantic)
+  - Applies learned patterns
+  - Selects best result
+  - Enhances output for professional wording
+  - Returns formatted requirements by category
+
+#### Extraction Methods
+
+**`_heuristic_extract(text)`**
+- **Purpose**: Pattern-based keyword matching extraction
+- **Parameters**: `text`: String document text
+- **Returns**: Dictionary with categorized requirements
+- **Key Features**:
+  - Fast pattern matching
+  - Keyword-based classification
+  - Quality scoring
+  - Deduplication
+
+**`_semantic_extract(text, top_k_per_class)`**
+- **Purpose**: Embedding-based similarity extraction
+- **Parameters**:
+  - `text`: String document text
+  - `top_k_per_class`: Integer top results per category
+- **Returns**: Dictionary with semantically extracted requirements
+- **Key Features**:
+  - Uses sentence embeddings
+  - Semantic similarity matching
+  - Category-specific prompts
+  - Learned pattern boosting
+
+**`_advanced_pattern_extract(text)`**
+- **Purpose**: Advanced regex and NLP pattern extraction
+- **Parameters**: `text`: String document text
+- **Returns**: Dictionary with pattern-matched requirements
+- **Key Features**:
+  - Complex regex patterns
+  - Category-specific patterns
+  - Enhanced deduplication
+  - Quality filtering
+
+#### Text Processing Functions
+
+**`_normalize_line(line)`**
+- **Purpose**: Normalize requirement text for processing
+- **Parameters**: `line`: String text line
+- **Returns**: Normalized string
+- **Key Features**:
+  - Removes bullet symbols
+  - Normalizes whitespace
+  - Removes image metadata markers
+  - Cleans punctuation
+
+**`_should_keep_line(line)`**
+- **Purpose**: Filter out non-requirement lines
+- **Parameters**: `line`: String text line
+- **Returns**: Boolean indicating if line should be kept
+- **Key Features**:
+  - Filters metadata
+  - Filters image markers
+  - Filters headings
+  - Checks for requirement indicators
+
+**`_enhance_requirement_text(requirement)`**
+- **Purpose**: Enhance requirement text to be more professional
+- **Parameters**: `requirement`: String requirement text
+- **Returns**: Enhanced string
+- **Key Features**:
+  - Improves wording
+  - Replaces vague terms
+  - Standardizes technical terms
+  - Ensures proper formatting
+
+**`_enhance_final_output(section_text)`**
+- **Purpose**: Enhance entire output for professional presentation
+- **Parameters**: `section_text`: String formatted sections
+- **Returns**: Enhanced string
+- **Key Features**:
+  - Preserves structure
+  - Enhances individual requirements
+  - Maintains quality indicators
+
+**`_format_sections(sections)`**
+- **Purpose**: Format extracted requirements into user-friendly output
+- **Parameters**: `sections`: Dictionary of categorized requirements
+- **Returns**: Formatted string
+- **Key Features**:
+  - Adds quality indicators (✅, ⚠️, ❌)
+  - Sorts by priority
+  - Calculates quality scores
+  - Formats with proper structure
+
+#### Classification Functions
+
+**`_classify_requirement_improved(sentence, context)`**
+- **Purpose**: Classify requirement into category with context awareness
+- **Parameters**:
+  - `sentence`: String requirement sentence
+  - `context`: Optional string context
+- **Returns**: String category name
+- **Categories**: functional, non_functional, user, business, system, features
+- **Key Features**:
+  - Context-aware classification
+  - Domain detection
+  - Pattern matching
+  - Priority-based classification
+
+**`_score_requirement_quality(requirement)`**
+- **Purpose**: Calculate quality score for a requirement (0-100)
+- **Parameters**: `requirement`: String requirement text
+- **Returns**: Float quality score
+- **Key Features**:
+  - Length scoring
+  - Action verb detection
+  - Specificity scoring
+  - Vague term penalties
+
+#### Learning Functions
+
+**`_learn_from_results(filename, sections)`**
+- **Purpose**: Learn from extracted requirements and store patterns
+- **Parameters**:
+  - `filename`: String source filename
+  - `sections`: Dictionary of categorized requirements
+- **Key Features**:
+  - Stores in ChromaDB
+  - Persists learned patterns
+  - User-specific learning support
+
+**`_apply_learned_patterns(text)`**
+- **Purpose**: Apply previously learned patterns to new text
+- **Parameters**: `text`: String document text
+- **Returns**: Dictionary with learned requirements
+- **Key Features**:
+  - Semantic similarity search
+  - Pattern matching
+  - Boosts relevant requirements
+
+**`_save_learned_patterns()`**
+- **Purpose**: Save learned patterns to persistent storage
+- **Key Features**:
+  - User-specific storage
+  - Global pattern storage
+  - ChromaDB persistence
+
+#### Deduplication Functions
+
+**`_cross_category_deduplicate(categorized)`**
+- **Purpose**: Remove duplicates across all categories
+- **Parameters**: `categorized`: Dictionary of categorized requirements
+- **Returns**: Deduplicated dictionary
+- **Key Features**:
+  - Normalization-based deduplication
+  - Core content matching
+  - Semantic similarity detection
+
+**`_reclassify_and_deduplicate_all(initial_categories)`**
+- **Purpose**: Reclassify and deduplicate all requirements
+- **Parameters**: `initial_categories`: Dictionary of initial categories
+- **Returns**: Reclassified and deduplicated dictionary
+
+---
+
+## Authentication Functions
+
+### `auth.py`
+
+**`get_password_hash(password)`**
+- **Purpose**: Hash password using bcrypt
+- **Parameters**: `password`: String password
+- **Returns**: String hashed password
+- **Key Features**:
+  - Handles 72-byte bcrypt limit
+  - Secure salt generation
+
+**`verify_password(plain_password, hashed_password)`**
+- **Purpose**: Verify password against hash
+- **Parameters**:
+  - `plain_password`: String plain password
+  - `hashed_password`: String hashed password
+- **Returns**: Boolean indicating match
+- **Key Features**:
+  - Supports bcrypt format
+  - Backward compatible with SHA-256
+
+**`create_access_token(data, expires_delta)`**
+- **Purpose**: Create JWT access token
+- **Parameters**:
+  - `data`: Dictionary with token data
+  - `expires_delta`: Optional timedelta for expiration
+- **Returns**: String JWT token
+- **Key Features**:
+  - 30-day expiration by default
+  - Secure JWT encoding
+
+**`get_current_user(credentials, db)`**
+- **Purpose**: Get authenticated user from JWT token
+- **Parameters**:
+  - `credentials`: HTTPAuthorizationCredentials
+  - `db`: Database session
+- **Returns**: User object
+- **Raises**: HTTPException if invalid
+
+**`get_current_user_optional(credentials, db)`**
+- **Purpose**: Get user if authenticated, None otherwise
+- **Parameters**:
+  - `credentials`: Optional HTTPAuthorizationCredentials
+  - `db`: Database session
+- **Returns**: User object or None
+
+**`get_db()`**
+- **Purpose**: Database session dependency
+- **Returns**: Database session generator
+- **Key Features**:
+  - Automatic session cleanup
+  - Proper connection management
+
+---
+
+## Database Functions
+
+### `database.py`
+
+**`init_db()`**
+- **Purpose**: Initialize database tables
+- **Key Features**:
+  - Creates all tables
+  - Handles migrations
+  - Sets up relationships
+
+#### Database Models
+
+**`ParsedFile`**
+- **Table**: `parsed_files`
+- **Fields**:
+  - `id`: Primary key
+  - `filename`: String filename
+  - `extracted_text`: Text extracted content
+  - `detected_shapes`: Integer image count
+  - `summary`: Text summary
+  - `full_text_path`: String path to text file
+  - `user_id`: Foreign key to users
+  - `created_at`: DateTime timestamp
+  - `view_id`: String view identifier
+- **Relationships**: images, user, features
+
+**`ImageMeta`**
+- **Table**: `image_meta`
+- **Fields**:
+  - `id`: Primary key
+  - `file_id`: Foreign key to parsed_files
+  - `image_path`: String path to image
+  - `page_number`: Integer page number
+  - `ocr_text`: Text OCR content
+- **Relationships**: file
+
+**`User`**
+- **Table**: `users`
+- **Fields**:
+  - `id`: Primary key
+  - `email`: String unique email
+  - `username`: String unique username
+  - `hashed_password`: String password hash
+  - `created_at`: DateTime timestamp
+  - `is_active`: Integer active status
+- **Relationships**: parsed_files, features
+
+**`Feature`**
+- **Table**: `features`
+- **Fields**:
+  - `id`: Primary key
+  - `user_id`: Foreign key to users
+  - `file_id`: Foreign key to parsed_files
+  - `category`: String requirement category
+  - `description`: Text requirement description
+  - `status`: String approval status
+  - `quality_score`: Integer quality score
+  - `feedback`: Text client feedback
+  - `created_at`: DateTime timestamp
+  - `updated_at`: DateTime last update
+- **Relationships**: user, file
+
+---
+
+## Document Processing Functions
+
+### `services/document_service.py`
+
+**`analyze_document(file, user_id, db, progress_tracker_id)`**
+- **Purpose**: Analyze document and save with user_id
+- **Parameters**:
+  - `file`: UploadFile object
+  - `user_id`: Integer user ID
+  - `db`: Database session
+  - `progress_tracker_id`: Optional tracker ID
+- **Returns**: Dictionary with extraction results
+- **Key Features**:
+  - Wraps internal analysis function
+  - Handles user association
+  - Progress tracking support
+
+**`analyze_with_agent(file, user_id, db, progress_tracker_id, basic_extraction_data)`**
+- **Purpose**: Analyze document with AI agent
+- **Parameters**:
+  - `file`: UploadFile object
+  - `user_id`: Integer user ID
+  - `db`: Database session
+  - `progress_tracker_id`: Optional tracker ID
+  - `basic_extraction_data`: Optional basic extraction results
+- **Returns**: Dictionary with AI analysis results
+- **Key Features**:
+  - Merges basic extraction data
+  - AI-powered analysis
+  - Feature extraction
   - Progress tracking
-- **Line Range:** 285-680
-
-**Line 2953:** `_analyze_with_agent_internal(file, user_id, db_session, progress_tracker_id)`
-- **Purpose:** AI agent-based document analysis
-- **Task:** Processes documents using RAG agent for requirements extraction
-- **Algorithms Used:**
-  - Document text extraction
-  - RAG agent processing
-  - Requirements extraction
-  - Self-learning pattern application
-- **Line Range:** 2953-3400
-
-**Line 98:** `favicon()`
-- **Purpose:** Favicon endpoint handler
-- **Task:** Returns empty favicon to prevent 404 errors
-
-**Line 2554:** `get_records(current_user)`
-- **Purpose:** Display all analyzed file summaries
-- **Task:** HTML page showing user's uploaded files
 
 ---
 
-### rag_agent.py (RAG Agent and AI Processing)
+## Image Processing Functions
 
-**Classes:**
+### `services/image_service.py`
 
-**Line 15:** `RequirementsExtractionAgent`
-- **Purpose:** Main RAG agent class for requirements extraction
-- **Task:** Handles document processing, requirements extraction, and self-learning
-- **Key Methods:**
-  - `__init__()` - Line 16: Agent initialization
-  - `_init_learning_system()` - Line 135: Initialize self-learning components
-  - `_load_learned_patterns()` - Line 180: Load patterns from ChromaDB
-  - `_save_learned_patterns()` - Line 210: Save patterns to ChromaDB
-  - `_learn_from_extraction()` - Line 260: Learn from successful extractions
-  - `_extract_category_specific_patterns()` - Line 356: Extract patterns by category
-  - `_learn_document_context()` - Line 382: Learn document context patterns
-  - `_apply_learned_patterns()` - Line 455: Apply learned patterns to new text
-  - `_update_performance_metrics()` - Line 568: Track extraction performance
-  - `_save_performance_metrics()` - Line 602: Save performance data
-  - `get_learning_status()` - Line 630: Get learning statistics
-  - `_format_learned_results()` - Line 665: Format learning results
-  - `_parse_response_to_sections()` - Line 684: Parse extraction response
-  - `_normalize_line()` - Line 726: Normalize text lines
-  - `_should_keep_line()` - Line 762: Filter relevant lines
-  - `_format_sections()` - Line 871: Format extracted sections
-  - `_learn_from_results()` - Line 907: Learn from extraction results
-  - `_spacy_filter()` - Line 932: spaCy-based sentence filtering
-  - `_near_duplicate_filter()` - Line 956: Near-duplicate detection algorithm
-  - `_rerank()` - Line 990: Cross-encoder reranking algorithm
-  - `_llm_finalize()` - Line 1005: LLM-based text finalization
-  - `_create_tools()` - Line 1051: Create agent tools
-  - `_create_agent()` - Line 1150: Create agent executor
-  - `process_document()` - Line 1202: Process document and create vector store
-  - `_heuristic_extract()` - Line 1232: Heuristic requirements extraction algorithm
-  - `_semantic_extract()` - Line 1453: Semantic requirements extraction algorithm
-  - `extract_requirements()` - Line 1800: Main requirements extraction method
-  - `search_requirements()` - Line 1942: Search requirements in vector store
-  - `search_specific_requirements()` - Line 1951: Search specific requirement types
+**`comprehensive_image_interpretation(image_path, context)`**
+- **Purpose**: Complete image interpretation combining OCR, VLM, and analysis
+- **Parameters**:
+  - `image_path`: String path to image
+  - `context`: Optional string context
+- **Returns**: Dictionary with interpretation results
+- **Key Features**:
+  - Advanced OCR extraction
+  - Image type detection
+  - VLM analysis (if enabled)
+  - Merged interpretation
 
-**Functions:**
+**`enhanced_vlm_analyze(image_path, ocr_text, image_type, context)`**
+- **Purpose**: Enhanced VLM analysis of image
+- **Parameters**:
+  - `image_path`: String path to image
+  - `ocr_text`: String OCR text
+  - `image_type`: String detected image type
+  - `context`: Optional string context
+- **Returns**: Dictionary with VLM analysis
+- **Key Features**:
+  - Vision-Language Model processing
+  - Context-aware analysis
+  - Requirement extraction from images
 
-**Line 1973:** `get_agent(user_id)`
-- **Purpose:** Get or create agent instance with caching
-- **Task:** Agent factory function with user-specific caching
-- **Algorithm:** Singleton pattern with user-specific instances
+**`enhanced_ocr_summarize(ocr_text, context)`**
+- **Purpose**: Enhanced OCR text summarization
+- **Parameters**:
+  - `ocr_text`: String OCR text
+  - `context`: Optional string context
+- **Returns**: String enhanced summary
+- **Key Features**:
+  - Intelligent text analysis
+  - Context integration
+  - Requirement extraction
 
----
-
-### auth.py (Authentication)
-
-**Functions:**
-
-**Line 26:** `get_password_hash(password)`
-- **Purpose:** Hash password using bcrypt
-- **Task:** Secure password hashing
-- **Algorithm:** bcrypt with salt (72-byte limit)
-
-**Line 39:** `verify_password(plain_password, hashed_password)`
-- **Purpose:** Verify password against hash
-- **Task:** Password verification with backward compatibility
-- **Algorithm:** bcrypt verification with SHA-256 fallback
-
-**Line 78:** `create_access_token(data, expires_delta)`
-- **Purpose:** Create JWT access token
-- **Task:** Generate authentication tokens
-- **Algorithm:** JWT (HS256) with 30-day expiry
-
-**Line 93:** `get_db()`
-- **Purpose:** Database session dependency
-- **Task:** Provide database session with automatic cleanup
-- **Algorithm:** Dependency injection with context manager
-
-**Line 102:** `get_current_user(credentials, db)`
-- **Purpose:** Get authenticated user from JWT token
-- **Task:** Validate token and return user object
-- **Algorithm:** JWT token validation
-
-**Line 137:** `get_current_user_optional(credentials, db)`
-- **Purpose:** Get user if authenticated, None otherwise
-- **Task:** Optional authentication for public endpoints
-- **Algorithm:** JWT token validation with optional error
+**`detect_image_type_advanced(image_path, ocr_text)`**
+- **Purpose**: Detect image type with advanced analysis
+- **Parameters**:
+  - `image_path`: String path to image
+  - `ocr_text`: String OCR text
+- **Returns**: Dictionary with type and confidence
+- **Key Features**:
+  - Multiple image type detection
+  - Confidence scoring
+  - Pattern recognition
 
 ---
 
-### database.py (Database Models)
+## Route Handlers
 
-**Classes:**
+### `routes/auth_routes.py`
 
-**Line 27:** `ParsedFile(Base)`
-- **Purpose:** Database model for parsed files
-- **Task:** Store document metadata and extracted text
-- **Fields:** id, filename, extracted_text, detected_shapes, summary, full_text_path, user_id, created_at, view_id
+**`@router.post("/api/signup")`**
+- **Purpose**: User registration
+- **Returns**: JWT token and user info
+- **Key Features**: Email validation, password hashing
 
-**Line 47:** `ImageMeta(Base)`
-- **Purpose:** Database model for image metadata
-- **Task:** Store image information from documents
-- **Fields:** id, file_id, image_path, page_number, ocr_text
+**`@router.post("/api/login")`**
+- **Purpose**: User authentication
+- **Returns**: JWT token and user info
+- **Key Features**: Password verification, token generation
 
-**Line 60:** `User(Base)`
-- **Purpose:** Database model for users
-- **Task:** Store user account information
-- **Fields:** id, email, username, hashed_password, created_at, is_active
+### `routes/upload_routes.py`
 
-**Functions:**
+**`@router.post("/upload_client_doc")`**
+- **Purpose**: Basic document extraction
+- **Returns**: JSON with extracted text and images
+- **Key Features**: Progress tracking, user association
 
-**Line 72:** `init_db()`
-- **Purpose:** Initialize database tables
-- **Task:** Create all database tables if they don't exist
-- **Algorithm:** SQLAlchemy table creation
+**`@router.post("/upload_agent_doc")`**
+- **Purpose**: AI agent document analysis
+- **Parameters**: Optional basic extraction data
+- **Returns**: JSON with AI-extracted requirements
+- **Key Features**: Merges basic extraction, AI analysis
 
----
+**`@router.get("/api/progress/{tracker_id}")`**
+- **Purpose**: Get processing progress
+- **Returns**: Progress status and percentage
 
-## ROUTE FILES
+### `routes/approval_routes.py`
 
-### routes/auth_routes.py
+**`@router.get("/api/features")`**
+- **Purpose**: Get features for approval
+- **Returns**: List of features with pagination
+- **Key Features**: Filters by user, run, status
 
-**Functions:**
+**`@router.put("/api/features/{feature_id}")`**
+- **Purpose**: Update feature (approve/deny)
+- **Returns**: Updated feature
+- **Key Features**: Status updates, feedback support
 
-**Line 17:** `SignupRequest` (Pydantic Model)
-- **Purpose:** Signup request validation model
+**`@router.put("/api/features/{feature_id}/feedback")`**
+- **Purpose**: Update feature feedback
+- **Returns**: Updated feature
+- **Key Features**: Client feedback storage
 
-**Line 23:** `LoginRequest` (Pydantic Model)
-- **Purpose:** Login request validation model
+**`@router.delete("/api/features/cleanup/old")`**
+- **Purpose**: Delete all features for user
+- **Returns**: Deletion count
+- **Key Features**: Preserves patterns and learning
 
-**Line 27:** `signup(request, db)`
-- **Purpose:** User registration endpoint
-- **Task:** Create new user account
-- **Algorithm:** Password hashing, user creation, token generation
-- **Line Range:** 27-88
+### `routes/dashboard_routes.py`
 
-**Line 89:** `login(request, db)`
-- **Purpose:** User authentication endpoint
-- **Task:** Authenticate user and return token
-- **Algorithm:** Password verification, token generation
-- **Line Range:** 89-136
+**`@router.get("/dashboard")`**
+- **Purpose**: Serve dashboard page
+- **Returns**: HTML dashboard
 
-**Line 137:** `get_current_user_info(token, credentials, db)`
-- **Purpose:** Get current user information
-- **Task:** Return authenticated user details
-- **Line Range:** 137-191
+**`@router.get("/api/dashboard/stats")`**
+- **Purpose**: Get dashboard statistics
+- **Returns**: JSON with user stats
 
----
+### `routes/training_routes.py`
 
-### routes/upload_routes.py
+**`@router.get("/training")`**
+- **Purpose**: Serve training page
+- **Returns**: HTML training dashboard
 
-**Functions:**
-
-**Line 20:** `validate_file_extension(filename)`
-- **Purpose:** Validate file extension
-- **Task:** Check if file type is allowed
-- **Algorithm:** Extension whitelist validation
-
-**Line 25:** `validate_file_size(file_size)`
-- **Purpose:** Validate file size
-- **Task:** Check if file is within size limits
-- **Algorithm:** Size limit check (50MB default)
-
-**Line 30:** `upload_client_doc(file, current_user, db, background_tasks)`
-- **Purpose:** Basic document upload endpoint
-- **Task:** Upload and extract text from document
-- **Algorithm:** Document parsing, text extraction, progress tracking
-- **Line Range:** 30-71
-
-**Line 74:** `upload_agent_doc(file, current_user, db)`
-- **Purpose:** AI agent document analysis endpoint
-- **Task:** Upload and analyze document with RAG agent
-- **Algorithm:** Document processing, RAG agent analysis, requirements extraction
-- **Line Range:** 74-117
-
-**Line 120:** `get_progress(tracker_id)`
-- **Purpose:** Get progress for document processing
-- **Task:** Return real-time progress updates
-- **Line Range:** 120-129
+**`@router.get("/api/training-status")`**
+- **Purpose**: Get training/learning status
+- **Returns**: JSON with learned patterns statistics
+- **Key Features**: Aggregates from agents, counts learned items
 
 ---
 
-### routes/dashboard_routes.py
+## Service Functions
 
-**Functions:**
+### `services/progress_service.py`
 
-**Line 15:** `dashboard_page()`
-- **Purpose:** Dashboard HTML page
-- **Task:** Serve dashboard HTML
+**`ProcessingStage` (Enum)**
+- **Stages**: UPLOADING, PARSING, TEXT_EXTRACTION, IMAGE_DETECTION, OCR_PROCESSING, IMAGE_SUMMARIZATION, FINALIZING, COMPLETE
 
-**Line 25:** `extract_page()`
-- **Purpose:** Extract page HTML
-- **Task:** Serve extract page HTML
+### `services/progress_storage.py`
 
-**Line 36:** `_get_user_from_token(token, credentials, db)`
-- **Purpose:** Helper to get user from token
-- **Task:** Extract user from JWT token (query param or header)
-- **Algorithm:** JWT token validation
-- **Line Range:** 36-71
+**`create_progress_tracker()`**
+- **Purpose**: Create new progress tracker
+- **Returns**: Tracker ID and tracker object
 
-**Line 74:** `get_my_uploads(token, credentials, db)`
-- **Purpose:** Get user's uploaded files
-- **Task:** Return list of user's documents
-- **Algorithm:** Database query with user filtering
-- **Line Range:** 74-109
+**`get_progress_tracker(tracker_id)`**
+- **Purpose**: Get progress tracker by ID
+- **Returns**: Tracker object or None
 
-**Line 112:** `get_upload_details(upload_id, token, credentials, db)`
-- **Purpose:** Get detailed upload information
-- **Task:** Return specific upload details
-- **Line Range:** 112-143
+**`remove_progress_tracker(tracker_id)`**
+- **Purpose**: Remove progress tracker
+- **Key Features**: Cleanup and memory management
 
 ---
 
-### routes/training_routes.py
+## Utility Functions
 
-**Functions:**
+### `utils/async_helpers.py`
 
-**Line 14:** `training_page()`
-- **Purpose:** Training status HTML page
-- **Task:** Serve training dashboard HTML
-
-**Line 224:** `get_training_status(token, credentials, db)`
-- **Purpose:** Get model training status
-- **Task:** Return learning statistics and patterns
-- **Algorithm:** Agent retrieval, pattern counting, statistics aggregation
-- **Line Range:** 224-365
-
----
-
-## SERVICE FILES
-
-### services/document_service.py
-
-**Functions:**
-
-**Line 8:** `analyze_document(file, user_id, db, progress_tracker_id)`
-- **Purpose:** Document analysis service wrapper
-- **Task:** Analyze document and save with user_id
-- **Algorithm:** Delegates to _analyze_document_internal
-
-**Line 15:** `analyze_with_agent(file, user_id, db, progress_tracker_id)`
-- **Purpose:** AI agent analysis service wrapper
-- **Task:** Analyze document with RAG agent and save with user_id
-- **Algorithm:** Delegates to _analyze_with_agent_internal
+**`run_in_thread(func, *args, timeout, **kwargs)`**
+- **Purpose**: Run function in thread pool with timeout
+- **Parameters**:
+  - `func`: Function to run
+  - `*args`: Function arguments
+  - `timeout`: Optional timeout in seconds
+  - `**kwargs`: Function keyword arguments
+- **Returns**: Function result
+- **Key Features**:
+  - Non-blocking execution
+  - Timeout handling
+  - Exception propagation
 
 ---
 
-### services/image_service.py
+## Helper Functions
 
-**Functions:**
+### Text Processing
 
-**Line 9:** `_get_env_bool(key, default)`
-- **Purpose:** Get boolean from environment variable
-- **Task:** Parse environment variable to boolean
+**`_normalize_line(line)`**: Normalize text for processing
+**`_should_keep_line(line)`**: Filter non-requirements
+**`_enhance_requirement_text(requirement)`**: Improve wording
+**`_is_valid_requirement(sentence)`**: Validate requirement
 
-**Line 15:** `enhanced_vlm_summarize(image_path, context, image_type)`
-- **Purpose:** Enhanced VLM image summarization
-- **Task:** Summarize images using Visual Language Models
-- **Algorithm:** Multi-model VLM aggregation, response deduplication, frequency ranking
-- **Line Range:** 15-191
+### Classification
 
-**Line 194:** `enhanced_ocr_summarize(ocr_text, context)`
-- **Purpose:** Enhanced OCR text summarization
-- **Task:** Summarize OCR-extracted text
-- **Algorithm:** Context-aware text analysis, key information extraction
-- **Line Range:** 194-291
+**`_classify_requirement_improved(sentence, context)`**: Categorize requirement
+**`_detect_domain_context(text)`**: Detect domain/context
+**`_score_requirement_quality(requirement)`**: Calculate quality score
 
----
+### Deduplication
 
-### services/progress_service.py
+**`_cross_category_deduplicate(categorized)`**: Remove duplicates
+**`_reclassify_and_deduplicate_all(initial_categories)`**: Reclassify and dedupe
+**`_near_duplicate_filter(items)`**: Filter near-duplicates
 
-**Classes:**
+### Learning
 
-**Line 1:** `ProcessingStage` (Enum)
-- **Purpose:** Document processing stages
-- **Values:** UPLOADING, PARSING, TEXT_EXTRACTION, IMAGE_DETECTION, OCR_PROCESSING, IMAGE_SUMMARIZATION, FINALIZING
+**`_learn_from_results(filename, sections)`**: Learn from extraction
+**`_apply_learned_patterns(text)`**: Apply learned patterns
+**`_save_learned_patterns()`**: Persist learning
 
 ---
 
-### services/progress_storage.py
+## Global Functions
 
-**Classes:**
-
-**Line 1:** `ProgressTracker`
-- **Purpose:** Track document processing progress
-- **Task:** Manage progress state and updates
-- **Methods:**
-  - `start()` - Initialize tracker
-  - `set_stage()` - Update processing stage
-  - `complete()` - Mark as complete
-  - `get_progress()` - Get current progress
-
-**Functions:**
-
-**Line 1:** `create_progress_tracker()`
-- **Purpose:** Create new progress tracker
-- **Task:** Generate tracker ID and instance
-
-**Line 1:** `get_progress_tracker(tracker_id)`
-- **Purpose:** Get existing progress tracker
-- **Task:** Retrieve tracker by ID
-
-**Line 1:** `remove_progress_tracker(tracker_id)`
-- **Purpose:** Remove progress tracker
-- **Task:** Clean up tracker after completion
+**`get_agent(user_id)`**
+- **Purpose**: Get or create RAG agent instance
+- **Parameters**: `user_id`: Optional user ID
+- **Returns**: RequirementsExtractionAgent instance
+- **Key Features**:
+  - Caching for performance
+  - User-specific agents
+  - Global agent fallback
 
 ---
 
-## UTILITY FILES
+## Notes
 
-### utils/async_helpers.py
-
-**Functions:**
-
-**Line 15:** `run_in_thread(func, *args, timeout, **kwargs)`
-- **Purpose:** Run blocking function in thread pool with timeout
-- **Task:** Execute synchronous functions asynchronously
-- **Algorithm:** ThreadPoolExecutor with asyncio timeout
-- **Line Range:** 15-49
-
-**Line 52:** `with_timeout(timeout)`
-- **Purpose:** Decorator to add timeout to async functions
-- **Task:** Apply timeout to async functions
-- **Algorithm:** asyncio.wait_for wrapper
-- **Line Range:** 52-65
-
----
-
-## KEY ALGORITHMS AND THEIR LOCATIONS
-
-### 1. Requirements Extraction Algorithm
-**Location:** rag_agent.py
-- **Heuristic Method:** Line 1232 - `_heuristic_extract()`
-  - Pattern matching: Lines 1247-1400
-  - Scoring system: Lines 1349-1397
-  - Deduplication: Lines 1398-1452
-- **Semantic Method:** Line 1453 - `_semantic_extract()`
-  - Embedding generation: Lines 1470-1490
-  - Cosine similarity: Lines 1496-1510
-  - Top-K selection: Lines 1511-1550
-- **Main Entry:** Line 1800 - `extract_requirements()`
-
-### 2. Self-Learning Algorithm
-**Location:** rag_agent.py
-- **Pattern Loading:** Line 180 - `_load_learned_patterns()`
-- **Pattern Saving:** Line 210 - `_save_learned_patterns()`
-- **Learning from Extraction:** Line 260 - `_learn_from_extraction()`
-- **Category Pattern Extraction:** Line 356 - `_extract_category_specific_patterns()`
-- **Document Context Learning:** Line 382 - `_learn_document_context()`
-- **Pattern Application:** Line 455 - `_apply_learned_patterns()`
-
-### 3. Text Chunking Algorithm
-**Location:** rag_agent.py, Line 82-86
-- **Implementation:** RecursiveCharacterTextSplitter
-- **Parameters:** chunk_size=1000, overlap=200
-
-### 4. Similarity Search Algorithm
-**Location:** rag_agent.py
-- **Vector Store Creation:** Line 1211 - Chroma.from_documents()
-- **Similarity Search:** Line 1051 - search_requirements() tool
-- **Top-K Retrieval:** Uses ChromaDB similarity_search with k parameter
-
-### 5. Deduplication Algorithm
-**Location:** rag_agent.py, Line 956 - `_near_duplicate_filter()`
-- **Method:** Embedding-based similarity
-- **Threshold:** 0.92 (92% similarity)
-- **Algorithm:** Cosine similarity comparison with set-based deduplication
-
-### 6. Reranking Algorithm
-**Location:** rag_agent.py, Line 990 - `_rerank()`
-- **Model:** BAAI/bge-reranker-base (optional)
-- **Method:** Cross-encoder reranking
-- **Purpose:** Improve search result relevance
-
-### 7. Image Summarization Algorithm
-**Location:** services/image_service.py, Line 15 - `enhanced_vlm_summarize()`
-- **Process:** Multi-model VLM aggregation
-- **Steps:**
-  - Base64 encoding: Line 30-31
-  - Prompt generation: Lines 34-86
-  - Model querying: Lines 100-115
-  - Response aggregation: Lines 120-191
-  - Deduplication: Lines 121-133
-  - Frequency ranking: Lines 135-191
-
-### 8. OCR Text Summarization Algorithm
-**Location:** services/image_service.py, Line 194 - `enhanced_ocr_summarize()`
-- **Process:** Context-aware text analysis
-- **Steps:**
-  - Text preprocessing: Lines 200-220
-  - Key information extraction: Lines 221-250
-  - Summary generation: Lines 251-291
-
-### 9. Document Parsing Algorithms
-**Location:** flowmind.py
-- **PDF Parsing:** Line 325-500 - PyPDF text and image extraction
-- **DOCX Parsing:** Line 550-580 - python-docx text extraction
-- **PPTX Parsing:** Line 580-610 - python-pptx text extraction
-- **Image OCR:** Line 362-500 - Tesseract OCR processing
-
-### 10. Password Hashing Algorithm
-**Location:** auth.py
-- **Hashing:** Line 26 - `get_password_hash()` - bcrypt with salt
-- **Verification:** Line 39 - `verify_password()` - bcrypt check with SHA-256 fallback
-
-### 11. JWT Token Algorithm
-**Location:** auth.py
-- **Token Creation:** Line 78 - `create_access_token()` - HS256 algorithm
-- **Token Validation:** Line 102 - `get_current_user()` - JWT decode and validation
-
-### 12. Async Thread Pool Algorithm
-**Location:** utils/async_helpers.py
-- **Thread Execution:** Line 15 - `run_in_thread()` - ThreadPoolExecutor with asyncio timeout
-- **Timeout Management:** asyncio.wait_for with configurable timeout
-
----
-
-## SUMMARY BY TASK
-
-### Document Processing
-- **Main Function:** flowmind.py:285 - `_analyze_document_internal()`
-- **PDF Parsing:** flowmind.py:325-500
-- **DOCX Parsing:** flowmind.py:550-580
-- **PPTX Parsing:** flowmind.py:580-610
-- **Text Extraction:** flowmind.py:314-610
-
-### AI/ML Processing
-- **Agent Initialization:** rag_agent.py:16 - `__init__()`
-- **Document Processing:** rag_agent.py:1202 - `process_document()`
-- **Requirements Extraction:** rag_agent.py:1800 - `extract_requirements()`
-- **Heuristic Extraction:** rag_agent.py:1232 - `_heuristic_extract()`
-- **Semantic Extraction:** rag_agent.py:1453 - `_semantic_extract()`
-
-### Self-Learning
-- **Pattern Loading:** rag_agent.py:180 - `_load_learned_patterns()`
-- **Pattern Saving:** rag_agent.py:210 - `_save_learned_patterns()`
-- **Learning:** rag_agent.py:260 - `_learn_from_extraction()`
-- **Pattern Application:** rag_agent.py:455 - `_apply_learned_patterns()`
-
-### Image Processing
-- **VLM Summarization:** services/image_service.py:15 - `enhanced_vlm_summarize()`
-- **OCR Summarization:** services/image_service.py:194 - `enhanced_ocr_summarize()`
-- **Image Extraction:** flowmind.py:362-500
-
-### Authentication
-- **Password Hashing:** auth.py:26 - `get_password_hash()`
-- **Password Verification:** auth.py:39 - `verify_password()`
-- **Token Creation:** auth.py:78 - `create_access_token()`
-- **User Authentication:** auth.py:102 - `get_current_user()`
-
-### Database Operations
-- **Session Management:** auth.py:93 - `get_db()`
-- **Table Creation:** database.py:72 - `init_db()`
-- **Models:** database.py:27, 47, 60 - ParsedFile, ImageMeta, User
-
-### API Endpoints
-- **Signup:** routes/auth_routes.py:27 - `signup()`
-- **Login:** routes/auth_routes.py:89 - `login()`
-- **Upload Basic:** routes/upload_routes.py:30 - `upload_client_doc()`
-- **Upload AI:** routes/upload_routes.py:74 - `upload_agent_doc()`
-- **Dashboard:** routes/dashboard_routes.py:74 - `get_my_uploads()`
-- **Training Status:** routes/training_routes.py:224 - `get_training_status()`
-
----
-
-This reference document provides exact line numbers for all functions, classes, and algorithms in the FlowMind codebase, making it easy to locate specific implementations and understand the code structure.
-
+- All functions include comprehensive error handling
+- Most functions support async/await for non-blocking operations
+- Progress tracking is integrated throughout processing pipeline
+- User-specific learning enables personalized improvements
+- Quality scoring provides feedback on requirement quality
+- Deduplication ensures clean, unique requirements

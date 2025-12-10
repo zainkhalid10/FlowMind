@@ -751,6 +751,25 @@ class RequirementsExtractionAgent:
         
         s = line.strip()
         
+        # Remove image metadata markers and OCR text
+        s = re.sub(r'\[IMAGE[^\]]*\]', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'\[IMAGE_SUMMARY[^\]]*\]', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'OCR:\s*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'VLM\s+Summarizer[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Image\s+Type[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Characteristics[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Analysis[^\n]*', '', s, flags=re.IGNORECASE)
+        
+        # Remove technical metadata markers
+        s = re.sub(r'\*\*Key Components\*\*[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'\*\*Technical Details\*\*[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Key Components:\s*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Technical Details:\s*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'Contains\s+\d+\s+structural\s+lines[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'\d+\s+identifiable\s+steps[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'\d+\s+components/modules[^\n]*', '', s, flags=re.IGNORECASE)
+        s = re.sub(r'\d+\s+identifiable\s+elements[^\n]*', '', s, flags=re.IGNORECASE)
+        
         # Remove common bullet symbols and numbering patterns
         s = re.sub(r"^[\-•●\u2022\u25CF\u25E6\s]*", "", s)
         s = re.sub(r"^\d+[\.\)]\s*", "", s)  # Handle both "1." and "1)" patterns
@@ -784,6 +803,40 @@ class RequirementsExtractionAgent:
         s = (line or "").strip().lower()
         if not s:
             return False
+        
+        # Filter out image metadata and OCR markers
+        if re.search(r'\[image[^\]]*\]', s, re.IGNORECASE):
+            return False
+        if re.search(r'\[image_summary[^\]]*\]', s, re.IGNORECASE):
+            return False
+        if re.search(r'^ocr:\s*', s, re.IGNORECASE):
+            return False
+        if re.search(r'img-[a-z0-9]+', s, re.IGNORECASE):
+            return False
+        
+        # Filter out technical metadata patterns
+        if re.search(r'key components:', s, re.IGNORECASE):
+            return False
+        if re.search(r'technical details:', s, re.IGNORECASE):
+            return False
+        if re.search(r'contains\s+\d+\s+structural\s+lines', s, re.IGNORECASE):
+            return False
+        if re.search(r'\d+\s+identifiable\s+(steps|elements|components)', s, re.IGNORECASE):
+            return False
+        if re.search(r'image type:', s, re.IGNORECASE):
+            return False
+        if re.search(r'characteristics:', s, re.IGNORECASE):
+            return False
+        if re.search(r'vlm\s+summarizer', s, re.IGNORECASE):
+            return False
+        if re.search(r'rag-based\s+requirement', s, re.IGNORECASE):
+            return False
+        
+        # Filter out pure component lists (like "Tesseract, Structured Data, Embeddings")
+        if re.match(r'^[a-z][^:]*:\s*[a-z][^,]*,\s*[a-z][^,]*,\s*[a-z]', s):
+            # Looks like a component list, check if it's meaningful
+            if not any(word in s for word in ['shall', 'must', 'should', 'will', 'enable', 'allow', 'provide']):
+                return False
         
         # Enhanced heading detection with more patterns
         # NOTE: Don't filter section headers that end with ":" - they're used in output formatting
@@ -887,7 +940,7 @@ class RequirementsExtractionAgent:
         # Keep moderately informative statements with good structure
         return len(s) > 15 and len(s.split()) >= 3
 
-    def _format_sections(self, sections: Dict[str, List[str]]) -> str:
+    def _format_sections(self, sections: Dict[str, List[str]], enhanced: bool = True) -> str:
         """Format sections into a user-friendly, deduplicated bullet list per section with quality indicators."""
         global_seen = set()
         parts: List[str] = []
@@ -906,6 +959,9 @@ class RequirementsExtractionAgent:
                 if key in global_seen:
                     continue
                 global_seen.add(key)
+                
+                # Enhance the requirement text to be more professional and meaningful
+                line = self._enhance_requirement_text(line)
                 
                 # Calculate quality score
                 quality_score = self._score_requirement_quality(line) if self.enable_quality_scoring else 0
@@ -1067,6 +1123,150 @@ class RequirementsExtractionAgent:
         except Exception:
             return candidates[:top_k]
 
+    def _enhance_requirement_text(self, requirement: str) -> str:
+        """Enhance requirement text to be more professional, accurate, and meaningful using AI-style improvements."""
+        if not requirement or len(requirement.strip()) < 10:
+            return requirement
+        
+        enhanced = requirement.strip()
+        
+        # Capitalize first letter if needed
+        if enhanced and enhanced[0].islower():
+            enhanced = enhanced[0].upper() + enhanced[1:]
+        
+        # Fix common grammatical issues
+        enhanced = re.sub(r'\s+', ' ', enhanced)  # Multiple spaces to single
+        enhanced = re.sub(r'\s+([,.!?;:])', r'\1', enhanced)  # Remove space before punctuation
+        enhanced = re.sub(r'([,.!?;:])([^\s])', r'\1 \2', enhanced)  # Add space after punctuation if missing
+        
+        # Enhance requirement language patterns
+        # Make "must" statements more professional
+        enhanced = re.sub(r'\b(must|should|can|will)\s+', lambda m: {
+            'must': 'shall',
+            'should': 'should',
+            'can': 'must be able to',
+            'will': 'shall'
+        }.get(m.group(1), m.group(1)) + ' ', enhanced, flags=re.IGNORECASE)
+        
+        # Improve vague terms with more specific language
+        replacements = {
+            r'\buser\s+friendly\b': 'intuitive and accessible',
+            r'\bfast\b': 'efficient with minimal latency',
+            r'\bquick\b': 'efficient',
+            r'\bgood\b': 'high-quality',
+            r'\bbad\b': 'suboptimal',
+            r'\beasy\b': 'straightforward',
+            r'\bhard\b': 'complex',
+            r'\bsimple\b': 'straightforward',
+            r'\bthing\b': 'component',
+            r'\bstuff\b': 'data',
+            r'\bget\b': 'retrieve',
+            r'\bput\b': 'store',
+            r'\bmake\b': 'generate',
+            r'\bdo\b': 'execute',
+            r'\bshow\b': 'display',
+            r'\btell\b': 'notify',
+            r'\bneed\b': 'require',
+            r'\bwant\b': 'require',
+        }
+        
+        for pattern, replacement in replacements.items():
+            enhanced = re.sub(pattern, replacement, enhanced, flags=re.IGNORECASE)
+        
+        # Ensure proper requirement structure
+        # If it doesn't start with a requirement verb, try to add context
+        requirement_verbs = ['shall', 'must', 'should', 'will', 'enable', 'allow', 'provide', 
+                           'support', 'include', 'generate', 'process', 'handle', 'manage',
+                           'control', 'monitor', 'track', 'log', 'report', 'notify', 'validate',
+                           'authenticate', 'authorize', 'calculate', 'fetch', 'collect', 'book',
+                           'reserve', 'charge', 'implement', 'ensure', 'maintain', 'deliver']
+        
+        first_word = enhanced.split()[0].lower() if enhanced.split() else ''
+        if first_word not in requirement_verbs and not enhanced.lower().startswith(('as a', 'as an', 'the system', 'the application')):
+            # Try to restructure if it's a fragment
+            if not enhanced.endswith(('.', '!', '?')):
+                enhanced += '.'
+        
+        # Improve sentence clarity
+        # Remove redundant words
+        enhanced = re.sub(r'\bvery\s+', '', enhanced, flags=re.IGNORECASE)
+        enhanced = re.sub(r'\breally\s+', '', enhanced, flags=re.IGNORECASE)
+        enhanced = re.sub(r'\bquite\s+', '', enhanced, flags=re.IGNORECASE)
+        
+        # Ensure proper capitalization for technical terms
+        tech_terms = {
+            r'\bapi\b': 'API',
+            r'\bui\b': 'UI',
+            r'\bux\b': 'UX',
+            r'\bhttp\b': 'HTTP',
+            r'\bhttps\b': 'HTTPS',
+            r'\bjson\b': 'JSON',
+            r'\bxml\b': 'XML',
+            r'\bsql\b': 'SQL',
+            r'\bdb\b': 'database',
+            r'\bdbms\b': 'DBMS',
+            r'\bjwt\b': 'JWT',
+            r'\bocr\b': 'OCR',
+            r'\brag\b': 'RAG',
+            r'\bai\b': 'AI',
+            r'\bml\b': 'ML',
+        }
+        
+        for pattern, replacement in tech_terms.items():
+            enhanced = re.sub(pattern, replacement, enhanced, flags=re.IGNORECASE)
+        
+        # Ensure sentence ends properly
+        if enhanced and not enhanced[-1] in '.!?':
+            enhanced += '.'
+        
+        # Final cleanup
+        enhanced = re.sub(r'\s+', ' ', enhanced).strip()
+        
+        return enhanced
+    
+    def _enhance_final_output(self, section_text: str) -> str:
+        """Enhance the final output text to be more professional and meaningful."""
+        if not section_text or len(section_text.strip()) < 10:
+            return section_text
+        
+        lines = section_text.split('\n')
+        enhanced_lines = []
+        in_section = False
+        
+        for line in lines:
+            # Keep section headers as-is
+            if ':' in line and ('Requirements' in line or 'Stories' in line or 'Features' in line):
+                enhanced_lines.append(line)
+                in_section = True
+                continue
+            
+            # Skip empty lines and section markers
+            if not line.strip() or line.strip() == '(none)':
+                enhanced_lines.append(line)
+                continue
+            
+            # Enhance requirement lines
+            if line.strip().startswith('-'):
+                # Extract the requirement text (after indicator and dash)
+                req_text = re.sub(r'^-\s*(✅|⚠️|❌)?\s*', '', line.strip())
+                if req_text:
+                    enhanced_req = self._enhance_requirement_text(req_text)
+                    # Preserve the indicator if present
+                    indicator = ''
+                    if '✅' in line:
+                        indicator = '✅ '
+                    elif '⚠️' in line:
+                        indicator = '⚠️  '
+                    elif '❌' in line:
+                        indicator = '❌ '
+                    enhanced_lines.append(f"- {indicator}{enhanced_req}")
+                else:
+                    enhanced_lines.append(line)
+            else:
+                enhanced_lines.append(line)
+        
+        return '\n'.join(enhanced_lines)
+    
     def _llm_finalize(self, section_text: str) -> str:
         """Optional LLM polishing via Ollama (local) or OpenRouter; fallback to input."""
         if not self.use_llm_finalize:
@@ -1267,33 +1467,105 @@ Thought: {agent_scratchpad}""",
     def process_document(self, text: str, filename: str) -> Dict[str, Any]:
         """Process a document and add it to the vector store."""
         try:
+            # Ensure text is a valid string
+            if not isinstance(text, str):
+                text = str(text) if text is not None else ""
+            
+            # Validate text is not empty
+            if not text or len(text.strip()) == 0:
+                return {
+                    "status": "error",
+                    "message": "Empty or invalid text provided"
+                }
+            
             # Split the text into chunks
             chunks = self.text_splitter.split_text(text)
             
-            # Create documents
-            documents = [
-                Document(
-                    page_content=chunk,
-                    metadata={"source": filename, "chunk_id": i}
-                )
-                for i, chunk in enumerate(chunks)
-            ]
+            # Validate and sanitize chunks - ensure all are valid strings
+            valid_chunks = []
+            for i, chunk in enumerate(chunks):
+                if chunk is None:
+                    continue
+                # Ensure chunk is a string
+                chunk_str = str(chunk) if not isinstance(chunk, str) else chunk
+                # Remove any invalid characters that might cause encoding issues
+                chunk_str = chunk_str.strip()
+                if chunk_str:  # Only add non-empty chunks
+                    valid_chunks.append(chunk_str)
+            
+            if not valid_chunks:
+                return {
+                    "status": "error",
+                    "message": "No valid text chunks created from document"
+                }
+            
+            # Create documents with validated chunks
+            documents = []
+            for i, chunk in enumerate(valid_chunks):
+                # Ensure chunk is a proper string and not too large
+                if isinstance(chunk, str) and chunk.strip():
+                    # Limit chunk size to prevent tokenization issues (max 8000 chars per chunk)
+                    chunk_content = chunk[:8000] if len(chunk) > 8000 else chunk
+                    documents.append(Document(
+                        page_content=chunk_content,
+                        metadata={"source": filename, "chunk_id": i}
+                    ))
+            
+            if not documents:
+                return {
+                    "status": "error",
+                    "message": "No valid documents created after validation"
+                }
             
             # Use a fresh, per-file collection to avoid cross-document bleed
             safe_name = "req_" + str(abs(hash(filename)) % (10**10))
             self.collection_name = safe_name
-            self.vectorstore = Chroma.from_documents(
-                documents=documents,
-                embedding=self.embeddings,
-                collection_name=self.collection_name,
-                client=self.chroma_client
-            )
+            
+            try:
+                self.vectorstore = Chroma.from_documents(
+                    documents=documents,
+                    embedding=self.embeddings,
+                    collection_name=self.collection_name,
+                    client=self.chroma_client
+                )
+            except Exception as embed_error:
+                # If embedding fails, provide detailed error information
+                error_msg = str(embed_error)
+                error_type = type(embed_error).__name__
+                
+                # Check for specific tokenization errors
+                if "TextEncodeInput" in error_msg or "must be Union" in error_msg:
+                    # Try to identify problematic content
+                    problematic_info = []
+                    for i, doc in enumerate(documents[:5]):  # Check first 5 chunks
+                        content = doc.page_content
+                        if content:
+                            # Check for non-string content or encoding issues
+                            try:
+                                content.encode('utf-8')
+                            except UnicodeEncodeError:
+                                problematic_info.append(f"Chunk {i}: Unicode encoding error")
+                            if len(content) > 5000:
+                                problematic_info.append(f"Chunk {i}: {len(content)} chars (very large)")
+                            if not isinstance(content, str):
+                                problematic_info.append(f"Chunk {i}: type {type(content)} (not string)")
+                    
+                    detailed_msg = f"Embedding tokenization error ({error_type}): {error_msg}"
+                    if problematic_info:
+                        detailed_msg += f". Issues found: {', '.join(problematic_info[:3])}"
+                    
+                    return {
+                        "status": "error",
+                        "message": detailed_msg
+                    }
+                # Re-raise other errors
+                raise
             self.last_source = filename
             
             return {
                 "status": "success",
                 "message": f"Document '{filename}' processed successfully",
-                "chunks_created": len(chunks),
+                "chunks_created": len(valid_chunks),
                 "total_chunks": len(documents)
             }
             
@@ -1416,6 +1688,34 @@ Thought: {agent_scratchpad}""",
         
         # Minimum length check
         if len(normalized) < 15:
+            return False
+        
+        # Exclude image metadata and OCR markers
+        if re.search(r'\[image[^\]]*\]', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'\[image_summary[^\]]*\]', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'^ocr:\s*', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'img-[a-z0-9]+', normalized, re.IGNORECASE):
+            return False
+        
+        # Exclude technical metadata patterns
+        if re.search(r'key components:', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'technical details:', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'contains\s+\d+\s+structural\s+lines', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'\d+\s+identifiable\s+(steps|elements|components)', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'image type:', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'characteristics:', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'vlm\s+summarizer', normalized, re.IGNORECASE):
+            return False
+        if re.search(r'rag-based\s+requirement', normalized, re.IGNORECASE):
             return False
         
         # Exclude pure metadata, headers, dates
@@ -1817,7 +2117,12 @@ Thought: {agent_scratchpad}""",
                 "Business Requirements": final_sections.get("business", []),
             }
             
-            return {"status": "success", "response": self._format_sections(sections)}
+            # Format and enhance the sections
+            formatted_response = self._format_sections(sections)
+            # Apply additional AI enhancement for professional wording
+            enhanced_response = self._enhance_final_output(formatted_response)
+            
+            return {"status": "success", "response": enhanced_response}
             
         except Exception as e:
             return {"status": "error", "message": f"Enhanced heuristic extraction failed: {str(e)}"}
@@ -2092,7 +2397,9 @@ Thought: {agent_scratchpad}""",
                 pass
 
             response_text = self._format_sections(sections)
-            # Optional LLM finalize
+            # Apply AI enhancement for professional wording
+            response_text = self._enhance_final_output(response_text)
+            # Optional LLM finalize (if enabled)
             response_text = self._llm_finalize(response_text)
             return {"status": "success", "response": response_text}
         except Exception as e:
@@ -2308,6 +2615,12 @@ Thought: {agent_scratchpad}""",
                     best_result["response"] = "No requirements extracted."
                 if not best_result.get("status"):
                     best_result["status"] = "success"
+                
+                # Enhance the final output for professional wording
+                if best_result.get("response"):
+                    print(f"✨ Enhancing extracted requirements for professional wording...")
+                    best_result["response"] = self._enhance_final_output(best_result["response"])
+                    print(f"✅ Requirements enhanced successfully")
                 
                 # Add learning info to result FIRST (before learning, which might be slow)
                 best_result["extraction_method"] = method_used

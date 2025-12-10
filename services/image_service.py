@@ -14,6 +14,23 @@ import re
 import io
 
 
+def sanitize_unicode_text(text: str) -> str:
+    """Remove invalid Unicode surrogate characters that can't be encoded to UTF-8."""
+    if not text:
+        return text
+    try:
+        # Try to encode to catch surrogates
+        text.encode('utf-8')
+        return text
+    except (UnicodeEncodeError, AttributeError, TypeError):
+        # Remove surrogates by encoding with errors='replace' and decoding
+        if isinstance(text, str):
+            return text.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+        else:
+            text_str = str(text) if text is not None else ""
+            return text_str.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+
+
 def _get_env_bool(key: str, default: bool = False) -> bool:
     """Get boolean from environment variable."""
     val = os.getenv(key, "").lower()
@@ -57,7 +74,9 @@ def advanced_ocr_extract(image_path: str) -> Dict[str, str]:
                 avg_confidence = sum(confidences) / len(confidences) if confidences else 0
                 
                 # Get text
-                text = pytesseract.image_to_string(processed_img, config='--psm 6').strip()
+                text_raw = pytesseract.image_to_string(processed_img, config='--psm 6').strip()
+                # Sanitize Unicode to remove invalid surrogate characters
+                text = sanitize_unicode_text(text_raw)
                 
                 if len(text) > len(best_text) and avg_confidence >= best_confidence:
                     best_text = text

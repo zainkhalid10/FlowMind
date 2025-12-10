@@ -28,6 +28,7 @@ import requests
 import asyncio
 import warnings
 import logging
+import re
 from dotenv import load_dotenv
 
 # Suppress harmless warnings
@@ -42,11 +43,71 @@ warnings.filterwarnings("ignore", category=UserWarning, module="urllib3")
 logging.getLogger("chromadb").setLevel(logging.ERROR)
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
 
+# Suppress huggingface tokenizers warnings about forking
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+# -------------------- Unicode Sanitization --------------------
+def sanitize_unicode(text: str) -> str:
+    """Remove invalid Unicode surrogate characters that can't be encoded to UTF-8."""
+    if not text:
+        return text or ""
+    
+    # Handle non-string types
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ""
+    
+    if not text:
+        return ""
+    
+    try:
+        # First, try to encode to catch surrogates
+        text.encode('utf-8')
+        return text
+    except UnicodeEncodeError:
+        # Remove surrogates by encoding with errors='replace' and decoding
+        # This replaces invalid characters with replacement characters
+        try:
+            return text.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+        except Exception:
+            # Fallback: remove surrogates manually
+            return ''.join(char for char in text if ord(char) < 0xD800 or ord(char) > 0xDFFF)
+    except (AttributeError, TypeError) as e:
+        # If it's not a string, convert to string first
+        try:
+            text_str = str(text) if text is not None else ""
+            text_str.encode('utf-8')
+            return text_str
+        except UnicodeEncodeError:
+            try:
+                return text_str.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+            except Exception:
+                return ''.join(char for char in text_str if ord(char) < 0xD800 or ord(char) > 0xDFFF)
+        except Exception:
+            return ""
+
+def sanitize_dict(data: dict) -> dict:
+    """Recursively sanitize all string values in a dictionary."""
+    if not isinstance(data, dict):
+        return data
+    
+    sanitized = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            sanitized[key] = sanitize_unicode(value)
+        elif isinstance(value, dict):
+            sanitized[key] = sanitize_dict(value)
+        elif isinstance(value, list):
+            sanitized[key] = [sanitize_dict(item) if isinstance(item, dict) else (sanitize_unicode(item) if isinstance(item, str) else item) for item in value]
+        else:
+            sanitized[key] = value
+    return sanitized
+
 # -------------------- OCR Summary Helpers --------------------
 def _summarize_image_ocr(ocr_text: str, context: str = "") -> str:
     """Legacy function - now uses enhanced service."""
     from services.image_service import enhanced_ocr_summarize
-    return enhanced_ocr_summarize(ocr_text, context)
+    result = enhanced_ocr_summarize(ocr_text, context)
+    return sanitize_unicode(result)
 
 # -------------------- SETUP --------------------
 # Tesseract path - platform-aware configuration
@@ -404,7 +465,9 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
                         try:
                             im = Image.open(BytesIO(data))
                             im.save(out_path, format="PNG")
-                            ocr_text = pytesseract.image_to_string(im)
+                            ocr_text_raw = pytesseract.image_to_string(im)
+                            # Sanitize OCR text to remove invalid Unicode characters
+                            ocr_text = sanitize_unicode(ocr_text_raw)
                         except Exception:
                             # If PIL cannot decode, just dump bytes and skip OCR
                             with open(out_path, "wb") as fimg:
@@ -476,7 +539,9 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
                                 imf.write(blob)
                             try:
                                 img = Image.open(out_path)
-                                ocr_text = pytesseract.image_to_string(img)
+                                ocr_text_raw = pytesseract.image_to_string(img)
+                                # Sanitize OCR text to remove invalid Unicode characters
+                                ocr_text = sanitize_unicode(ocr_text_raw)
                             except Exception:
                                 ocr_text = ""
                             image_metadata.append((image_id, out_path, page_num, ocr_text))
@@ -520,7 +585,9 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
                     # OCR
                     try:
                         img = Image.open(out_path)
-                        ocr_text = pytesseract.image_to_string(img)
+                        ocr_text_raw = pytesseract.image_to_string(img)
+                        # Sanitize OCR text to remove invalid Unicode characters
+                        ocr_text = sanitize_unicode(ocr_text_raw)
                     except Exception:
                         ocr_text = ""
                     image_metadata.append((image_id, out_path, page_num, ocr_text))
@@ -558,7 +625,9 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
                                     imf.write(shape.image.blob)
                                 try:
                                     img = Image.open(out_path)
-                                    ocr_text = pytesseract.image_to_string(img)
+                                    ocr_text_raw = pytesseract.image_to_string(img)
+                                    # Sanitize OCR text to remove invalid Unicode characters
+                                    ocr_text = sanitize_unicode(ocr_text_raw)
                                 except Exception:
                                     ocr_text = ""
                                 image_metadata.append((image_id, out_path, 1, ocr_text))
@@ -597,12 +666,14 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
                         out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
                         with open(out_path, "wb") as imf:
                             imf.write(shape.image.blob)
-                        try:
-                            img = Image.open(out_path)
-                            ocr_text = pytesseract.image_to_string(img)
-                        except Exception:
-                            ocr_text = ""
-                        image_metadata.append((image_id, out_path, slide_idx, ocr_text))
+                            try:
+                                img = Image.open(out_path)
+                                ocr_text_raw = pytesseract.image_to_string(img)
+                                # Sanitize OCR text to remove invalid Unicode characters
+                                ocr_text = sanitize_unicode(ocr_text_raw)
+                            except Exception:
+                                ocr_text = ""
+                            image_metadata.append((image_id, out_path, slide_idx, ocr_text))
                         pos = len(text_output)
                         context_before = text_output[max(0, pos - 300):pos]
                         image_positions.append({
@@ -627,7 +698,9 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
         img = Image.open(filepath)
         if tracker:
             tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=1, current_image=1)
-        text_output = pytesseract.image_to_string(img)
+        text_output_raw = pytesseract.image_to_string(img)
+        # Sanitize OCR text to remove invalid Unicode characters
+        text_output = sanitize_unicode(text_output_raw)
         image_id = gen_image_id(file.filename, 1, 1)
         image_metadata.append((image_id, filepath, 1, text_output))
         if text_output.strip():
@@ -645,7 +718,7 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
 
     # ----------- SAVE FULL TEXT FILE -----------
     # Sanitize text before writing to avoid surrogate encoding issues
-    sanitized_text = (text_output or "").encode("utf-8", "ignore").decode("utf-8", "ignore")
+    sanitized_text = sanitize_unicode(text_output or "")
     text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
     with open(text_file_path, "w", encoding="utf-8") as tf:
         tf.write(sanitized_text)
@@ -709,19 +782,56 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
     # Build quick lookup for contextual summaries
     ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
 
-    return {
-        "filename": file.filename,
-        "summary": summary,
-        "full_text_file": text_file_path,
+    # Build image summaries with VLM analysis for AI agent
+    image_summaries = []
+    images_list = []
+    for (iid, path, pg, ocr) in image_metadata:
+        vlm_summary = _vlm_summarize(path, ctx_by_id.get(iid, ""))
+        ocr_summary = _summarize_image_ocr(ocr or "", context=ctx_by_id.get(iid, ""))
+        final_summary = vlm_summary or ocr_summary
+        
+        # Sanitize OCR text and summaries to prevent Unicode encoding errors
+        sanitized_ocr = sanitize_unicode((ocr or "").strip())
+        sanitized_summary = sanitize_unicode(final_summary)
+        
+        # Format for AI agent (includes all relevant data)
+        image_summaries.append({
+            "image_id": iid,
+            "path": path,
+            "page": pg,
+            "ocr": sanitized_ocr,
+            "summary": sanitized_summary,
+            "interpretation": sanitized_summary  # Alias for compatibility
+        })
+        
+        # Format for display
+        images_list.append({
+            "image_id": iid,
+            "path": path,
+            "page": pg,
+            "ocr": sanitized_ocr,
+            "summary": sanitized_summary
+        })
+
+    # Sanitize text_output before using it
+    sanitized_text_output = sanitize_unicode(text_output or "")
+    sanitized_summary = sanitize_unicode(summary or "")
+    
+    result = {
+        "filename": file.filename or "",
+        "summary": sanitized_summary,
+        "full_text_file": text_file_path or "",
+        "extracted_text": sanitized_text_output,  # The extracted text content for AI agent
+        "full_text": sanitized_text_output,  # Same as extracted_text for compatibility
         "images_detected": image_count,
         "image_metadata_saved": len(image_metadata),
-        "images": [
-            {"image_id": iid, "path": path, "page": pg, "ocr": (ocr or "").strip(),
-             "summary": (_vlm_summarize(path, ctx_by_id.get(iid, "")) or _summarize_image_ocr(ocr or "", context=ctx_by_id.get(iid, "")))}
-            for (iid, path, pg, ocr) in image_metadata
-        ],
+        "image_summaries": image_summaries,  # Formatted summaries for AI agent
+        "images": images_list,  # For display
         "image_positions": image_positions
     }
+    
+    # Sanitize all Unicode strings to prevent encoding errors (recursive sanitization)
+    return sanitize_dict(result)
 
 
 # -------------------- AUTHENTICATION PAGES --------------------
@@ -742,21 +852,111 @@ async def login_page():
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 2rem;
+            position: relative;
+            overflow: hidden;
         }
+        
+        /* Animated Background - Data Getting In */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .data-stream {
+            position: absolute;
+            color: rgba(6, 182, 212, 0.4);
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+            animation: streamIn linear infinite;
+            white-space: nowrap;
+        }
+        
+        @keyframes streamIn {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.5);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--end-x), var(--end-y)) scale(1);
+            }
+        }
+        
+        /* Circular convergence effect */
+        .convergence-circle {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(6, 182, 212, 0.1);
+            border-radius: 50%;
+            animation: pulseCircle 3s ease-in-out infinite;
+        }
+        
+        .convergence-circle::before,
+        .convergence-circle::after {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+        }
+        
+        .convergence-circle::after {
+            width: 400px;
+            height: 400px;
+            border-color: rgba(139, 92, 246, 0.1);
+        }
+        
+        @keyframes pulseCircle {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
         .auth-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 3rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
             width: 100%;
             max-width: 450px;
             animation: slideUp 0.5s ease-out;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(6, 182, 212, 0.2);
         }
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(30px); }
@@ -769,16 +969,16 @@ async def login_page():
         .auth-header h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 0.5rem;
         }
         .auth-header p {
-            color: #64748b;
+            color: #475569;
             font-size: 1rem;
         }
         .form-label {
             font-weight: 600;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 0.5rem;
         }
         .form-control {
@@ -787,10 +987,13 @@ async def login_page():
             border-radius: 12px;
             font-size: 1rem;
             transition: all 0.3s ease;
+            background: white;
+            color: #0f172a;
         }
         .form-control:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+            outline: none;
         }
         .btn-primary {
             width: 100%;
@@ -798,13 +1001,16 @@ async def login_page():
             border-radius: 12px;
             font-weight: 600;
             font-size: 1rem;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
             border: none;
             transition: all 0.3s ease;
+            color: white;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
+            background: linear-gradient(135deg, #075985 0%, #1e40af 50%, #6d28d9 100%);
         }
         .alert {
             border-radius: 12px;
@@ -814,15 +1020,19 @@ async def login_page():
         .auth-footer {
             text-align: center;
             margin-top: 2rem;
-            color: #64748b;
+            color: #475569;
         }
         .auth-footer a {
-            color: #2563eb;
+            color: #06b6d4;
             text-decoration: none;
             font-weight: 500;
         }
         .auth-footer a:hover {
             text-decoration: underline;
+            color: #0891b2;
+        }
+        .text-primary {
+            color: #06b6d4 !important;
         }
     </style>
 </head>
@@ -859,6 +1069,98 @@ async def login_page():
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Create animated data streams flowing in
+        function createDataStreams() {
+            const bgAnimation = document.querySelector('.bg-animation');
+            if (!bgAnimation) return;
+            
+            const dataSymbols = ['LOGIN', 'AUTH', 'ACCESS', 'SECURE', 'FLOW', 'MIND', 'AI', 'DATA', 'INFO', 'USER', 'PASS', 'KEY'];
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            function createStream() {
+                const stream = document.createElement('div');
+                stream.className = 'data-stream';
+                
+                // Random data symbol
+                stream.textContent = dataSymbols[Math.floor(Math.random() * dataSymbols.length)];
+                
+                // Random starting position from edges
+                const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+                let startX, startY, endX, endY;
+                
+                if (side === 0) { // Top
+                    startX = Math.random() * window.innerWidth;
+                    startY = -50;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else if (side === 1) { // Right
+                    startX = window.innerWidth + 50;
+                    startY = Math.random() * window.innerHeight;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else if (side === 2) { // Bottom
+                    startX = Math.random() * window.innerWidth;
+                    startY = window.innerHeight + 50;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else { // Left
+                    startX = -50;
+                    startY = Math.random() * window.innerHeight;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                }
+                
+                const deltaX = endX - startX;
+                const deltaY = endY - startY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const duration = 3 + (distance / 200); // Speed based on distance
+                
+                stream.style.left = startX + 'px';
+                stream.style.top = startY + 'px';
+                stream.style.setProperty('--end-x', deltaX + 'px');
+                stream.style.setProperty('--end-y', deltaY + 'px');
+                stream.style.animationDuration = duration + 's';
+                stream.style.animationDelay = Math.random() * 0.5 + 's';
+                
+                // Random size
+                const size = 12 + Math.random() * 8;
+                stream.style.fontSize = size + 'px';
+                
+                // Random color variation
+                const colors = [
+                    'rgba(6, 182, 212, 0.4)',
+                    'rgba(59, 130, 246, 0.4)',
+                    'rgba(139, 92, 246, 0.4)',
+                    'rgba(6, 182, 212, 0.3)',
+                    'rgba(59, 130, 246, 0.3)'
+                ];
+                stream.style.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                bgAnimation.appendChild(stream);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    if (stream.parentNode) {
+                        stream.parentNode.removeChild(stream);
+                    }
+                }, (duration + 0.5) * 1000);
+            }
+            
+            // Create streams continuously
+            setInterval(createStream, 150);
+            setInterval(createStream, 200);
+            setInterval(createStream, 250);
+            
+            // Initial burst
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => createStream(), i * 100);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', createDataStreams);
+        
         const form = document.getElementById('loginForm');
         const alertContainer = document.getElementById('alertContainer');
         const submitBtn = document.getElementById('submitBtn');
@@ -930,21 +1232,111 @@ async def signup_page():
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 2rem;
+            position: relative;
+            overflow: hidden;
         }
+        
+        /* Animated Background - Data Getting In */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .data-stream {
+            position: absolute;
+            color: rgba(6, 182, 212, 0.4);
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+            animation: streamIn linear infinite;
+            white-space: nowrap;
+        }
+        
+        @keyframes streamIn {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.5);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--end-x), var(--end-y)) scale(1);
+            }
+        }
+        
+        /* Circular convergence effect */
+        .convergence-circle {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(6, 182, 212, 0.1);
+            border-radius: 50%;
+            animation: pulseCircle 3s ease-in-out infinite;
+        }
+        
+        .convergence-circle::before,
+        .convergence-circle::after {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+        }
+        
+        .convergence-circle::after {
+            width: 400px;
+            height: 400px;
+            border-color: rgba(139, 92, 246, 0.1);
+        }
+        
+        @keyframes pulseCircle {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
         .auth-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 3rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
             width: 100%;
             max-width: 450px;
             animation: slideUp 0.5s ease-out;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(6, 182, 212, 0.2);
         }
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(30px); }
@@ -957,16 +1349,16 @@ async def signup_page():
         .auth-header h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 0.5rem;
         }
         .auth-header p {
-            color: #64748b;
+            color: #475569;
             font-size: 1rem;
         }
         .form-label {
             font-weight: 600;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 0.5rem;
         }
         .form-control {
@@ -975,10 +1367,13 @@ async def signup_page():
             border-radius: 12px;
             font-size: 1rem;
             transition: all 0.3s ease;
+            background: white;
+            color: #0f172a;
         }
         .form-control:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+            outline: none;
         }
         .btn-primary {
             width: 100%;
@@ -986,13 +1381,16 @@ async def signup_page():
             border-radius: 12px;
             font-weight: 600;
             font-size: 1rem;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
             border: none;
             transition: all 0.3s ease;
+            color: white;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
+            background: linear-gradient(135deg, #075985 0%, #1e40af 50%, #6d28d9 100%);
         }
         .alert {
             border-radius: 12px;
@@ -1002,24 +1400,33 @@ async def signup_page():
         .auth-footer {
             text-align: center;
             margin-top: 2rem;
-            color: #64748b;
+            color: #475569;
         }
         .auth-footer a {
-            color: #2563eb;
+            color: #06b6d4;
             text-decoration: none;
             font-weight: 500;
         }
         .auth-footer a:hover {
             text-decoration: underline;
+            color: #0891b2;
+        }
+        .text-primary {
+            color: #06b6d4 !important;
         }
         .password-hint {
             font-size: 0.875rem;
-            color: #64748b;
+            color: #475569;
             margin-top: 0.25rem;
         }
     </style>
 </head>
 <body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="convergence-circle"></div>
+    </div>
+    
     <div class="auth-card">
         <div class="auth-header">
             <h1><i class="fas fa-user-plus text-primary"></i> Sign Up</h1>
@@ -1058,6 +1465,98 @@ async def signup_page():
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Create animated data streams flowing in
+        function createDataStreams() {
+            const bgAnimation = document.querySelector('.bg-animation');
+            if (!bgAnimation) return;
+            
+            const dataSymbols = ['SIGNUP', 'REGISTER', 'CREATE', 'ACCOUNT', 'JOIN', 'FLOW', 'MIND', 'AI', 'DATA', 'INFO', 'USER', 'NEW'];
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            function createStream() {
+                const stream = document.createElement('div');
+                stream.className = 'data-stream';
+                
+                // Random data symbol
+                stream.textContent = dataSymbols[Math.floor(Math.random() * dataSymbols.length)];
+                
+                // Random starting position from edges
+                const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+                let startX, startY, endX, endY;
+                
+                if (side === 0) { // Top
+                    startX = Math.random() * window.innerWidth;
+                    startY = -50;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else if (side === 1) { // Right
+                    startX = window.innerWidth + 50;
+                    startY = Math.random() * window.innerHeight;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else if (side === 2) { // Bottom
+                    startX = Math.random() * window.innerWidth;
+                    startY = window.innerHeight + 50;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                } else { // Left
+                    startX = -50;
+                    startY = Math.random() * window.innerHeight;
+                    endX = centerX + (Math.random() - 0.5) * 200;
+                    endY = centerY + (Math.random() - 0.5) * 200;
+                }
+                
+                const deltaX = endX - startX;
+                const deltaY = endY - startY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const duration = 3 + (distance / 200); // Speed based on distance
+                
+                stream.style.left = startX + 'px';
+                stream.style.top = startY + 'px';
+                stream.style.setProperty('--end-x', deltaX + 'px');
+                stream.style.setProperty('--end-y', deltaY + 'px');
+                stream.style.animationDuration = duration + 's';
+                stream.style.animationDelay = Math.random() * 0.5 + 's';
+                
+                // Random size
+                const size = 12 + Math.random() * 8;
+                stream.style.fontSize = size + 'px';
+                
+                // Random color variation
+                const colors = [
+                    'rgba(6, 182, 212, 0.4)',
+                    'rgba(59, 130, 246, 0.4)',
+                    'rgba(139, 92, 246, 0.4)',
+                    'rgba(6, 182, 212, 0.3)',
+                    'rgba(59, 130, 246, 0.3)'
+                ];
+                stream.style.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                bgAnimation.appendChild(stream);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    if (stream.parentNode) {
+                        stream.parentNode.removeChild(stream);
+                    }
+                }, (duration + 0.5) * 1000);
+            }
+            
+            // Create streams continuously
+            setInterval(createStream, 150);
+            setInterval(createStream, 200);
+            setInterval(createStream, 250);
+            
+            // Initial burst
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => createStream(), i * 100);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', createDataStreams);
+        
         const form = document.getElementById('signupForm');
         const alertContainer = document.getElementById('alertContainer');
         const submitBtn = document.getElementById('submitBtn');
@@ -2573,21 +3072,95 @@ async def get_public_stats():
             # Count total clients (users)
             total_clients = db.query(User).filter(User.is_active == 1).count()
             
-            # Get patterns learned from the agent
+            # Get patterns learned from all agents (sum of all learned items: keywords + patterns + phrases)
+            # Aggregate from both global agent and all user-specific agents
             patterns_learned = 0
+            all_learned_items = set()  # Use set to deduplicate across agents
+            
             try:
-                agent = get_agent()
-                if hasattr(agent, 'learned_patterns'):
-                    learned_patterns = agent.learned_patterns
-                    if isinstance(learned_patterns, dict):
-                        for category, data in learned_patterns.items():
-                            if isinstance(data, dict):
-                                keywords = data.get('keywords', set())
-                                patterns = data.get('patterns', set())
-                                phrases = data.get('phrases', set())
-                                patterns_learned += len(keywords) + len(patterns) + len(phrases)
+                from rag_agent import get_agent, user_agent_cache
+                
+                # First, try global agent
+                try:
+                    global_agent = get_agent()  # No user_id = global agent
+                    if hasattr(global_agent, 'learned_patterns'):
+                        learned_patterns = global_agent.learned_patterns
+                        if isinstance(learned_patterns, dict):
+                            for category, data in learned_patterns.items():
+                                if isinstance(data, dict):
+                                    keywords = data.get('keywords', set())
+                                    patterns = data.get('patterns', set())
+                                    phrases = data.get('phrases', set())
+                                    # Convert to lists if sets for accurate counting
+                                    keywords = list(keywords) if isinstance(keywords, set) else (keywords if isinstance(keywords, list) else [])
+                                    patterns = list(patterns) if isinstance(patterns, set) else (patterns if isinstance(patterns, list) else [])
+                                    phrases = list(phrases) if isinstance(phrases, set) else (phrases if isinstance(phrases, list) else [])
+                                    # Add to set for deduplication
+                                    for kw in keywords:
+                                        all_learned_items.add(f"keyword:{category}:{kw}")
+                                    for pat in patterns:
+                                        all_learned_items.add(f"pattern:{category}:{pat}")
+                                    for phr in phrases:
+                                        all_learned_items.add(f"phrase:{category}:{phr}")
+                except Exception as e:
+                    print(f"⚠️ Error getting patterns from global agent: {e}")
+                
+                # Then, aggregate from all user-specific agents
+                try:
+                    if user_agent_cache:
+                        for user_id, user_agent in user_agent_cache.items():
+                            if hasattr(user_agent, 'learned_patterns'):
+                                learned_patterns = user_agent.learned_patterns
+                                if isinstance(learned_patterns, dict):
+                                    for category, data in learned_patterns.items():
+                                        if isinstance(data, dict):
+                                            keywords = data.get('keywords', set())
+                                            patterns = data.get('patterns', set())
+                                            phrases = data.get('phrases', set())
+                                            # Convert to lists if sets
+                                            keywords = list(keywords) if isinstance(keywords, set) else (keywords if isinstance(keywords, list) else [])
+                                            patterns = list(patterns) if isinstance(patterns, set) else (patterns if isinstance(patterns, list) else [])
+                                            phrases = list(phrases) if isinstance(phrases, set) else (phrases if isinstance(phrases, list) else [])
+                                            # Add to set for deduplication
+                                            for kw in keywords:
+                                                all_learned_items.add(f"keyword:{category}:{kw}")
+                                            for pat in patterns:
+                                                all_learned_items.add(f"pattern:{category}:{pat}")
+                                            for phr in phrases:
+                                                all_learned_items.add(f"phrase:{category}:{phr}")
+                except Exception as e:
+                    print(f"⚠️ Error aggregating patterns from user agents: {e}")
+                
+                # Count unique learned items
+                patterns_learned = len(all_learned_items)
+                print(f"📊 Public stats: Counted {patterns_learned} unique learned items (from global + {len(user_agent_cache) if user_agent_cache else 0} user agents)")
+                
+                # If no patterns found from agents, try fallback to database features
+                if patterns_learned == 0:
+                    try:
+                        feature_count = db.query(Feature).count()
+                        if feature_count > 0:
+                            # Use feature count as a rough estimate (each feature might represent learned patterns)
+                            patterns_learned = feature_count
+                            print(f"📊 Public stats: No patterns from agents, using feature count as fallback: {patterns_learned}")
+                    except Exception as fallback_error:
+                        print(f"⚠️ Fallback feature count also failed: {fallback_error}")
+                
             except Exception as e:
-                print(f"⚠️ Error getting patterns: {e}")
+                print(f"⚠️ Error getting patterns for public stats: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # Fallback: try to count from database features as a proxy
+                try:
+                    feature_count = db.query(Feature).count()
+                    if feature_count > 0:
+                        # Use feature count as a rough estimate (each feature might represent learned patterns)
+                        patterns_learned = feature_count
+                        print(f"📊 Public stats: Using feature count as fallback after error: {patterns_learned}")
+                except Exception as fallback_error:
+                    print(f"⚠️ Fallback feature count failed: {fallback_error}")
+                    patterns_learned = 0
             
             # Calculate accuracy from extraction stats
             accuracy = 97.3  # Default fallback
@@ -3144,7 +3717,9 @@ async def _analyze_with_agent_internal(
                             try:
                                 im = Image.open(BytesIO(data))
                                 im.save(out_path, format="PNG")
-                                ocr_text = pytesseract.image_to_string(im)
+                                ocr_text_raw = pytesseract.image_to_string(im)
+                                # Sanitize OCR text to remove invalid Unicode characters
+                                ocr_text = sanitize_unicode(ocr_text_raw)
                             except Exception:
                                 with open(out_path, "wb") as fimg:
                                     fimg.write(data)
@@ -3199,14 +3774,16 @@ async def _analyze_with_agent_internal(
                                 out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
                                 with open(out_path, "wb") as imf:
                                     imf.write(blob)
-                                try:
-                                    img = Image.open(out_path)
-                                    ocr_text = pytesseract.image_to_string(img)
-                                except Exception:
-                                    ocr_text = ""
-                                image_metadata.append((image_id, out_path, page_num, ocr_text))
-                                if ocr_text.strip():
-                                    text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
+                                    try:
+                                        img = Image.open(out_path)
+                                        ocr_text_raw = pytesseract.image_to_string(img)
+                                        # Sanitize OCR text to remove invalid Unicode characters
+                                        ocr_text = sanitize_unicode(ocr_text_raw)
+                                    except Exception:
+                                        ocr_text = ""
+                                    image_metadata.append((image_id, out_path, page_num, ocr_text))
+                                    if ocr_text.strip():
+                                        text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
                             except Exception:
                                 pass
                 except Exception as e:
@@ -3232,7 +3809,9 @@ async def _analyze_with_agent_internal(
                             imf.write(blob)
                         try:
                             img = Image.open(out_path)
-                            ocr_text = pytesseract.image_to_string(img)
+                            ocr_text_raw = pytesseract.image_to_string(img)
+                            # Sanitize OCR text to remove invalid Unicode characters
+                            ocr_text = sanitize_unicode(ocr_text_raw)
                         except Exception:
                             ocr_text = ""
                         image_metadata.append((image_id, out_path, page_num, ocr_text))
@@ -3268,7 +3847,9 @@ async def _analyze_with_agent_internal(
                                         imf.write(shape.image.blob)
                                     try:
                                         img = Image.open(out_path)
-                                        ocr_text = pytesseract.image_to_string(img)
+                                        ocr_text_raw = pytesseract.image_to_string(img)
+                                        # Sanitize OCR text to remove invalid Unicode characters
+                                        ocr_text = sanitize_unicode(ocr_text_raw)
                                     except Exception:
                                         ocr_text = ""
                                     image_metadata.append((image_id, out_path, 1, ocr_text))
@@ -3295,7 +3876,9 @@ async def _analyze_with_agent_internal(
                                 imf.write(shape.image.blob)
                             try:
                                 img = Image.open(out_path)
-                                ocr_text = pytesseract.image_to_string(img)
+                                ocr_text_raw = pytesseract.image_to_string(img)
+                                # Sanitize OCR text to remove invalid Unicode characters
+                                ocr_text = sanitize_unicode(ocr_text_raw)
                             except Exception:
                                 ocr_text = ""
                             image_metadata.append((image_id, out_path, slide_idx, ocr_text))
@@ -3311,7 +3894,9 @@ async def _analyze_with_agent_internal(
             img = Image.open(filepath)
             if tracker:
                 tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=1, current_image=1)
-            text_output = pytesseract.image_to_string(img)
+            text_output_raw = pytesseract.image_to_string(img)
+            # Sanitize OCR text to remove invalid Unicode characters
+            text_output = sanitize_unicode(text_output_raw)
             image_id = gen_image_id(file.filename, 1, 1)
             image_metadata.append((image_id, filepath, 1, text_output))
             if tracker:
@@ -3329,37 +3914,173 @@ async def _analyze_with_agent_internal(
 
         # Merge Basic Extraction data if provided
         if basic_extraction_data:
-            print(f"🔄 Merging Basic Extraction data with AI extraction...")
+            print(f"🔄 Merging Basic Extraction data with AI extraction for enhanced analysis...")
             basic_text = basic_extraction_data.get("extracted_text", "") or basic_extraction_data.get("full_text", "")
             basic_image_summaries = basic_extraction_data.get("image_summaries", [])
             
-            # Add Basic Extraction text to the beginning with a clear marker
-            if basic_text.strip():
-                merged_text = f"[BASIC_EXTRACTION_TEXT]\n{basic_text.strip()}\n\n[AI_EXTRACTION_TEXT]\n{text_output}"
-                print(f"   ✅ Merged {len(basic_text)} chars from Basic Extraction")
-            else:
-                merged_text = text_output
+            # Build comprehensive merged text that combines both sources intelligently
+            merged_parts = []
             
-            # Add image summaries from Basic Extraction
+            # Add instruction note for the agent at the beginning
+            instruction_note = """
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    REQUIREMENTS EXTRACTION INSTRUCTIONS                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+You have access to data from TWO sources that have been merged:
+
+1. BASIC EXTRACTION RESULTS:
+   - Initial text extraction and OCR from the document
+   - Image OCR text and VLM interpretations from basic analysis
+   - Raw extracted content from the document
+
+2. AI-ENHANCED EXTRACTION:
+   - Additional text extraction from the RAG agent's own analysis
+   - Additional image analysis and interpretations
+   - Enhanced context and semantic understanding
+
+YOUR TASK:
+- Analyze ALL sections below comprehensively
+- Combine insights from BOTH Basic Extraction AND AI-Enhanced Extraction
+- Use image interpretations from BOTH sources to understand visual requirements
+- Extract MEANINGFUL requirements from images - understand what they show, not just copy OCR text
+- DO NOT include image metadata markers like [IMAGE IMG-xxx], OCR: labels, or technical details like "Key Components:", "Technical Details:", "Contains X structural lines"
+- DO NOT include raw OCR text that doesn't represent actual requirements
+- Extract the FUNCTIONALITY and REQUIREMENTS shown in images, not the metadata about the images
+- Merge duplicate or related requirements intelligently (avoid redundancy)
+- Extract features that leverage the complete context from both sources
+- Provide well-written, properly styled, and comprehensive features
+- Ensure final output is clean, organized, and professional
+
+IMPORTANT: 
+- Extract features that represent the BEST combination of both data sources
+- Focus on WHAT the system should do, not HOW images were processed
+- Use image content to understand requirements, but don't mention image processing details in final features
+"""
+            merged_parts.append(instruction_note.strip())
+            merged_parts.append("\n" + "═" * 80 + "\n")
+            
+            # Add Basic Extraction text with context marker
+            if basic_text.strip():
+                merged_parts.append("┌─ BASIC EXTRACTION RESULTS ───────────────────────────────────────────────────┐")
+                merged_parts.append("│ Source: Initial text extraction and OCR from document analysis                │")
+                merged_parts.append("└──────────────────────────────────────────────────────────────────────────────┘")
+                merged_parts.append("")
+                merged_parts.append(basic_text.strip())
+                merged_parts.append("")
+                print(f"   ✅ Merged {len(basic_text)} chars from Basic Extraction")
+            
+            # Add Basic Extraction image summaries with enhanced context
+            # Extract meaningful requirements from images, not raw metadata
             if basic_image_summaries:
-                image_summaries_text = "\n\n[BASIC_EXTRACTION_IMAGE_SUMMARIES]\n"
+                merged_parts.append("\n" + "┌─ BASIC EXTRACTION IMAGE ANALYSIS ───────────────────────────────────────────┐")
+                merged_parts.append("│ Source: OCR text and VLM interpretations from initial image analysis          │")
+                merged_parts.append("└──────────────────────────────────────────────────────────────────────────────┘")
+                merged_parts.append("")
+                for idx, img_summary in enumerate(basic_image_summaries, 1):
+                    if isinstance(img_summary, dict):
+                        img_id = img_summary.get("image_id", f"UNKNOWN-{idx}")
+                        page = img_summary.get("page", "?")
+                        ocr = img_summary.get("ocr", "").strip()
+                        summary = img_summary.get("summary", "") or img_summary.get("interpretation", "")
+                        
+                        # Extract meaningful content from OCR and summary, filtering out metadata
+                        meaningful_content = []
+                        
+                        # Process OCR text - extract requirements, not raw text
+                        if ocr:
+                            # Remove metadata markers and extract actual content
+                            ocr_clean = re.sub(r'\[IMAGE[^\]]*\]', '', ocr, flags=re.IGNORECASE)
+                            ocr_clean = re.sub(r'OCR:\s*', '', ocr_clean, flags=re.IGNORECASE)
+                            ocr_clean = re.sub(r'Key Components[^\n]*', '', ocr_clean, flags=re.IGNORECASE)
+                            ocr_clean = re.sub(r'Technical Details[^\n]*', '', ocr_clean, flags=re.IGNORECASE)
+                            ocr_clean = ocr_clean.strip()
+                            
+                            # Only include if it looks like a requirement, not metadata
+                            if ocr_clean and len(ocr_clean) > 20 and not re.search(r'^\d+\s+(steps|components|elements)', ocr_clean, re.IGNORECASE):
+                                # Check if it contains requirement-like language
+                                if any(word in ocr_clean.lower() for word in ['shall', 'must', 'should', 'will', 'enable', 'allow', 'provide', 'support', 'system', 'user', 'application']):
+                                    meaningful_content.append(f"From image {idx} (Page {page}): {ocr_clean[:300]}{'...' if len(ocr_clean) > 300 else ''}")
+                        
+                        # Process summary - extract requirements, not technical metadata
+                        if summary:
+                            summary_clean = re.sub(r'Image Type[^\n]*', '', summary, flags=re.IGNORECASE)
+                            summary_clean = re.sub(r'Characteristics[^\n]*', '', summary_clean, flags=re.IGNORECASE)
+                            summary_clean = re.sub(r'Analysis[^\n]*', '', summary_clean, flags=re.IGNORECASE)
+                            summary_clean = re.sub(r'Contains\s+\d+\s+structural[^\n]*', '', summary_clean, flags=re.IGNORECASE)
+                            summary_clean = re.sub(r'\d+\s+identifiable\s+(steps|elements|components)[^\n]*', '', summary_clean, flags=re.IGNORECASE)
+                            summary_clean = summary_clean.strip()
+                            
+                            # Only include if it's meaningful content, not just metadata
+                            if summary_clean and len(summary_clean) > 30:
+                                # Check if it describes functionality or requirements
+                                if any(word in summary_clean.lower() for word in ['workflow', 'process', 'system', 'user', 'feature', 'requirement', 'functionality', 'capability', 'shall', 'must', 'should']):
+                                    meaningful_content.append(f"Image {idx} interpretation: {summary_clean[:300]}{'...' if len(summary_clean) > 300 else ''}")
+                        
+                        # Only add if we have meaningful content
+                        if meaningful_content:
+                            merged_parts.append(f"📷 IMAGE {idx} (Page {page}):")
+                            for content in meaningful_content:
+                                merged_parts.append(f"   {content}")
+                            merged_parts.append("")
+                    elif isinstance(img_summary, str):
+                        # Clean string summaries too
+                        clean_summary = re.sub(r'\[IMAGE[^\]]*\]', '', img_summary, flags=re.IGNORECASE)
+                        clean_summary = re.sub(r'OCR:\s*', '', clean_summary, flags=re.IGNORECASE)
+                        clean_summary = re.sub(r'Key Components[^\n]*', '', clean_summary, flags=re.IGNORECASE)
+                        clean_summary = clean_summary.strip()
+                        
+                        if clean_summary and len(clean_summary) > 20:
+                            merged_parts.append(f"📷 IMAGE {idx}: {clean_summary[:300]}{'...' if len(clean_summary) > 300 else ''}")
+                            merged_parts.append("")
+                
+                print(f"   ✅ Added meaningful content from {len(basic_image_summaries)} images (filtered metadata)")
+            
+            # Add AI extraction text with marker
+            merged_parts.append("\n" + "┌─ AI-ENHANCED EXTRACTION ─────────────────────────────────────────────────────┐")
+            merged_parts.append("│ Source: RAG Agent's own document analysis and image processing                   │")
+            merged_parts.append("└──────────────────────────────────────────────────────────────────────────────┘")
+            merged_parts.append("")
+            merged_parts.append(text_output)
+            
+            # Combine all parts - ensure all parts are strings
+            merged_parts_str = []
+            for part in merged_parts:
+                if part is None:
+                    continue
+                # Convert to string and sanitize
+                part_str = str(part) if not isinstance(part, str) else part
+                part_str = sanitize_unicode(part_str)
+                merged_parts_str.append(part_str)
+            
+            merged_text = "\n".join(merged_parts_str)
+            
+            # Ensure text_output is a valid string
+            text_output = sanitize_unicode(merged_text) if merged_text else ""
+            print(f"   ✅ Total merged text length: {len(text_output)} chars")
+            print(f"   📋 Merged data includes: Basic text + {len(basic_image_summaries)} image summaries + AI extraction")
+            
+            # Also merge image metadata from both sources for database storage
+            if basic_image_summaries:
+                # Create a set of existing image IDs from AI extraction to avoid duplicates
+                existing_image_ids = {img_id for img_id, _, _, _ in image_metadata}
+                
+                # Add basic extraction images that aren't duplicates
                 for img_summary in basic_image_summaries:
                     if isinstance(img_summary, dict):
-                        img_id = img_summary.get("image_id", "UNKNOWN")
-                        summary = img_summary.get("summary", "") or img_summary.get("ocr", "") or img_summary.get("interpretation", "")
-                        if summary:
-                            image_summaries_text += f"[IMAGE {img_id}]\n{summary}\n\n"
-                    elif isinstance(img_summary, str):
-                        image_summaries_text += f"{img_summary}\n\n"
-                
-                merged_text += image_summaries_text
-                print(f"   ✅ Added {len(basic_image_summaries)} image summaries from Basic Extraction")
-            
-            text_output = merged_text
-            print(f"   ✅ Total merged text length: {len(text_output)} chars")
-        
+                        img_id = img_summary.get("image_id", "")
+                        if img_id and img_id not in existing_image_ids:
+                            # Try to reconstruct image metadata from basic extraction
+                            page = img_summary.get("page", 1)
+                            ocr = img_summary.get("ocr", "").strip()
+                            path = img_summary.get("path", "")
+                            if path and os.path.exists(path):
+                                image_metadata.append((img_id, path, page, ocr))
+                                existing_image_ids.add(img_id)
+                                print(f"   ✅ Added image {img_id} from Basic Extraction to metadata")
+
         # Save full text file
-        sanitized_text = (text_output or "").encode("utf-8", "ignore").decode("utf-8", "ignore")
+        sanitized_text = sanitize_unicode(text_output or "")
         text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
         with open(text_file_path, "w", encoding="utf-8") as tf:
             tf.write(sanitized_text)
@@ -3399,11 +4120,23 @@ async def _analyze_with_agent_internal(
             print(f"📊 Progress: {progress['progress']}% - Processing document with AI agent...")
         
         # Process document in thread pool with timeout
+        # Ensure text_output is a valid string before passing to agent
+        if not isinstance(text_output, str):
+            text_output = str(text_output) if text_output is not None else ""
+        text_output = sanitize_unicode(text_output)
+        
+        # Validate text is not empty and is a proper string
+        if not text_output or len(text_output.strip()) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No text content extracted from document"
+            )
+        
         try:
             agent_result = await run_in_thread(
                 agent.process_document,
                 text_output,
-                file.filename,
+                file.filename or "unknown",
                 timeout=240.0  # 4 minutes for document processing (increased for large documents)
             )
         except asyncio.TimeoutError:
@@ -3474,9 +4207,32 @@ async def _analyze_with_agent_internal(
             
             # Add note about Basic Extraction merge if data was provided
             if basic_extraction_data:
-                merge_note = "\n\n---\n📋 Note: This analysis merged data from Basic Extraction (text + image summaries) with AI-powered extraction for comprehensive results."
+                merge_note = """
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ENHANCED ANALYSIS - MERGED DATA SOURCES                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+This comprehensive analysis combines data from multiple sources:
+
+✅ Basic Extraction Results:
+   • Initial text extraction and OCR from document
+   • Image OCR text and VLM interpretations
+   • Raw extracted content
+
+✅ AI-Enhanced Extraction:
+   • Advanced RAG agent analysis
+   • Semantic understanding and context
+   • Enhanced feature extraction
+
+The features above represent the best combination of both data sources, providing
+comprehensive, well-written, and properly styled requirements that leverage the
+complete context from both basic extraction and AI analysis.
+
+═══════════════════════════════════════════════════════════════════════════════
+"""
                 requirements_result["response"] = requirements_result.get("response", "") + merge_note
-                print(f"✅ Added merge note to final output")
+                print(f"✅ Added enhanced merge note to final output")
             
             print(f"📊 Response length: {len(str(requirements_result.get('response', '')))}")
             print(f"📊 About to continue to database save...")
@@ -3605,6 +4361,35 @@ async def _analyze_with_agent_internal(
         # Build quick lookup of context for images within this request is not tracked separately here,
         # so pass empty context for now; summarized meanings rely on OCR wording for agent runs
         
+        # Collect image summaries for merging with text extraction
+        image_summaries_for_features = []
+        try:
+            # Get image summaries from basic_extraction_data if available
+            if basic_extraction_data and basic_extraction_data.get('image_summaries'):
+                image_summaries_for_features = basic_extraction_data.get('image_summaries', [])
+                print(f"📸 Found {len(image_summaries_for_features)} image summaries to merge with text extraction")
+            
+            # Also try to get from image_metadata if VLM summaries are available
+            # This would be populated if VLM processing was done
+            if not image_summaries_for_features:
+                # Try to get from database ImageMeta records (if they have VLM summaries stored)
+                from database import ImageMeta
+                db_img = SessionLocal()
+                try:
+                    img_records = db_img.query(ImageMeta).filter(ImageMeta.file_id == record.id).all()
+                    for img_record in img_records:
+                        if img_record.ocr_text and len(img_record.ocr_text) > 50:  # Only use substantial OCR text
+                            image_summaries_for_features.append({
+                                'summary': img_record.ocr_text,
+                                'interpretation': img_record.ocr_text
+                            })
+                    if image_summaries_for_features:
+                        print(f"📸 Found {len(image_summaries_for_features)} image summaries from database")
+                finally:
+                    db_img.close()
+        except Exception as e:
+            print(f"⚠️ Error collecting image summaries: {e}")
+        
         # Parse and save features for approval (run synchronously but quickly, skip if slow)
         features_count = 0
         try:
@@ -3615,8 +4400,14 @@ async def _analyze_with_agent_internal(
                     # Use a new session to avoid thread-safety issues
                     db_features = SessionLocal()
                     try:
-                        features_count = parse_and_save_features(extracted_response, user_id, record.id, db_features)
-                        print(f"📋 Saved {features_count} features for user approval")
+                        features_count = parse_and_save_features(
+                            extracted_response, 
+                            user_id, 
+                            record.id, 
+                            db_features,
+                            image_summaries=image_summaries_for_features
+                        )
+                        print(f"📋 Saved {features_count} features for user approval (merged from text + images)")
                     finally:
                         db_features.close()
                 except Exception as e:
@@ -3631,14 +4422,15 @@ async def _analyze_with_agent_internal(
             # Use OCR text as summary to avoid slow VLM re-processing
             image_summaries = []
             for (iid, path, pg, ocr) in image_metadata:
-                # Use simple OCR text as summary (fast, no processing)
-                summary = (ocr or "").strip()[:200] if ocr else ""  # Just use OCR, no extra processing
+                # Sanitize OCR text and create summary
+                sanitized_ocr = sanitize_unicode((ocr or "").strip())
+                summary = sanitized_ocr[:200] if sanitized_ocr else ""  # Just use OCR, no extra processing
                 
                 image_summaries.append({
                     "image_id": iid,
                     "path": path,
                     "page": pg,
-                    "ocr": (ocr or "").strip(),
+                    "ocr": sanitized_ocr,
                     "summary": summary
                 })
             
@@ -3681,14 +4473,15 @@ async def _analyze_with_agent_internal(
             print(f"📊 Returning results to client (view_id: {response_data['view_id']})...")
             print(f"📊 Response data prepared, returning now...")
             print(f"🚀 ACTUALLY RETURNING RESPONSE NOW - view_id: {response_data['view_id']}")
-            return response_data
+            # Sanitize Unicode to prevent encoding errors
+            return sanitize_dict(response_data)
         except Exception as e:
             print(f"❌ Error preparing response: {str(e)}")
             import traceback
             traceback.print_exc()
             # Return minimal response even on error
             print(f"⚠️ Returning fallback response due to error")
-            return {
+            fallback_response = {
                 "filename": file.filename or "unknown",
                 "extraction_summary": f"Extracted {len(text_output.split()) if text_output else 0} words and {image_count} image(s)",
                 "agent_processing": agent_result or {"status": "success"},
@@ -3696,6 +4489,8 @@ async def _analyze_with_agent_internal(
                 "view_id": view_id or str(uuid.uuid4()),
                 "error": f"Error preparing full response: {str(e)}"
             }
+            # Sanitize Unicode to prevent encoding errors
+            return sanitize_dict(fallback_response)
 
     except HTTPException as e:
         print(f"❌ HTTPException in _analyze_with_agent_internal: {e.status_code} - {e.detail}")

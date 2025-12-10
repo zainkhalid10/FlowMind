@@ -79,6 +79,7 @@ class Feature(Base):
     description = Column(Text, nullable=False)
     status = Column(String(20), default="pending")  # pending, approved, denied
     quality_score = Column(Integer, default=0)
+    feedback = Column(Text, nullable=True)  # Client feedback on the requirement
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

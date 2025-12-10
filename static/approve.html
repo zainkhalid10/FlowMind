@@ -15,23 +15,92 @@
         
         body {
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: radial-gradient(circle at 20% 20%, rgba(102,126,234,0.25), transparent 35%),
-                        radial-gradient(circle at 80% 0%, rgba(236,72,153,0.2), transparent 30%),
-                        linear-gradient(135deg, #0f172a 0%, #111827 50%, #0b1021 100%);
+            background: radial-gradient(circle at 20% 20%, rgba(6,182,212,0.25), transparent 35%),
+                        radial-gradient(circle at 80% 0%, rgba(59,130,246,0.2), transparent 30%),
+                        linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             padding: 24px;
-            color: #0f172a;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 22px;
-            box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35);
-            padding: 36px;
-            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            animation: fadeInUp 0.6s ease-out;
+            position: relative;
+            overflow: hidden;
+            color: #0f172a;
+        }
+        
+        .container h1,
+        .container h2,
+        .container h3,
+        .container p,
+        .container span,
+        .container div:not([class*="gradient"]) {
+            color: #0f172a;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #06b6d4, #8b5cf6, #f093fb, #4facfe);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
         
         .header {
@@ -41,14 +110,44 @@
             gap: 12px;
             margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 2px solid #e2e8f0;
+            position: relative;
+            animation: slideInRight 0.5s ease-out;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+            animation: expandWidth 1s ease-out;
+        }
+        
+        @keyframes expandWidth {
+            from { width: 0; }
+            to { width: 100px; }
         }
         
         h1 {
-            color: #0f172a;
-            font-size: 30px;
+            color: #f1f5f9;
+            font-size: 32px;
             font-weight: 800;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            display: inline-block;
+        }
+        
+        h1::after {
+            content: '🎯';
+            margin-left: 10px;
+            animation: bounce 2s ease-in-out infinite;
         }
         
         .nav-buttons {
@@ -60,17 +159,42 @@
         }
         
         .btn {
-            padding: 12px 18px;
+            padding: 12px 24px;
             border: 1px solid transparent;
             border-radius: 12px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 700;
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             display: inline-block;
             text-align: center;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn span {
+            position: relative;
+            z-index: 1;
         }
         
         .btn-primary {
@@ -78,24 +202,42 @@
             color: white;
         }
         
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+        
         .btn-secondary {
-            background: #0ea5e9;
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
             color: white;
         }
         
-        .btn-ghost {
-            background: transparent;
-            color: #0f172a;
-            border-color: #e2e8f0;
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #0284c7 0%, #0891b2 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
         }
         
-        .btn:hover, .btn:focus-visible {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(99, 102, 241, 0.25);
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.8);
+            color: #f1f5f9;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-ghost:hover {
+            background: white;
+            border-color: #06b6d4;
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(-1px) scale(0.98);
         }
         
         .btn:focus-visible {
-            outline: 2px solid #a5b4fc;
+            outline: 3px solid rgba(102, 126, 234, 0.5);
             outline-offset: 3px;
         }
         
@@ -111,26 +253,80 @@
         }
         
         .stat-card {
-            padding: 20px;
-            border-radius: 12px;
+            padding: 25px;
+            border-radius: 16px;
             text-align: center;
             color: white;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
         }
         
-        .stat-card.total { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .stat-card.pending { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .stat-card.approved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .stat-card.denied { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card.total { 
+            background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+        }
+        .stat-card.pending { 
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stat-card.approved { 
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stat-card.denied { 
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
         
         .stat-number {
-            font-size: 36px;
-            font-weight: bold;
-            margin-bottom: 5px;
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover .stat-number {
+            transform: scale(1.1);
         }
         
         .stat-label {
             font-size: 14px;
-            opacity: 0.9;
+            opacity: 0.95;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .filters {
@@ -154,12 +350,12 @@
         
         .filter-select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #06b6d4;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
         
         .filter-select:hover {
-            border-color: #667eea;
+            border-color: #06b6d4;
         }
         
         .bulk-actions {
@@ -183,26 +379,64 @@
         }
         
         .feature-card {
-            padding: 20px;
+            padding: 24px;
             border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            background: #f8f9fa;
-            transition: all 0.3s;
+            border-radius: 16px;
+            background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideInUp 0.5s ease-out forwards;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        @keyframes slideInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .feature-card:hover::before {
+            left: 100%;
         }
         
         .feature-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+            border-color: #06b6d4;
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+            transform: translateY(-4px);
+            background: linear-gradient(to bottom, #ffffff, #f0f4ff);
         }
         
         .feature-card.approved {
             border-color: #28a745;
-            background: #d4edda;
+            background: linear-gradient(to bottom, #d4edda, #c3e6cb);
+        }
+        
+        .feature-card.approved:hover {
+            box-shadow: 0 8px 30px rgba(40, 167, 69, 0.3);
         }
         
         .feature-card.denied {
             border-color: #dc3545;
-            background: #f8d7da;
+            background: linear-gradient(to bottom, #f8d7da, #f5c6cb);
+        }
+        
+        .feature-card.denied:hover {
+            box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3);
         }
         
         .feature-header {
@@ -219,26 +453,51 @@
         }
         
         .category-badge {
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
             color: white;
+            transition: all 0.3s;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         
-        .category-functional { background: #667eea; }
-        .category-non_functional { background: #764ba2; }
-        .category-user { background: #f093fb; }
-        .category-business { background: #4facfe; }
-        .category-other { background: #6c757d; }
+        .category-badge:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        
+        .category-functional { 
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+        }
+        .category-non_functional { 
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+        }
+        .category-user { 
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+        .category-business { 
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+        .category-other { 
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
         
         .quality-badge {
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
-            background: #ffc107;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
             color: #333;
+            box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .quality-badge:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
         }
         
         .feature-description {
@@ -261,25 +520,31 @@
         }
         
         .btn-approve {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
             min-width: 110px;
             height: 38px;
+            border: none;
         }
         
         .btn-deny {
-            background: #dc3545;
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
             color: white;
             min-width: 110px;
             height: 38px;
+            border: none;
         }
         
         .btn-approve:hover {
-            background: #218838;
+            background: linear-gradient(135deg, #218838, #1ea080);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
         }
         
         .btn-deny:hover {
-            background: #c82333;
+            background: linear-gradient(135deg, #c82333, #c0392b);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
         }
         
         .btn-small {
@@ -317,12 +582,12 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #667eea;
+            color: #06b6d4;
         }
         
         .spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid #06b6d4;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -337,22 +602,110 @@
         
         .search-box {
             width: 300px;
-            padding: 12px 16px;
+            padding: 12px 16px 12px 45px;
             border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 15px;
             height: 44px;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            position: relative;
         }
         
         .search-box:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15),
+                        0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
         }
         
         .search-box:hover {
-            border-color: #667eea;
+            border-color: #06b6d4;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+        
+        .filter-select {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .filter-select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .filter-select:focus {
+            transform: translateY(-2px);
+        }
+        
+        /* Scroll animations */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Smooth scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+        }
+        
+        /* Feedback section styling */
+        .feedback-section {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(248,249,250,0.8));
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        
+        .feedback-section:hover {
+            border-color: #06b6d4;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+        
+        .feedback-input {
+            transition: all 0.3s;
+        }
+        
+        .feedback-input:focus {
+            border-color: #06b6d4 !important;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+            transform: scale(1.01);
+        }
+        
+        /* Loading animation enhancement */
+        .spinner {
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-top: 4px solid #06b6d4;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Feature card stagger animation */
+        .features-list .feature-card {
+            animation-delay: calc(var(--index) * 0.1s);
         }
     </style>
 </head>
@@ -410,6 +763,7 @@
             
             <button class="btn btn-secondary btn-small" onclick="selectAll()">Select All</button>
             <button class="btn btn-secondary btn-small" onclick="deselectAll()">Deselect All</button>
+            <button class="btn btn-secondary btn-small" onclick="cleanupOldFeatures()" style="background: #dc3545; color: white;">🗑️ Clean Old Runs</button>
         </div>
         
         <div class="bulk-actions" id="bulkActions">
@@ -442,7 +796,12 @@
                 
                 console.log('Loading documents...');
                 const response = await fetch('/api/documents', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
                 });
                 
                 if (response.status === 401 || response.status === 403) {
@@ -467,7 +826,9 @@
                         data.documents.forEach(doc => {
                             const option = document.createElement('option');
                             option.value = doc.id.toString();
-                            option.textContent = `${doc.filename} (${doc.feature_count} features)`;
+                            // Show filename with run timestamp and feature count
+                            const runInfo = doc.run_label || 'Current Run';
+                            option.textContent = `${doc.filename} - ${runInfo} (${doc.feature_count} features)`;
                             select.appendChild(option);
                         });
                         console.log(`Added ${data.documents.length} documents to filter`);
@@ -523,7 +884,12 @@
                 }
                 
                 const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
                 });
                 
                 if (response.status === 401 || response.status === 403) {
@@ -568,7 +934,12 @@
                 if (categoryFilter) url += `category=${categoryFilter}`;
                 
                 const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
                 });
                 
                 if (response.status === 401 || response.status === 403) {
@@ -592,12 +963,12 @@
                 const container = document.getElementById('featuresContainer');
                 if (container) {
                     container.innerHTML = `
-                        <div class="empty-state">
-                            <h3>Error loading features</h3>
-                            <p>${error.message}</p>
+                    <div class="empty-state">
+                        <h3>Error loading features</h3>
+                        <p>${error.message}</p>
                             <p style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">Check browser console for details.</p>
-                        </div>
-                    `;
+                    </div>
+                `;
                 }
             }
         }
@@ -607,8 +978,8 @@
             
             if (features.length === 0) {
                 container.innerHTML = `
-                    <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="empty-state fade-in">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation: bounce 2s ease-in-out infinite;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         <h3>No features found</h3>
@@ -619,8 +990,8 @@
                 return;
             }
             
-            container.innerHTML = '<div class="features-list">' + features.map(feature => `
-                <div class="feature-card ${feature.status}">
+            container.innerHTML = '<div class="features-list">' + features.map((feature, index) => `
+                <div class="feature-card ${feature.status}" style="--index: ${index}; animation-delay: ${index * 0.1}s;">
                     <div class="feature-header">
                         <div class="feature-meta">
                             <input type="checkbox" class="checkbox" data-id="${feature.id}" onchange="toggleSelection(${feature.id})">
@@ -630,7 +1001,18 @@
                         </div>
                         <small style="color: #6c757d;">📄 ${feature.filename}</small>
                     </div>
-                    <div class="feature-description">${feature.description}</div>
+                    <div class="feature-description">${escapeHtml(feature.description)}</div>
+                    <div class="feedback-section" style="margin-top: 15px; margin-bottom: 15px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #0f172a;">💬 Your Feedback:</label>
+                        <textarea 
+                            class="feedback-input" 
+                            data-feature-id="${feature.id}"
+                            placeholder="Add your feedback, comments, or suggestions for this requirement..."
+                            style="width: 100%; min-height: 80px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
+                            onblur="saveFeedback(${feature.id}, this.value)"
+                        >${escapeHtml(feature.feedback || '')}</textarea>
+                        ${feature.feedback ? `<small style="color: #28a745; display: block; margin-top: 5px;">✓ Feedback saved</small>` : ''}
+                    </div>
                     <div class="feature-actions">
                         ${feature.status !== 'approved' ? `<button class="btn btn-approve btn-small" onclick="updateStatus(${feature.id}, 'approved')">✓ Approve</button>` : ''}
                         ${feature.status !== 'denied' ? `<button class="btn btn-deny btn-small" onclick="updateStatus(${feature.id}, 'denied')">✗ Deny</button>` : ''}
@@ -649,6 +1031,52 @@
                 'other': 'Other'
             };
             return map[category] || category;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function saveFeedback(featureId, feedback) {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    return;
+                }
+                
+                const response = await fetch(`/api/features/${featureId}/feedback`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ feedback: feedback })
+                });
+                
+                if (response.ok) {
+                    // Update the UI to show feedback was saved
+                    const textarea = document.querySelector(`textarea[data-feature-id="${featureId}"]`);
+                    if (textarea) {
+                        const feedbackSection = textarea.closest('.feedback-section');
+                        let savedIndicator = feedbackSection.querySelector('.feedback-saved-indicator');
+                        if (!savedIndicator) {
+                            savedIndicator = document.createElement('small');
+                            savedIndicator.className = 'feedback-saved-indicator';
+                            savedIndicator.style.cssText = 'color: #28a745; display: block; margin-top: 5px;';
+                            feedbackSection.appendChild(savedIndicator);
+                        }
+                        savedIndicator.textContent = feedback ? '✓ Feedback saved' : '';
+                    }
+                } else if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Error saving feedback:', error);
+            }
         }
         
         async function updateStatus(featureId, status) {
@@ -769,6 +1197,48 @@
             }
         }
         
+        async function cleanupOldFeatures() {
+            if (!confirm('This will delete ALL features from the database and page. Patterns and self-learning will remain intact. Continue?')) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    alert('Please login to cleanup features');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                const response = await fetch('/api/features/cleanup/old', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`✅ ${data.message}`);
+                    // Reload features and stats
+                    await loadFeatures();
+                    await loadStats();
+                    await loadDocuments();
+                } else if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/login';
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Failed to cleanup features' }));
+                    alert(`Failed to cleanup: ${errorData.detail || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error cleaning up features:', error);
+                alert('Error cleaning up features: ' + error.message);
+            }
+        }
+        
         // Search functionality
         document.getElementById('searchBox').addEventListener('input', (e) => {
             const search = e.target.value.toLowerCase();
@@ -787,15 +1257,145 @@
         document.getElementById('statusFilter').addEventListener('change', loadFeatures);
         document.getElementById('categoryFilter').addEventListener('change', loadFeatures);
         
+        // Scroll animation observer
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        
+        // Animate stats on load
+        function animateStats() {
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0) scale(1)';
+                }, index * 100);
+            });
+        }
+        
+        // Smooth scroll to top
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Add scroll to top button
+        function addScrollToTopButton() {
+            const scrollBtn = document.createElement('button');
+            scrollBtn.innerHTML = '↑';
+            scrollBtn.className = 'scroll-to-top';
+            scrollBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+                color: white;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 0.3s;
+                z-index: 1000;
+            `;
+            scrollBtn.onclick = scrollToTop;
+            document.body.appendChild(scrollBtn);
+            
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    scrollBtn.style.opacity = '1';
+                    scrollBtn.style.transform = 'translateY(0)';
+                } else {
+                    scrollBtn.style.opacity = '0';
+                    scrollBtn.style.transform = 'translateY(20px)';
+                }
+            });
+        }
+        
+        // Add number counter animation
+        function animateNumber(element, target, duration = 1000) {
+            const start = 0;
+            const increment = target / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current);
+                }
+            }, 16);
+        }
+        
+        // Enhanced loadStats with animation
+        const originalLoadStats = loadStats;
+        loadStats = async function() {
+            await originalLoadStats();
+            setTimeout(() => {
+                const totalEl = document.getElementById('stat-total');
+                const pendingEl = document.getElementById('stat-pending');
+                const approvedEl = document.getElementById('stat-approved');
+                const deniedEl = document.getElementById('stat-denied');
+                
+                if (totalEl && totalEl.textContent !== '-') {
+                    const total = parseInt(totalEl.textContent) || 0;
+                    const pending = parseInt(pendingEl.textContent) || 0;
+                    const approved = parseInt(approvedEl.textContent) || 0;
+                    const denied = parseInt(deniedEl.textContent) || 0;
+                    
+                    totalEl.textContent = '0';
+                    pendingEl.textContent = '0';
+                    approvedEl.textContent = '0';
+                    deniedEl.textContent = '0';
+                    
+                    animateNumber(totalEl, total);
+                    animateNumber(pendingEl, pending);
+                    animateNumber(approvedEl, approved);
+                    animateNumber(deniedEl, denied);
+                }
+            }, 100);
+        };
+        
         // Initial load
         window.onload = () => {
             if (checkAuth()) {
+                addScrollToTopButton();
                 loadDocuments().then(() => {
                     loadStats();
                     loadFeatures();
+                    setTimeout(animateStats, 200);
                 });
             }
         };
+        
+        // Add parallax effect to header
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('.header');
+            if (header) {
+                const scrolled = window.pageYOffset;
+                header.style.transform = `translateY(${scrolled * 0.1}px)`;
+                header.style.opacity = 1 - (scrolled / 200);
+            }
+        });
     </script>
 </body>
 </html>

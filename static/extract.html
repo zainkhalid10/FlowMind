@@ -16,26 +16,121 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Data Falling Background */
+        .data-fall-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .data-particle {
+            position: absolute;
+            color: rgba(6, 182, 212, 0.7);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            opacity: 0;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+            will-change: transform, opacity;
+        }
+        
+        @keyframes dataFall {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.5) rotate(0deg);
+            }
+            5% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+            95% {
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--end-x), var(--end-y)) scale(0.2) rotate(360deg);
+            }
+        }
+        
+        /* Circular orbit effect */
+        .data-orbit {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(6, 182, 212, 0.1);
+            border-radius: 50%;
+            animation: orbitRotate 20s linear infinite;
+        }
+        
+        .data-orbit::before,
+        .data-orbit::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+        }
+        
+        .data-orbit::after {
+            width: 800px;
+            height: 800px;
+            border-color: rgba(139, 92, 246, 0.1);
+        }
+        
+        @keyframes orbitRotate {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+        
+        /* Ensure content is above background */
+        .container,
+        .navbar {
+            position: relative;
+            z-index: 1;
         }
         
         .navbar {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             padding: 20px 35px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 2px solid rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(6, 182, 212, 0.2);
+            backdrop-filter: blur(10px);
         }
         
         .navbar h2 {
             margin: 0;
-            color: #667eea;
+            color: #0f172a;
+            font-weight: 700;
         }
         
         .navbar .user-info {
@@ -51,7 +146,7 @@
         
         .header {
             text-align: center;
-            color: white;
+            color: #e0f2fe;
             margin-bottom: 40px;
         }
         
@@ -59,10 +154,12 @@
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 10px;
+            color: #e0f2fe;
         }
         
         .header p {
             font-size: 1.2rem;
+            color: #cbd5e1;
             opacity: 0.9;
         }
         
@@ -74,12 +171,21 @@
         }
         
         .card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             padding: 35px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             transition: transform 0.3s, box-shadow 0.3s;
-            border: 2px solid rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(6, 182, 212, 0.2);
+            backdrop-filter: blur(10px);
+            color: #0f172a;
+        }
+        
+        .card p,
+        .card label,
+        .card span,
+        .card div:not(.card-icon) {
+            color: #1e293b;
         }
         
         .card:hover {
@@ -107,22 +213,22 @@
         }
         
         .card-icon.basic {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: linear-gradient(135deg, #0891b2, #075985);
         }
         
         .card-icon.agent {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, #0891b2, #075985);
         }
         
         .card-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #1e293b;
+            color: #0f172a;
         }
         
         .card-subtitle {
             font-size: 0.9rem;
-            color: #64748b;
+            color: #475569;
             margin-top: 5px;
         }
         
@@ -152,7 +258,7 @@
         }
         
         .file-input-label:hover {
-            border-color: #667eea;
+            border-color: #06b6d4;
             background: rgba(102, 126, 234, 0.05);
             border-width: 3px;
         }
@@ -160,7 +266,7 @@
         .btn {
             width: 100%;
             padding: 14px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
             color: white;
             border: 2px solid transparent;
             border-radius: 10px;
@@ -189,7 +295,7 @@
         }
         
         .btn-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
             box-shadow: 0 4px 8px rgba(16, 185, 129, 0.2);
         }
         
@@ -219,14 +325,14 @@
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea, #10b981);
+            background: linear-gradient(90deg, #0891b2, #2563eb, #7c3aed);
             width: 0%;
             transition: width 0.3s ease-out;
         }
         
         .progress-time {
             font-size: 0.8rem;
-            color: #64748b;
+            color: #475569;
             margin-top: 5px;
             font-weight: 500;
         }
@@ -283,17 +389,21 @@
         
         .alert-success {
             background: #d1fae5;
-            color: #059669;
+            color: #0891b2;
         }
     </style>
 </head>
 <body>
+    <!-- Animated Data Falling Background -->
+    <div class="data-fall-container">
+        <div class="data-orbit"></div>
+    </div>
     <div class="container">
         <div class="navbar">
             <h2><i class="fas fa-brain"></i> FlowMind</h2>
             <div class="user-info">
                 <span id="username-display"></span>
-                <a href="/approve" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none; background: linear-gradient(135deg, #10b981, #059669); margin-right: 10px;">
+                <a href="/approve" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none; background: linear-gradient(135deg, #0891b2, #2563eb, #7c3aed); margin-right: 10px;">
                     <i class="fas fa-check-circle"></i> Approve
                 </a>
                 <a href="/dashboard" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none;">
@@ -387,7 +497,7 @@
             
             <div class="card" id="learning-status-card" style="grid-column: 1 / -1; cursor: pointer;" onclick="window.location.href='/training'">
                 <div style="text-align: center; padding: 20px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #667eea;"></i>
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #06b6d4;"></i>
                     <p style="margin-top: 10px; color: #64748b;">Loading learning status...</p>
                 </div>
             </div>
@@ -606,13 +716,22 @@
             const card = document.getElementById('learning-status-card');
             if (!card) return;
             
-            const totalPatterns = status.total_learned_patterns || 0;
+            // Use total_learned_items if available, otherwise fall back to total_learned_patterns
+            // This includes keywords + patterns + phrases
+            const totalPatterns = status.total_learned_items || status.total_learned_patterns || 0;
             const totalDocs = status.total_documents_processed || 0;
             const learningIterations = status.learning_iterations || 0;
             
+            console.log('📊 Learning status update:', {
+                totalPatterns,
+                totalDocs,
+                learningIterations,
+                raw_status: status
+            });
+            
             card.innerHTML = `
                 <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #06b6d4, #8b5cf6); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
                         <i class="fas fa-brain" style="color: white; font-size: 1.2rem;"></i>
                     </div>
                     <div>
@@ -622,19 +741,19 @@
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
                     <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
-                        <div style="font-size: 1.8rem; font-weight: 700; color: #667eea;">${totalPatterns}</div>
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${totalPatterns}</div>
                         <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Patterns</div>
                     </div>
                     <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
-                        <div style="font-size: 1.8rem; font-weight: 700; color: #667eea;">${totalDocs}</div>
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${totalDocs}</div>
                         <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Documents</div>
                     </div>
                     <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
-                        <div style="font-size: 1.8rem; font-weight: 700; color: #667eea;">${learningIterations}</div>
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${learningIterations}</div>
                         <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Iterations</div>
                     </div>
                 </div>
-                <a href="/training" style="display: block; text-align: center; margin-top: 15px; padding: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">
+                <a href="/training" style="display: block; text-align: center; margin-top: 15px; padding: 10px; background: linear-gradient(135deg, #06b6d4, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">
                     <i class="fas fa-graduation-cap"></i> View Training Dashboard
                 </a>
             `;
@@ -658,7 +777,7 @@
             }
             
             let html = '<div style="color: #e2e8f0;">';
-            html += `<h3 style="color: #10b981; margin-bottom: 15px;"><i class="fas fa-check-circle"></i> Extraction Results</h3>`;
+            html += `<h3 style="color: #06b6d4; margin-bottom: 15px;"><i class="fas fa-check-circle"></i> Extraction Results</h3>`;
             
             if (data.filename) {
                 html += `<p><strong style="color: #60a5fa;">Filename:</strong> ${escapeHtml(data.filename)}</p>`;
@@ -666,7 +785,7 @@
             
             if (data.summary) {
                 html += `<div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">`;
-                html += `<strong style="color: #10b981;">Summary:</strong><br>`;
+                html += `<strong style="color: #06b6d4;">Summary:</strong><br>`;
                 html += `<p style="margin-top: 8px; line-height: 1.6;">${escapeHtml(data.summary)}</p>`;
                 html += `</div>`;
             }
@@ -685,7 +804,7 @@
                         html += `<p style="font-size: 0.85rem; color: #94a3b8;">OCR Text: ${escapeHtml(img.ocr.substring(0, 200))}${img.ocr.length > 200 ? '...' : ''}</p>`;
                     }
                     if (img.summary) {
-                        html += `<p style="font-size: 0.85rem; color: #10b981;">Summary: ${escapeHtml(img.summary)}</p>`;
+                        html += `<p style="font-size: 0.85rem; color: #06b6d4;">Summary: ${escapeHtml(img.summary)}</p>`;
                     }
                     html += `</div>`;
                 });
@@ -709,7 +828,7 @@
             }
             
             let html = '<div style="color: #e2e8f0;">';
-            html += `<h3 style="color: #10b981; margin-bottom: 15px;"><i class="fas fa-robot"></i> AI Analysis Results</h3>`;
+            html += `<h3 style="color: #06b6d4; margin-bottom: 15px;"><i class="fas fa-robot"></i> AI Analysis Results</h3>`;
             
             if (data.filename) {
                 html += `<p><strong style="color: #60a5fa;">Filename:</strong> ${escapeHtml(data.filename)}</p>`;
@@ -717,7 +836,7 @@
             
             if (data.extraction_summary) {
                 html += `<div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">`;
-                html += `<strong style="color: #10b981;">Extraction Summary:</strong><br>`;
+                html += `<strong style="color: #06b6d4;">Extraction Summary:</strong><br>`;
                 html += `<p style="margin-top: 8px;">${escapeHtml(data.extraction_summary)}</p>`;
                 html += `</div>`;
             }
@@ -1184,8 +1303,8 @@
                     const label = this.nextElementSibling;
                     if (this.files[0]) {
                         label.innerHTML = `<i class="fas fa-file"></i> ${this.files[0].name}`;
-                        label.style.borderColor = '#10b981';
-                        label.style.background = 'rgba(16, 185, 129, 0.05)';
+                        label.style.borderColor = '#06b6d4';
+                        label.style.background = 'rgba(6, 182, 212, 0.05)';
                     }
                 });
             }
@@ -1196,14 +1315,116 @@
                     const label = this.nextElementSibling;
                     if (label && this.files[0]) {
                         label.innerHTML = `<i class="fas fa-file"></i> ${this.files[0].name}`;
-                        label.style.borderColor = '#10b981';
-                        label.style.background = 'rgba(16, 185, 129, 0.05)';
+                        label.style.borderColor = '#06b6d4';
+                        label.style.background = 'rgba(6, 182, 212, 0.05)';
                     }
                 });
             }
         } catch (error) {
             console.error('Error setting up file input listeners:', error);
         }
+    </script>
+    
+    <script>
+        // Create animated data particles falling in circular pattern
+        function createDataParticles() {
+            const container = document.querySelector('.data-fall-container');
+            if (!container) return;
+            
+            const dataSymbols = ['0', '1', '0101', '1010', 'DATA', 'INFO', 'TEXT', 'DOC', 'PDF', 'IMG', 'AI', 'ML', 'RAG', 'OCR', 'VLM', 'NLP'];
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const maxRadius = Math.max(window.innerWidth, window.innerHeight) * 0.6;
+            
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.className = 'data-particle';
+                
+                // Random data symbol
+                particle.textContent = dataSymbols[Math.floor(Math.random() * dataSymbols.length)];
+                
+                // Random angle for circular distribution (start from outer circle)
+                const angle = Math.random() * Math.PI * 2;
+                const startRadius = maxRadius * (0.7 + Math.random() * 0.3); // Start from 70-100% of max radius
+                
+                // Calculate starting position on outer circle
+                const startX = centerX + Math.cos(angle) * startRadius;
+                const startY = centerY + Math.sin(angle) * startRadius;
+                
+                // Calculate end position (toward center, but not exactly center for spiral effect)
+                const endRadius = Math.random() * 100; // End within 100px of center
+                const endAngle = angle + (Math.random() - 0.5) * 0.5; // Slight angle variation
+                const endX = centerX + Math.cos(endAngle) * endRadius - startX;
+                const endY = centerY + Math.sin(endAngle) * endRadius - startY;
+                
+                particle.style.left = startX + 'px';
+                particle.style.top = startY + 'px';
+                
+                // Set CSS variables for animation end position
+                particle.style.setProperty('--end-x', endX + 'px');
+                particle.style.setProperty('--end-y', endY + 'px');
+                
+                // Random animation duration (4-7 seconds)
+                const duration = 4 + Math.random() * 3;
+                particle.style.animation = `dataFall ${duration}s linear forwards`;
+                
+                // Random delay
+                particle.style.animationDelay = Math.random() * 1 + 's';
+                
+                // Random size
+                const size = 12 + Math.random() * 10;
+                particle.style.fontSize = size + 'px';
+                
+                // Random color variation
+                const colors = [
+                    'rgba(6, 182, 212, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(139, 92, 246, 0.7)',
+                    'rgba(6, 182, 212, 0.5)',
+                    'rgba(59, 130, 246, 0.5)',
+                    'rgba(139, 92, 246, 0.5)'
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.color = color;
+                particle.style.textShadow = `0 0 10px ${color}, 0 0 20px ${color.replace('0.7', '0.3')}`;
+                
+                container.appendChild(particle);
+                
+                // Remove particle after animation
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, (duration + 1) * 1000);
+            }
+            
+            // Create particles continuously - increased frequency
+            setInterval(createParticle, 80); // Create new particle every 80ms (more frequent)
+            setInterval(createParticle, 120); // Additional stream
+            setInterval(createParticle, 150); // Another stream for more density
+            
+            // Create initial burst of particles
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => createParticle(), i * 50);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', createDataParticles);
+        
+        // Recreate particles on window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const container = document.querySelector('.data-fall-container');
+                if (container) {
+                    const particles = container.querySelectorAll('.data-particle');
+                    particles.forEach(p => p.remove());
+                    createDataParticles();
+                }
+            }, 300);
+        });
     </script>
 </body>
 </html>

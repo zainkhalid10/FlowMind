@@ -29,7 +29,7 @@ async def training_page():
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -38,32 +38,42 @@ async def training_page():
             margin: 0 auto;
         }
         .card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 2px solid rgba(6, 182, 212, 0.2);
+            backdrop-filter: blur(10px);
+            color: #0f172a;
+        }
+        .card h1, .card h3, .card h5 {
+            color: #0f172a;
         }
         .stat-card {
             text-align: center;
             padding: 20px;
-            background: #f8fafc;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 10px;
             margin: 10px;
+            border: 1px solid rgba(6, 182, 212, 0.2);
         }
         .stat-number {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #667eea;
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .stat-label {
-            color: #64748b;
+            color: #475569;
             margin-top: 10px;
         }
         .keyword-list {
             max-height: 400px;
             overflow-y: auto;
-            background: #f8fafc;
+            background: rgba(248, 250, 252, 0.8);
             padding: 15px;
             border-radius: 8px;
             margin-top: 15px;
@@ -75,6 +85,17 @@ async def training_page():
             border-radius: 6px;
             display: inline-block;
             border: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
+            border: none;
+        }
+        .text-primary {
+            color: #06b6d4 !important;
+        }
+        .text-muted {
+            color: #475569 !important;
         }
     </style>
 </head>
@@ -313,36 +334,55 @@ async def get_training_status(
         stats = agent.extraction_stats if hasattr(agent, 'extraction_stats') else {}
         learned_patterns = agent.learned_patterns if hasattr(agent, 'learned_patterns') else {}
         print(f"📊 Stats: {len(learned_patterns)} pattern categories found")
+        print(f"📊 Learned patterns type: {type(learned_patterns)}, keys: {list(learned_patterns.keys()) if isinstance(learned_patterns, dict) else 'N/A'}")
         
-        # Count total patterns and keywords
+        # Count total patterns, keywords, and phrases
         total_patterns = 0
         total_keywords = 0
+        total_phrases = 0
+        total_learned_items = 0  # Total of all learned items
         keywords_by_category = {}
         patterns_by_category = {}
+        phrases_by_category = {}
         
         for category, data in learned_patterns.items():
             if isinstance(data, dict):
                 keywords = data.get('keywords', set())
                 patterns = data.get('patterns', set())
+                phrases = data.get('phrases', set())
                 
-                keywords_list = list(keywords) if isinstance(keywords, set) else keywords
-                patterns_list = list(patterns) if isinstance(patterns, set) else patterns
+                keywords_list = list(keywords) if isinstance(keywords, set) else (keywords if isinstance(keywords, list) else [])
+                patterns_list = list(patterns) if isinstance(patterns, set) else (patterns if isinstance(patterns, list) else [])
+                phrases_list = list(phrases) if isinstance(phrases, set) else (phrases if isinstance(phrases, list) else [])
                 
                 total_keywords += len(keywords_list)
                 total_patterns += len(patterns_list)
+                total_phrases += len(phrases_list)
                 
                 keywords_by_category[category] = keywords_list
                 patterns_by_category[category] = patterns_list
+                phrases_by_category[category] = phrases_list
+        
+        # Total learned items = keywords + patterns + phrases
+        total_learned_items = total_keywords + total_patterns + total_phrases
+        
+        print(f"📊 Counted - Keywords: {total_keywords}, Patterns: {total_patterns}, Phrases: {total_phrases}, Total: {total_learned_items}")
         
         result = {
-            "total_learned_patterns": total_patterns,
+            "total_learned_patterns": total_learned_items,  # Changed to include all learned items for display
+            "total_patterns": total_patterns,  # Just patterns
             "total_keywords": total_keywords,
+            "total_phrases": total_phrases,
+            "total_learned_items": total_learned_items,  # Explicit total
             "total_documents_processed": stats.get("total_documents", 0),
             "learning_iterations": stats.get("learning_iterations", 0),
             "learned_keywords": keywords_by_category,
             "learned_patterns": patterns_by_category,
+            "learned_phrases": phrases_by_category,
             "extraction_stats": stats
         }
+        
+        print(f"📊 Returning result with total_learned_patterns: {result['total_learned_patterns']}, total_learned_items: {result['total_learned_items']}")
         
         # Cache the result
         _training_status_cache[cache_key] = (result, current_time)
