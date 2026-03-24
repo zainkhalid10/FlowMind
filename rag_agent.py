@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 from typing import List, Dict, Any, Optional
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
@@ -704,41 +705,69 @@ class RequirementsExtractionAgent:
             return f"Error formatting learned results: {str(e)}"
     
     def _parse_response_to_sections(self, response_text: str) -> Dict[str, List[str]]:
-        """Parse formatted response text into sections for learning."""
+        """Parse formatted response text into sections for learning. Handles multiple bullet styles and fallback for diagram-heavy/short responses."""
         try:
             sections = {}
             current_section = None
             current_items = []
-            
+            fallback_items = []  # Lines that look like requirements but have no section
+
+            def flush_section():
+                nonlocal current_section, current_items
+                if current_section and current_items:
+                    sections[current_section] = list(sections.get(current_section, [])) + current_items
+                current_items = []
+
+            def add_item(item: str):
+                if not item or item.lower() in ("(none)", "n/a", "-"):
+                    return
+                if len(item) < 3:
+                    return
+                if current_section is not None:
+                    current_items.append(item)
+                else:
+                    fallback_items.append(item)
+
             lines = response_text.split("\n")
             for line in lines:
                 line = line.strip()
                 if not line:
                     continue
-                
-                # Check if this is a section heading (ends with colon)
-                if line.endswith(":") and not line.startswith("-"):
-                    # Save previous section
-                    if current_section and current_items:
-                        sections[current_section] = current_items
-                    
-                    # Start new section
+
+                # Section heading (ends with colon, not a bullet)
+                if line.endswith(":") and not line.startswith(("-", "*", "•", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                    flush_section()
                     current_section = line.rstrip(":").lower().replace(" ", "_")
-                    # Normalize section name
                     current_section = current_section.replace("_requirements", "").replace("_/", "_").replace("_stories", "_stories")
                     current_items = []
-                # Check if this is a bullet point
-                elif line.startswith("- "):
-                    requirement = line[2:].strip()
-                    if requirement and requirement.lower() != "(none)":
-                        current_items.append(requirement)
-            
-            # Save last section
-            if current_section and current_items:
-                sections[current_section] = current_items
-            
+                # Bullet: - item, * item, • item
+                elif line.startswith("- ") or line.startswith("* ") or (line.startswith("• ") and len(line) > 2):
+                    raw = line[2:].strip()
+                    add_item(raw)
+                # Numbered: 1. item, 2. item, or 1) item
+                elif len(line) >= 3 and line[0].isdigit():
+                    if line[1:3] == ". " or line[1:3] == ") ":
+                        raw = line[3:].strip()
+                        add_item(raw)
+                    elif len(line) >= 4 and line[1] == "." and line[2] == ")":  # "1.) "
+                        raw = line[4:].strip()
+                        add_item(raw)
+                # Continuation or standalone requirement-like line (e.g. from diagrams)
+                elif current_section and len(line) > 15 and not line.endswith(":"):
+                    add_item(line)
+
+            flush_section()
+
+            # If we got no sections but have content, put everything into "general" so learning still runs (e.g. diagram-heavy docs)
+            if not sections and fallback_items:
+                sections["general"] = fallback_items
+            elif not sections and response_text.strip():
+                # Last resort: split into non-empty lines as general requirements
+                general = [ln.strip() for ln in response_text.split("\n") if len(ln.strip()) > 10 and ln.strip().lower() not in ("(none)", "n/a")]
+                if general:
+                    sections["general"] = general[:50]  # cap to avoid noise
+
             return sections
-            
         except Exception as e:
             print(f"⚠️ Error parsing response to sections: {str(e)}")
             return {}
@@ -2631,9 +2660,7 @@ Thought: {agent_scratchpad}""",
                 print(f"📊 Result status: {best_result.get('status')}, Response length: {len(str(best_result.get('response', '')))}")
                 print(f"📊 About to return best_result from extract_requirements...")
                 
-                # Do learning in background (non-blocking) - don't block return
-                import threading
-                
+                # Persist learning before returning so the UI reflects new patterns immediately.
                 def do_learning():
                     try:
                         if self.enable_self_learning and text:
@@ -2665,12 +2692,10 @@ Thought: {agent_scratchpad}""",
                         self._update_performance_metrics(method_used, success, categories_found)
                     except Exception as learn_error:
                         print(f"⚠️ Learning/performance update failed (non-critical): {learn_error}")
-                
-                # Start learning in background thread (non-blocking)
-                learning_thread = threading.Thread(target=do_learning, daemon=True)
-                learning_thread.start()
-                
-                print(f"📊 Returning best_result now (learning running in background)...")
+
+                do_learning()
+
+                print(f"📊 Returning best_result now (learning completed before response)...")
                 return best_result
             
             # If all methods failed, return error

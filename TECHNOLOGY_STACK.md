@@ -150,6 +150,11 @@
   - Image extraction from slides
   - Presentation structure parsing
 
+### LibreOffice (headless)
+- **Purpose**: Convert legacy DOC/PPT to DOCX/PPTX for parsing
+- **Usage**: subprocess call to soffice --headless --convert-to
+- **Paths**: Auto-detected (macOS, Windows, Linux); override via LIBREOFFICE_PATH
+
 ---
 
 ## 5. IMAGE PROCESSING & OCR
@@ -219,11 +224,11 @@
 - **Endpoint**: http://localhost:11434/api/generate
 - **Purpose**: Local LLM inference for VLM (Visual Language Model) and text generation
 - **Models Used**:
-  - llava:13b (default VLM model for image summarization)
+  - qwen2.5-vl, llava:13b (hybrid VLM models per FYP report; tries each in order)
   - llama3:8b (default LLM for text finalization)
 - **Configuration**: Environment variables
-  - FLOWMIND_VLM_MODELS (comma-separated list)
-  - FLOWMIND_OLLAMA_VLM_MODEL (default: llava:13b)
+  - FLOWMIND_VLM_MODELS (comma-separated list; e.g. qwen2.5-vl,llava:13b; tries each in order)
+  - FLOWMIND_OLLAMA_VLM_MODEL (fallback when FLOWMIND_VLM_MODELS not set; default: llava:13b)
   - FLOWMIND_OLLAMA_MODEL (default: llama3:8b)
   - FLOWMIND_VLM_TIMEOUT_MS (default: 12000ms)
 - **Usage**:
@@ -403,6 +408,9 @@
   - FLOWMIND_ENABLE_SELF_LEARNING (enable learning)
   - OPENROUTER_API_KEY (optional)
   - MAX_FILE_SIZE (file size limit)
+  - TRELLO_API_KEY, TRELLO_TOKEN, TRELLO_LIST_ID (for Trello integration)
+  - JIRA_URL, JIRA_PROJECT_KEY, JIRA_EMAIL, JIRA_API_TOKEN (for Jira integration)
+  - LIBREOFFICE_PATH (optional override for DOC/PPT conversion; Windows: C:\Program Files\LibreOffice\program\soffice.exe)
 
 ### requests (v2.32.3)
 - **Purpose**: HTTP library for API calls

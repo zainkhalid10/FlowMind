@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Client Review</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .client-role-pill {
+      margin-top: 10px;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 0.5px solid rgba(133, 79, 11, 0.35);
+      background: #FAEEDA;
+      color: #854F0B;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .review-sub {
+      color: #6B6B68;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .progress-card {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: #6B6B68;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: #E8E7F9;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      background: #534AB7;
+      transition: width 0.25s ease;
+    }
+
+    .progress-stats {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .progress-stat {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 11px;
+      color: #6B6B68;
+      background: #FCFCFB;
+    }
+
+    .progress-stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 17px;
+      font-weight: 600;
+      color: #1A1A1A;
+    }
+
+    .progress-stat.approved strong { color: #3B6D11; }
+    .progress-stat.rejected strong { color: #A32D2D; }
+    .progress-stat.modification strong { color: #854F0B; }
+    .progress-stat.pending strong { color: #534AB7; }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .filter-pill {
+      border: 0.5px solid rgba(0,0,0,0.18);
+      background: #fff;
+      border-radius: 999px;
+      font-size: 11px;
+      padding: 5px 11px;
+      color: #6B6B68;
+      cursor: pointer;
+    }
+
+    .filter-pill.active {
+      background: #534AB7;
+      border-color: #534AB7;
+      color: #fff;
+    }
+
+    .review-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .req-card {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-left: 3px solid #A3A3A0;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .req-card.status-approved { border-left-color: #3B6D11; }
+    .req-card.status-rejected { border-left-color: #A32D2D; }
+    .req-card.status-modification_requested { border-left-color: #854F0B; }
+
+    .req-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 6px;
+    }
+
+    .req-desc {
+      font-size: 12px;
+      color: #6B6B68;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 9px;
+    }
+
+    .status-chip {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .status-chip.pending { background: #EFEFEA; color: #6B6B68; }
+    .status-chip.approved { background: #EAF3DE; color: #3B6D11; }
+    .status-chip.rejected { background: #FCEBEB; color: #A32D2D; }
+    .status-chip.modification_requested { background: #FAEEDA; color: #854F0B; }
+    .status-chip.pending_manager_approval { background: #FAEEDA; color: #854F0B; }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .action-btn {
+      border-radius: 8px;
+      border: 0.5px solid rgba(0,0,0,0.2);
+      padding: 5px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      background: #FFFFFF;
+    }
+
+    .action-btn.approve {
+      background: #EAF3DE;
+      border-color: #3B6D11;
+      color: #3B6D11;
+    }
+
+    .action-btn.reject {
+      background: #FCEBEB;
+      border-color: #A32D2D;
+      color: #A32D2D;
+    }
+
+    .action-btn.modify {
+      background: #FAEEDA;
+      border-color: #854F0B;
+      color: #854F0B;
+    }
+
+    .action-btn.priority {
+      background: #EFEFEA;
+      color: #4C4C49;
+      border-color: rgba(0,0,0,0.18);
+    }
+
+    .inline-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+      margin-top: 0;
+    }
+
+    .inline-panel.open {
+      max-height: 350px;
+      margin-top: 8px;
+    }
+
+    .inline-box {
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 9px;
+      padding: 10px;
+      background: #FCFCFB;
+    }
+
+    .inline-label {
+      font-size: 11px;
+      color: #6B6B68;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .inline-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .priority-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .priority-btn {
+      border-radius: 8px;
+      padding: 4px 10px;
+      border: 0.5px solid transparent;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .priority-btn.high { background: #FCEBEB; border-color: #A32D2D; color: #A32D2D; }
+    .priority-btn.medium { background: #FAEEDA; border-color: #854F0B; color: #854F0B; }
+    .priority-btn.low { background: #EAF3DE; border-color: #3B6D11; color: #3B6D11; }
+
+    .comment-quote {
+      margin-top: 8px;
+      border-left: 3px solid #BA7517;
+      background: #FEF7EC;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #854F0B;
+    }
+
+    .add-requirement-toggle {
+      width: 100%;
+      border: 1px dashed rgba(83, 74, 183, 0.45);
+      color: #534AB7;
+      background: #FFFFFF;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .added-by-client {
+      font-size: 10px;
+      border-radius: 999px;
+      border: 0.5px solid rgba(133, 79, 11, 0.4);
+      color: #854F0B;
+      background: #FAEEDA;
+      padding: 2px 8px;
+    }
+
+    .submit-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .review-main {
+      position: relative;
+    }
+
+    .modal-host {
+      position: absolute;
+      inset: 0;
+      background: rgba(26, 26, 26, 0.22);
+      border-radius: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 3;
+    }
+
+    .modal-host.show { display: flex; }
+
+    .modal-card {
+      width: min(520px, 100%);
+      background: #fff;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .success-view {
+      border: 0.5px solid rgba(59, 109, 17, 0.3);
+      border-radius: 12px;
+      background: #F1F8E9;
+      color: #3B6D11;
+      padding: 24px;
+      text-align: center;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .success-check {
+      font-size: 32px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .section-card {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin: 0 0 10px;
+    }
+
+    .mini-meta {
+      color: #6B6B68;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .doc-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid #e5e7eb;
+      margin: 0 -14px 14px -14px;
+      padding: 0 14px;
+    }
+
+    .doc-tab-btn {
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: #6B6B68;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.2s ease;
+    }
+
+    .doc-tab-btn:hover {
+      color: #1A1A1A;
+      border-bottom-color: #d1d5db;
+    }
+
+    .doc-tab-btn.active {
+      color: #534AB7;
+      border-bottom-color: #534AB7;
+    }
+
+    .doc-tab-content {
+      display: none;
+    }
+
+    .doc-tab-content.active {
+      display: block;
+    }
+
+    @media (max-width: 900px) {
+      .progress-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .fm-main {
+        margin-left: 0;
+        padding: 16px;
+      }
+      .fm-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+      }
+    }
+
+    /* Dark mode styles */
+    html[data-theme="dark"] .progress-card {
+      background: #171A22 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .progress-head {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .progress-head > strong {
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .progress-track {
+      background: #1C1F29 !important;
+    }
+
+    html[data-theme="dark"] .progress-stat {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .progress-stat strong {
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .progress-stat.approved strong { color: #4FD77F !important; }
+    html[data-theme="dark"] .progress-stat.rejected strong { color: #FF7F7F !important; }
+    html[data-theme="dark"] .progress-stat.modification strong { color: #FFB84D !important; }
+    html[data-theme="dark"] .progress-stat.pending strong { color: #B8A7FF !important; }
+
+    html[data-theme="dark"] .filter-pill {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .filter-pill.active {
+      background: #534AB7 !important;
+      border-color: #534AB7 !important;
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .req-card {
+      background: #171A22 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .req-title {
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .req-desc {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .status-chip.pending { background: rgba(128, 128, 128, 0.15) !important; color: #A9AEBE !important; }
+    html[data-theme="dark"] .status-chip.approved { background: rgba(79, 215, 127, 0.15) !important; color: #4FD77F !important; }
+    html[data-theme="dark"] .status-chip.rejected { background: rgba(255, 127, 127, 0.15) !important; color: #FF7F7F !important; }
+    html[data-theme="dark"] .status-chip.modification_requested { background: rgba(255, 184, 77, 0.15) !important; color: #FFB84D !important; }
+    html[data-theme="dark"] .status-chip.pending_manager_approval { background: rgba(255, 184, 77, 0.15) !important; color: #FFB84D !important; }
+
+    html[data-theme="dark"] .action-btn {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .action-btn.approve {
+      background: rgba(79, 215, 127, 0.15) !important;
+      border-color: rgba(79, 215, 127, 0.25) !important;
+      color: #4FD77F !important;
+    }
+
+    html[data-theme="dark"] .action-btn.reject {
+      background: rgba(255, 127, 127, 0.15) !important;
+      border-color: rgba(255, 127, 127, 0.25) !important;
+      color: #FF7F7F !important;
+    }
+
+    html[data-theme="dark"] .action-btn.modify {
+      background: rgba(255, 184, 77, 0.15) !important;
+      border-color: rgba(255, 184, 77, 0.25) !important;
+      color: #FFB84D !important;
+    }
+
+    html[data-theme="dark"] .action-btn.priority {
+      background: #1C1F29 !important;
+      color: #A9AEBE !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    html[data-theme="dark"] .add-requirement-toggle {
+      border-color: rgba(83, 74, 183, 0.25) !important;
+      color: #B8A7FF !important;
+      background: transparent !important;
+    }
+
+    html[data-theme="dark"] .inline-box {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .inline-label {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .priority-btn {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .priority-btn.high { background: rgba(255, 127, 127, 0.15) !important; border-color: rgba(255, 127, 127, 0.25) !important; color: #FF7F7F !important; }
+    html[data-theme="dark"] .priority-btn.medium { background: rgba(255, 184, 77, 0.15) !important; border-color: rgba(255, 184, 77, 0.25) !important; color: #FFB84D !important; }
+    html[data-theme="dark"] .priority-btn.low { background: rgba(79, 215, 127, 0.15) !important; border-color: rgba(79, 215, 127, 0.25) !important; color: #4FD77F !important; }
+
+    html[data-theme="dark"] .comment-quote {
+      background: rgba(255, 184, 77, 0.15) !important;
+      border-left-color: #FFB84D !important;
+      color: #FFB84D !important;
+    }
+
+    html[data-theme="dark"] .added-by-client {
+      color: #FFB84D !important;
+      background: rgba(255, 184, 77, 0.15) !important;
+      border-color: rgba(255, 184, 77, 0.25) !important;
+    }
+
+    html[data-theme="dark"] .modal-host {
+      background: rgba(0, 0, 0, 0.7) !important;
+    }
+
+    html[data-theme="dark"] .modal-card {
+      background: #171A22 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .modal-card * {
+      color: inherit;
+    }
+
+    html[data-theme="dark"] .success-view {
+      background: rgba(79, 215, 127, 0.15) !important;
+      border-color: rgba(79, 215, 127, 0.25) !important;
+      color: #4FD77F !important;
+    }
+
+    html[data-theme="dark"] .section-card {
+      background: #171A22 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .section-title {
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .mini-meta {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .doc-tabs {
+      border-bottom-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .doc-tab-btn {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .doc-tab-btn:hover {
+      color: #E9E9EA !important;
+      border-bottom-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    html[data-theme="dark"] .doc-tab-btn.active {
+      color: #B8A7FF !important;
+      border-bottom-color: #B8A7FF !important;
+    }
+
+    html[data-theme="dark"] .review-sub {
+      color: #A9AEBE !important;
+    }
+
+    html[data-theme="dark"] .client-role-pill {
+      background: rgba(255, 184, 77, 0.15) !important;
+      color: #FFB84D !important;
+      border-color: rgba(255, 184, 77, 0.25) !important;
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <div class="client-role-pill">Client Reviewer</div>
+    <nav class="fm-nav" style="margin-top: 12px;">
+      <a href="#review-requirements" class="fm-nav-item" data-page="client-review"><span class="fm-dot"></span> Review requirements</a>
+      <a href="#my-feedback" class="fm-nav-item" data-page="my-feedback"><span class="fm-dot"></span> My feedback</a>
+      <a href="#documents" class="fm-nav-item" data-page="documents"><span class="fm-dot"></span> Documents</a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">CR</div>
+      <div>
+        <div class="fm-user-name" id="userName">Client</div>
+        <div class="fm-user-role">External reviewer</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main review-main">
+    <div class="fm-topbar">
+      <div>
+        <h1 class="fm-page-title">Review requirements</h1>
+        <div class="review-sub" id="reviewSub">Loading review assignment...</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="approveAllBtn" class="fm-btn-outline" style="display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-check-double" style="font-size:12px;"></i>Approve all
+        </button>
+        <button id="printReviewBtn" class="fm-btn-outline" style="display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-print" style="font-size:12px;"></i>Print
+        </button>
+        <button id="submitReviewBtn" class="fm-btn-primary submit-disabled">Submit review</button>
+      </div>
+    </div>
+
+    <section id="reviewSection">
+      <section class="progress-card">
+        <div class="progress-head">
+          <strong style="color:#1A1A1A; font-size:13px;">Review progress</strong>
+          <span id="reviewedCount">0 of 0 reviewed</span>
+        </div>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <div class="progress-stats">
+          <div class="progress-stat approved">Approved<strong id="countApproved">0</strong></div>
+          <div class="progress-stat rejected">Rejected<strong id="countRejected">0</strong></div>
+          <div class="progress-stat modification">Modifications<strong id="countModification">0</strong></div>
+          <div class="progress-stat pending">Pending<strong id="countPending">0</strong></div>
+        </div>
+      </section>
+
+      <div style="margin-bottom:12px;">
+        <input id="requirementSearch" class="fm-input" placeholder="🔍 Search requirements by title or description..." style="width:100%; padding:10px 12px; border-radius:8px; font-size:13px;">
+      </div>
+
+      <div style="margin-bottom:10px; display:flex; gap:8px; align-items:center;">
+        <label style="font-size:12px; color:#6B6B68; font-weight:500;">Group by:</label>
+        <select id="groupingSelect" class="fm-input" style="flex:0; min-width:120px; padding:6px 10px; font-size:12px;">
+          <option value="none">None (Flat list)</option>
+          <option value="status">Review Status</option>
+          <option value="category">Category</option>
+          <option value="priority">Priority</option>
+        </select>
+      </div>
+
+      <div id="filterRow" class="filter-row"></div>
+      <section id="reviewList" class="review-list"></section>
+
+      <button id="addReqToggle" class="add-requirement-toggle">+ Add new requirement</button>
+      <div id="addReqPanel" class="inline-panel">
+        <div class="inline-box">
+          <label class="inline-label" for="newReqTitle">Title</label>
+          <input id="newReqTitle" class="fm-input" placeholder="Requirement title" required>
+          <label class="inline-label" for="newReqDesc" style="margin-top:8px;">Description</label>
+          <textarea id="newReqDesc" class="fm-input" rows="4" style="min-height:80px; resize: vertical;"></textarea>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+            <div>
+              <label class="inline-label" for="newReqCategory">Category</label>
+              <select id="newReqCategory" class="fm-input">
+                <option value="functional">Functional</option>
+                <option value="non-functional">Non-functional</option>
+                <option value="business">Business</option>
+                <option value="system">System</option>
+              </select>
+            </div>
+            <div>
+              <label class="inline-label" for="newReqPriority">Priority</label>
+              <select id="newReqPriority" class="fm-input">
+                <option value="High">High</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="inline-actions">
+            <button id="addReqSubmit" class="fm-btn-primary fm-btn-sm">Add requirement</button>
+            <button id="addReqCancel" class="fm-btn-outline fm-btn-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="myFeedbackSection" class="section-card" style="display:none;">
+      <h3 class="section-title">My feedback</h3>
+      <div id="myFeedbackList" class="review-list"></div>
+    </section>
+
+    <section id="documentsSection" class="section-card" style="display:none;">
+      <div class="doc-tabs">
+        <button class="doc-tab-btn active" data-tab="metadata">Document Info</button>
+        <button class="doc-tab-btn" data-tab="view">Original Document</button>
+      </div>
+      <div id="metadataTab" class="doc-tab-content active">
+        <div id="documentsInfo" class="mini-meta">No document assigned yet.</div>
+      </div>
+      <div id="viewTab" class="doc-tab-content" style="display:none;">
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button id="downloadDocBtn" class="fm-btn-primary fm-btn-sm" style="display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-download" style="font-size:12px;"></i>Download
+          </button>
+          <button id="printDocBtn" class="fm-btn-outline fm-btn-sm" style="display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-print" style="font-size:12px;"></i>Print
+          </button>
+        </div>
+        <div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; background:#f9fafb;">
+          <iframe id="documentPdfViewer" 
+                  style="width:100%; height:600px; border:none; display:none;"
+                  frameborder="0"
+                  allowfullscreen></iframe>
+          <div id="documentLoadingMsg" style="padding:40px; text-align:center; color:#6B6B68; font-size:13px;">
+            Loading document...
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="successView" class="success-view">
+      <div class="success-check">✓</div>
+      <h3 style="margin:0 0 6px; font-size:18px;">Review submitted!</h3>
+      <p style="margin:0; color:#4B6B2E;">The project manager has been notified.</p>
+    </div>
+
+    <div id="submitModal" class="modal-host">
+      <div class="modal-card">
+        <h3 style="margin:0 0 6px; font-size:16px; color:#1A1A1A;">Submit your review?</h3>
+        <p id="submitSummaryText" style="margin:0 0 12px; color:#6B6B68; font-size:12px;">0 requirements reviewed, 0 still pending.</p>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button id="confirmSubmitBtn" class="fm-btn-primary fm-btn-sm">Submit anyway</button>
+          <button id="cancelSubmitBtn" class="fm-btn-outline fm-btn-sm">Go back</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    requireAuth();
+
+    const role = getRole();
+    if (role && role !== 'client') {
+      window.location.href = '/dashboard';
+    }
+
+    setActivePage('client-review');
+
+    let fileId = localStorage.getItem('fm_assigned_file') || new URLSearchParams(window.location.search).get('file_id');
+    let requirements = [];
+    let activeFilter = 'all';
+    let searchQuery = '';
+    let groupingMode = 'none';
+    let reviewMeta = { filename: '', manager_name: '', due_date: '', submitted: false };
+    const filterOrder = ['all', 'pending', 'approved', 'rejected', 'modification_requested'];
+
+    const filterLabel = {
+      all: 'All',
+      pending: 'Pending',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      modification_requested: 'Modifications'
+    };
+
+    function statusClass(status) {
+      const s = String(status || 'pending').toLowerCase();
+      if (s === 'approved') return 'approved';
+      if (s === 'rejected') return 'rejected';
+      if (s === 'modification_requested') return 'modification_requested';
+      if (s === 'pending_manager_approval') return 'pending_manager_approval';
+      return 'pending';
+    }
+
+    function prettyStatus(status) {
+      const s = String(status || 'pending').toLowerCase();
+      if (s === 'modification_requested') return 'Modification Requested';
+      if (s === 'pending_manager_approval') return 'Pending Manager Approval';
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function countByStatus() {
+      const map = { all: requirements.length, pending: 0, approved: 0, rejected: 0, modification_requested: 0 };
+      requirements.forEach(req => {
+        const s = statusClass(req.review_status);
+        if (map[s] !== undefined) map[s] += 1;
+      });
+      return map;
+    }
+
+    function getVisibleRequirements() {
+      return requirements.filter(req => {
+        const matchesFilter = activeFilter === 'all' || statusClass(req.review_status) === activeFilter;
+        
+        if (!matchesFilter) return false;
+        
+        if (!searchQuery.trim()) return true;
+        
+        const query = searchQuery.toLowerCase();
+        const title = (req.title || '').toLowerCase();
+        const desc = (req.description || '').toLowerCase();
+        const comment = (req.client_comment || '').toLowerCase();
+        
+        return title.includes(query) || desc.includes(query) || comment.includes(query);
+      });
+    }
+
+    function reviewedCount() {
+      return requirements.filter(req => statusClass(req.review_status) !== 'pending').length;
+    }
+
+    function renderFilterPills() {
+      const counts = countByStatus();
+      const holder = document.getElementById('filterRow');
+      holder.innerHTML = filterOrder.map(key => {
+        const active = key === activeFilter ? 'active' : '';
+        return '<button class="filter-pill ' + active + '" data-filter="' + key + '">' + filterLabel[key] + ' (' + (counts[key] || 0) + ')</button>';
+      }).join('');
+
+      holder.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeFilter = btn.dataset.filter;
+          renderFilterPills();
+          renderRequirements();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const counts = countByStatus();
+      const reviewed = reviewedCount();
+      const total = requirements.length;
+      const pending = counts.pending || 0;
+      const pct = total ? Math.round((reviewed / total) * 100) : 0;
+
+      document.getElementById('reviewedCount').textContent = reviewed + ' of ' + total + ' reviewed';
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('countApproved').textContent = counts.approved || 0;
+      document.getElementById('countRejected').textContent = counts.rejected || 0;
+      document.getElementById('countModification').textContent = counts.modification_requested || 0;
+      document.getElementById('countPending').textContent = pending;
+
+      const submitBtn = document.getElementById('submitReviewBtn');
+      if (reviewed > 0) {
+        submitBtn.classList.remove('submit-disabled');
+      } else {
+        submitBtn.classList.add('submit-disabled');
+      }
+
+      document.getElementById('submitSummaryText').textContent = reviewed + ' requirements reviewed, ' + pending + ' still pending.';
+    }
+
+    function reqPriorityClass(priority) {
+      const p = String(priority || 'Medium').toLowerCase();
+      if (p === 'high') return 'badge-danger';
+      if (p === 'low') return 'badge-success';
+      return 'badge-warning';
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderMyFeedback() {
+      const target = document.getElementById('myFeedbackList');
+      const items = requirements.filter(req => {
+        const status = statusClass(req.review_status);
+        return status !== 'pending' || String(req.client_comment || '').trim();
+      });
+
+      if (!items.length) {
+        target.innerHTML = '<div class="fm-card" style="padding:14px; color:#6B6B68; font-size:12px;">No feedback submitted yet.</div>';
+        return;
+      }
+
+      target.innerHTML = items.map(req => {
+        const status = statusClass(req.review_status);
+        const comment = req.client_comment
+          ? '<div class="comment-quote">' + escapeHtml(req.client_comment) + '</div>'
+          : '';
+        return '<article class="req-card status-' + status + '">'
+          + '<div class="req-title">REQ-' + req.req_id + ' · ' + escapeHtml(req.title || 'Requirement') + '</div>'
+          + '<div class="req-desc">' + escapeHtml(req.description || '-') + '</div>'
+          + '<div class="chip-row">'
+          + '<span class="fm-badge ' + reqPriorityClass(req.priority) + '">' + escapeHtml(req.priority || 'Medium') + '</span>'
+          + '<span class="status-chip ' + status + '">' + prettyStatus(status) + '</span>'
+          + '</div>'
+          + comment
+          + '</article>';
+      }).join('');
+    }
+
+    function renderDocumentsInfo() {
+      const counts = countByStatus();
+      const due = reviewMeta.due_date ? new Date(reviewMeta.due_date).toLocaleDateString() : 'Not set';
+      document.getElementById('documentsInfo').innerHTML = ''
+        + '<div><strong>Document:</strong> ' + escapeHtml(reviewMeta.filename || ('File ' + fileId)) + '</div>'
+        + '<div><strong>Shared by:</strong> ' + escapeHtml(reviewMeta.manager_name || 'Manager') + '</div>'
+        + '<div><strong>Due date:</strong> ' + escapeHtml(due) + '</div>'
+        + '<div style="margin-top:8px;"><strong>Review summary:</strong> '
+        + 'Approved ' + (counts.approved || 0) + ', Rejected ' + (counts.rejected || 0) + ', '
+        + 'Modifications ' + (counts.modification_requested || 0) + ', Pending ' + (counts.pending || 0)
+        + '</div>';
+
+      // Set up PDF viewer if filename exists
+      if (reviewMeta.filename) {
+        const pdfUrl = '/uploads/' + encodeURIComponent(reviewMeta.filename);
+        const pdfViewer = document.getElementById('documentPdfViewer');
+        const loadingMsg = document.getElementById('documentLoadingMsg');
+        
+        // Set iframe src to display the PDF
+        pdfViewer.src = pdfUrl;
+        
+        // Show iframe, hide loading message after a short delay
+        setTimeout(() => {
+          pdfViewer.style.display = 'block';
+          loadingMsg.style.display = 'none';
+        }, 500);
+      }
+    }
+
+    function setClientSection(section) {
+      const reviewSection = document.getElementById('reviewSection');
+      const myFeedbackSection = document.getElementById('myFeedbackSection');
+      const documentsSection = document.getElementById('documentsSection');
+      const submitBtn = document.getElementById('submitReviewBtn');
+      const approveAllBtn = document.getElementById('approveAllBtn');
+      const pageTitle = document.querySelector('.fm-page-title');
+
+      reviewSection.style.display = section === 'review' ? 'block' : 'none';
+      myFeedbackSection.style.display = section === 'my-feedback' ? 'block' : 'none';
+      documentsSection.style.display = section === 'documents' ? 'block' : 'none';
+      submitBtn.style.display = section === 'review' ? '' : 'none';
+      approveAllBtn.style.display = section === 'review' ? '' : 'none';
+
+      if (section === 'my-feedback') {
+        pageTitle.textContent = 'My feedback';
+      } else if (section === 'documents') {
+        pageTitle.textContent = 'Documents';
+      } else {
+        pageTitle.textContent = 'Review requirements';
+      }
+
+      document.querySelectorAll('.fm-nav-item').forEach(item => item.classList.remove('active'));
+      if (section === 'review') {
+        document.querySelector('.fm-nav-item[data-page="client-review"]').classList.add('active');
+      }
+      if (section === 'my-feedback') {
+        document.querySelector('.fm-nav-item[data-page="my-feedback"]').classList.add('active');
+      }
+      if (section === 'documents') {
+        document.querySelector('.fm-nav-item[data-page="documents"]').classList.add('active');
+      }
+    }
+
+    function syncSectionFromHash() {
+      const hash = String(window.location.hash || '').toLowerCase();
+      if (hash === '#my-feedback') {
+        setClientSection('my-feedback');
+      } else if (hash === '#documents') {
+        setClientSection('documents');
+      } else {
+        setClientSection('review');
+      }
+    }
+
+    function printReviewSummary() {
+      const counts = countByStatus();
+      const due = reviewMeta.due_date ? new Date(reviewMeta.due_date).toLocaleDateString() : 'Not set';
+      const submitted = reviewMeta.submitted_at ? new Date(reviewMeta.submitted_at).toLocaleDateString() + ' at ' + new Date(reviewMeta.submitted_at).toLocaleTimeString() : 'Pending';
+      
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Review Summary - ${escapeHtml(reviewMeta.filename)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { border-bottom: 2px solid #534AB7; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; color: #534AB7; }
+            .meta { background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+            .section { margin-bottom: 30px; }
+            .section h2 { font-size: 14px; color: #1a1a1a; border-left: 3px solid #534AB7; padding-left: 10px; margin-top: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background: #f9fafb; font-weight: 600; }
+            .approved { color: #3B6D11; }
+            .rejected { color: #A32D2D; }
+            .modification_requested { color: #854F0B; }
+            .pending { color: #6B6B68; }
+            .req-item { margin-bottom: 12px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; }
+            .req-title { font-weight: 600; margin-bottom: 4px; }
+            .req-desc { color: #666; font-size: 12px; margin-bottom: 4px; }
+            .req-comment { background: #fffae6; padding: 8px; border-left: 3px solid #854F0B; margin-top: 6px; font-size: 12px; }
+            .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
+            .badge-info { background: #e3f2fd; color: #1976d2; }
+            .badge-success { background: #e8f5e9; color: #388e3c; }
+            .badge-warning { background: #fff3e0; color: #f57c00; }
+            .badge-danger { background: #ffebee; color: #c62828; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Review Summary Report</h1>
+          </div>
+          
+          <div class="meta">
+            <strong>Document:</strong> ${escapeHtml(reviewMeta.filename || 'N/A')}<br>
+            <strong>Manager:</strong> ${escapeHtml(reviewMeta.manager_name || 'N/A')}<br>
+            <strong>Due Date:</strong> ${escapeHtml(due)}<br>
+            <strong>Submitted:</strong> ${escapeHtml(submitted)}<br>
+            <strong>Generated:</strong> ${new Date().toLocaleString()}
+          </div>
+
+          <div class="section">
+            <h2>Review Statistics</h2>
+            <table>
+              <tr>
+                <th>Status</th>
+                <th>Count</th>
+                <th>Percentage</th>
+              </tr>
+              <tr>
+                <td class="approved">✓ Approved</td>
+                <td>${counts.approved || 0}</td>
+                <td>${requirements.length > 0 ? Math.round((counts.approved / requirements.length) * 100) : 0}%</td>
+              </tr>
+              <tr>
+                <td class="rejected">✗ Rejected</td>
+                <td>${counts.rejected || 0}</td>
+                <td>${requirements.length > 0 ? Math.round((counts.rejected / requirements.length) * 100) : 0}%</td>
+              </tr>
+              <tr>
+                <td class="modification_requested">⚙ Modifications</td>
+                <td>${counts.modification_requested || 0}</td>
+                <td>${requirements.length > 0 ? Math.round((counts.modification_requested / requirements.length) * 100) : 0}%</td>
+              </tr>
+              <tr>
+                <td class="pending">◯ Pending</td>
+                <td>${counts.pending || 0}</td>
+                <td>${requirements.length > 0 ? Math.round((counts.pending / requirements.length) * 100) : 0}%</td>
+              </tr>
+              <tr style="background: #f9fafb; font-weight: 600;">
+                <td>Total</td>
+                <td>${requirements.length}</td>
+                <td>100%</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="section">
+            <h2>Requirements with Feedback</h2>
+            ${requirements.filter(r => r.client_comment || r.review_status !== 'pending').map(req => `
+              <div class="req-item">
+                <div class="req-title">REQ-${req.req_id} · ${escapeHtml(req.title || 'Requirement ' + req.req_id)}</div>
+                <span class="badge badge-info">${escapeHtml(req.category || 'functional')}</span>
+                <span class="badge ${reqPriorityClass(req.priority)}">${escapeHtml(req.priority || 'Medium')}</span>
+                <span class="badge ${statusClass(req.review_status)}">${prettyStatus(statusClass(req.review_status))}</span>
+                <div class="req-desc">${escapeHtml(req.description || '-')}</div>
+                ${req.client_comment ? '<div class="req-comment"><strong>Your feedback:</strong> ' + escapeHtml(req.client_comment) + '</div>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const printWindow = window.open('', '', 'width=800,height=600');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 500);
+    }
+
+    function renderRequirements() {
+      const list = document.getElementById('reviewList');
+      const visible = getVisibleRequirements();
+
+      if (!visible.length) {
+        list.innerHTML = '<div class="fm-card" style="padding:18px; color:#6B6B68; font-size:12px;">No requirements in this filter.</div>';
+        return;
+      }
+
+      let html = '';
+
+      if (groupingMode === 'status') {
+        const groupedByStatus = {
+          'pending': [],
+          'approved': [],
+          'rejected': [],
+          'modification_requested': []
+        };
+        visible.forEach(req => {
+          const status = statusClass(req.review_status);
+          if (groupedByStatus[status]) groupedByStatus[status].push(req);
+        });
+        
+        const statusOrder = ['approved', 'rejected', 'modification_requested', 'pending'];
+        const statusTitles = { 'approved': '✓ Approved', 'rejected': '✗ Rejected', 'modification_requested': '⚙ Modifications Requested', 'pending': '◯ Pending Review' };
+        
+        statusOrder.forEach(status => {
+          if (groupedByStatus[status].length > 0) {
+            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + statusTitles[status] + ' (' + groupedByStatus[status].length + ')</h3>';
+            html += '<div style="margin-bottom:12px;">' + groupedByStatus[status].map(req => renderRequirementCard(req)).join('') + '</div>';
+          }
+        });
+      } else if (groupingMode === 'category') {
+        const groupedByCategory = {};
+        const categories = ['functional', 'non-functional', 'business', 'system'];
+        categories.forEach(cat => groupedByCategory[cat] = []);
+        
+        visible.forEach(req => {
+          const cat = (req.category || 'functional').toLowerCase();
+          if (!groupedByCategory[cat]) groupedByCategory[cat] = [];
+          groupedByCategory[cat].push(req);
+        });
+        
+        categories.forEach(cat => {
+          if (groupedByCategory[cat].length > 0) {
+            const catDisplay = cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + catDisplay + ' (' + groupedByCategory[cat].length + ')</h3>';
+            html += '<div style="margin-bottom:12px;">' + groupedByCategory[cat].map(req => renderRequirementCard(req)).join('') + '</div>';
+          }
+        });
+      } else if (groupingMode === 'priority') {
+        const groupedByPriority = {
+          'High': [],
+          'Medium': [],
+          'Low': []
+        };
+        visible.forEach(req => {
+          const pri = req.priority || 'Medium';
+          if (groupedByPriority[pri]) groupedByPriority[pri].push(req);
+        });
+        
+        const priorityOrder = ['High', 'Medium', 'Low'];
+        priorityOrder.forEach(pri => {
+          if (groupedByPriority[pri].length > 0) {
+            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + pri + ' Priority (' + groupedByPriority[pri].length + ')</h3>';
+            html += '<div style="margin-bottom:12px;">' + groupedByPriority[pri].map(req => renderRequirementCard(req)).join('') + '</div>';
+          }
+        });
+      } else {
+        html = visible.map(req => renderRequirementCard(req)).join('');
+      }
+
+      list.innerHTML = html;
+      bindRequirementActions();
+    }
+
+    function renderRequirementCard(req) {
+      const status = statusClass(req.review_status);
+      const reqId = String(req.req_id);
+      const isPending = status === 'pending';
+      const commentBlock = req.client_comment ? '<div class="comment-quote">' + req.client_comment + '</div>' : '';
+      const addedBadge = String(req.source || '').toLowerCase() === 'client' ? '<span class="added-by-client">Added by client</span>' : '';
+      
+      // Show timestamp if there's feedback (not pending)
+      const timestamp = (status !== 'pending' && req.feedback_date) 
+        ? '<div style="font-size:11px; color:#9ca3af; margin-top:8px; padding-top:6px; border-top:0.5px solid #e5e7eb;">Feedback submitted: ' + new Date(req.feedback_date).toLocaleString() + '</div>'
+        : '';
+
+      return '<article class="req-card status-' + status + '" data-req-id="' + reqId + '">'
+        + '<div class="req-title">REQ-' + reqId + ' · ' + (req.title || ('Requirement ' + reqId)) + ' ' + addedBadge + '</div>'
+        + '<div class="req-desc">' + (req.description || '-') + '</div>'
+        + commentBlock
+        + '<div class="chip-row">'
+        + '<span class="fm-badge badge-info">' + (req.category || 'functional') + '</span>'
+        + '<span class="fm-badge ' + reqPriorityClass(req.priority) + '">' + (req.priority || 'Medium') + '</span>'
+        + '<span class="status-chip ' + status + '">' + prettyStatus(status) + '</span>'
+        + '</div>'
+        + (isPending ? '<div class="action-row">'
+          + '<button class="action-btn approve" data-action="approve" data-id="' + reqId + '">Approve</button>'
+          + '<button class="action-btn reject" data-action="reject" data-id="' + reqId + '">Reject</button>'
+          + '<button class="action-btn modify" data-action="request_modification" data-id="' + reqId + '">Request modification</button>'
+          + '<button class="action-btn priority" data-action="set-priority" data-id="' + reqId + '">Set priority</button>'
+          + '</div>' : '')
+        + timestamp
+        + '<div id="panel-' + reqId + '" class="inline-panel"></div>'
+        + '</article>';
+    }
+
+    function openPanel(reqId, html) {
+      const panel = document.getElementById('panel-' + reqId);
+      panel.innerHTML = '<div class="inline-box">' + html + '</div>';
+      panel.classList.add('open');
+      const cancelBtn = panel.querySelector('[data-inline-cancel]');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          panel.classList.remove('open');
+          panel.innerHTML = '';
+        });
+      }
+    }
+
+    async function postAction(reqId, action, comment) {
+      const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
+        method: 'POST',
+        body: JSON.stringify({ req_id: Number(reqId), action, comment: comment || '' })
+      });
+      if (!res.ok) throw new Error('Failed to save action');
+      const payload = await res.json();
+
+      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
+      if (idx >= 0) {
+        requirements[idx].review_status = payload.review_status || statusClass(action);
+        requirements[idx].client_comment = payload.client_comment || (comment || '');
+      }
+      renderFilterPills();
+      updateProgress();
+      renderRequirements();
+      showToast('Action saved', 'success');
+    }
+
+    async function setPriority(reqId, priority) {
+      const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/set-priority', {
+        method: 'POST',
+        body: JSON.stringify({ req_id: Number(reqId), priority })
+      });
+      if (!res.ok) throw new Error('Failed to set priority');
+
+      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
+      if (idx >= 0) requirements[idx].priority = priority;
+      renderRequirements();
+      showToast('Priority updated', 'success');
+    }
+
+    async function approveAllPending() {
+      const pending = requirements.filter(req => statusClass(req.review_status) === 'pending');
+      if (!pending.length) {
+        showToast('No pending requirements to approve', 'error');
+        return;
+      }
+
+      const ok = window.confirm('Approve all pending requirements (' + pending.length + ' items)?');
+      if (!ok) return;
+
+      const approveBtn = document.getElementById('approveAllBtn');
+      const previousLabel = approveBtn.innerHTML;
+      approveBtn.disabled = true;
+      approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:12px;"></i>Approving...';
+
+      try {
+        const results = await Promise.allSettled(
+          pending.map(req => apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
+            method: 'POST',
+            body: JSON.stringify({ req_id: Number(req.req_id), action: 'approve', comment: '' })
+          }))
+        );
+
+        let successCount = 0;
+        results.forEach((result, idx) => {
+          if (result.status === 'fulfilled' && result.value && result.value.ok) {
+            const reqId = String(pending[idx].req_id);
+            const rowIdx = requirements.findIndex(r => String(r.req_id) === reqId);
+            if (rowIdx >= 0) {
+              requirements[rowIdx].review_status = 'approved';
+            }
+            successCount += 1;
+          }
+        });
+
+        renderFilterPills();
+        updateProgress();
+        renderRequirements();
+        renderMyFeedback();
+        renderDocumentsInfo();
+
+        if (successCount === pending.length) {
+          showToast('Approved all ' + successCount + ' pending requirements', 'success');
+        } else {
+          showToast('Approved ' + successCount + ' of ' + pending.length + ' requirements', 'error');
+        }
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      } finally {
+        approveBtn.disabled = false;
+        approveBtn.innerHTML = previousLabel;
+      }
+    }
+
+    function bindRequirementActions() {
+      document.querySelectorAll('[data-action="approve"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await postAction(btn.dataset.id, 'approve', '');
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="reject"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reqId = btn.dataset.id;
+          openPanel(reqId,
+            '<label class="inline-label">Reason for rejection (optional)</label>' +
+            '<textarea id="txt-' + reqId + '" class="fm-input" rows="4" style="min-height:80px; resize: vertical;"></textarea>' +
+            '<div class="inline-actions">' +
+            '<button class="fm-btn-outline fm-btn-sm" data-inline-cancel>Cancel</button>' +
+            '<button class="fm-btn-primary fm-btn-sm" data-confirm>Confirm Rejection</button>' +
+            '</div>'
+          );
+          const panel = document.getElementById('panel-' + reqId);
+          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
+            const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
+            try {
+              await postAction(reqId, 'reject', comment);
+            } catch (e) {
+              showToast('Something went wrong', 'error');
+            }
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-action="request_modification"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reqId = btn.dataset.id;
+          openPanel(reqId,
+            '<label class="inline-label">Describe the required change</label>' +
+            '<textarea id="txt-' + reqId + '" class="fm-input" rows="4" style="min-height:80px; resize: vertical;" required></textarea>' +
+            '<div class="inline-actions">' +
+            '<button class="fm-btn-outline fm-btn-sm" data-inline-cancel>Cancel</button>' +
+            '<button class="fm-btn-primary fm-btn-sm" data-confirm>Submit</button>' +
+            '</div>'
+          );
+          const panel = document.getElementById('panel-' + reqId);
+          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
+            const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
+            if (!comment) {
+              showToast('Please describe the required change', 'error');
+              return;
+            }
+            try {
+              await postAction(reqId, 'request_modification', comment);
+            } catch (e) {
+              showToast('Something went wrong', 'error');
+            }
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-action="set-priority"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reqId = btn.dataset.id;
+          openPanel(reqId,
+            '<label class="inline-label">Set priority</label>' +
+            '<div class="priority-options">' +
+            '<button class="priority-btn high" data-p="High">High</button>' +
+            '<button class="priority-btn medium" data-p="Medium">Medium</button>' +
+            '<button class="priority-btn low" data-p="Low">Low</button>' +
+            '<button class="fm-btn-outline fm-btn-sm" data-inline-cancel>Cancel</button>' +
+            '</div>'
+          );
+          const panel = document.getElementById('panel-' + reqId);
+          panel.querySelectorAll('[data-p]').forEach(pBtn => {
+            pBtn.addEventListener('click', async () => {
+              try {
+                await setPriority(reqId, pBtn.dataset.p);
+                panel.classList.remove('open');
+                panel.innerHTML = '';
+              } catch (e) {
+                showToast('Something went wrong', 'error');
+              }
+            });
+          });
+        });
+      });
+    }
+
+    async function loadReviewData() {
+      if (!fileId) {
+        document.getElementById('reviewSub').textContent = 'No assigned document found for this client account.';
+        renderMyFeedback();
+        renderDocumentsInfo();
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/review/' + encodeURIComponent(fileId));
+        if (!res.ok) throw new Error('Failed to load review data');
+        const data = await res.json();
+
+        requirements = data.requirements || [];
+        reviewMeta = {
+          filename: data.filename || ('File ' + fileId),
+          manager_name: data.manager_name || 'Manager',
+          due_date: data.due_date || '',
+          submitted: !!data.submitted
+        };
+
+        const due = reviewMeta.due_date ? new Date(reviewMeta.due_date).toLocaleDateString() : 'Not set';
+        document.getElementById('reviewSub').textContent = reviewMeta.filename + ' · Shared by ' + reviewMeta.manager_name + ' · Due: ' + due;
+
+        renderFilterPills();
+        updateProgress();
+        renderRequirements();
+        renderMyFeedback();
+        renderDocumentsInfo();
+      } catch (e) {
+        showToast('Could not load review data', 'error');
+      }
+    }
+
+    function setupAddRequirementForm() {
+      const panel = document.getElementById('addReqPanel');
+      document.getElementById('addReqToggle').addEventListener('click', () => panel.classList.toggle('open'));
+      document.getElementById('addReqCancel').addEventListener('click', () => panel.classList.remove('open'));
+
+      document.getElementById('addReqSubmit').addEventListener('click', async () => {
+        const title = (document.getElementById('newReqTitle').value || '').trim();
+        const description = (document.getElementById('newReqDesc').value || '').trim();
+        const category = document.getElementById('newReqCategory').value;
+        const priority = document.getElementById('newReqPriority').value;
+
+        if (!title) {
+          showToast('Title is required', 'error');
+          return;
+        }
+
+        try {
+          const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/add-requirement', {
+            method: 'POST',
+            body: JSON.stringify({ title, description, category, priority })
+          });
+          if (!res.ok) throw new Error('Failed to add requirement');
+          const created = await res.json();
+          requirements.push(created);
+          panel.classList.remove('open');
+          document.getElementById('newReqTitle').value = '';
+          document.getElementById('newReqDesc').value = '';
+          renderFilterPills();
+          updateProgress();
+          renderRequirements();
+          showToast('Requirement added', 'success');
+        } catch (e) {
+          showToast('Something went wrong', 'error');
+        }
+      });
+    }
+
+    function setupSubmitReview() {
+      const modal = document.getElementById('submitModal');
+      const submitBtn = document.getElementById('submitReviewBtn');
+      submitBtn.addEventListener('click', () => {
+        if (submitBtn.classList.contains('submit-disabled')) return;
+        modal.classList.add('show');
+      });
+      document.getElementById('cancelSubmitBtn').addEventListener('click', () => modal.classList.remove('show'));
+      document.getElementById('confirmSubmitBtn').addEventListener('click', async () => {
+        try {
+          const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/submit', { method: 'POST', body: JSON.stringify({}) });
+          if (!res.ok) throw new Error();
+          modal.classList.remove('show');
+          document.getElementById('successView').style.display = 'block';
+          showToast('Review submitted', 'success');
+        } catch (e) {
+          showToast('Something went wrong', 'error');
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const name = localStorage.getItem('fm_name') || 'Client Reviewer';
+      const initials = name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2);
+      document.getElementById('userName').textContent = name;
+      document.getElementById('userInitials').textContent = initials || 'CR';
+
+      document.querySelectorAll('.fm-nav-item').forEach(link => {
+        link.addEventListener('click', () => {
+          setTimeout(syncSectionFromHash, 0);
+        });
+      });
+      window.addEventListener('hashchange', syncSectionFromHash);
+
+      // Set up document tab switching
+      document.querySelectorAll('.doc-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tabName = btn.getAttribute('data-tab');
+          
+          // Update active button
+          document.querySelectorAll('.doc-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          // Update active content
+          document.querySelectorAll('.doc-tab-content').forEach(content => {
+            content.style.display = 'none';
+            content.classList.remove('active');
+          });
+          
+          // Show selected tab content
+          const tabContent = document.getElementById(tabName + 'Tab');
+          if (tabContent) {
+            tabContent.style.display = 'block';
+            tabContent.classList.add('active');
+          }
+        });
+      });
+
+      // Set up document download and print buttons
+      document.getElementById('downloadDocBtn').addEventListener('click', () => {
+        if (reviewMeta.filename) {
+          const link = document.createElement('a');
+          link.href = '/uploads/' + encodeURIComponent(reviewMeta.filename);
+          link.download = reviewMeta.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      });
+
+      document.getElementById('printDocBtn').addEventListener('click', () => {
+        const pdfViewer = document.getElementById('documentPdfViewer');
+        if (pdfViewer && pdfViewer.src) {
+          window.open(pdfViewer.src, '_blank');
+        }
+      });
+
+      document.getElementById('printReviewBtn').addEventListener('click', printReviewSummary);
+      document.getElementById('approveAllBtn').addEventListener('click', approveAllPending);
+
+      // Set up requirement search
+      document.getElementById('requirementSearch').addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        renderRequirements();
+        updateProgress();
+      });
+
+      // Set up grouping selector
+      document.getElementById('groupingSelect').addEventListener('change', (e) => {
+        groupingMode = e.target.value;
+        renderRequirements();
+      });
+
+      setupAddRequirementForm();
+      setupSubmitReview();
+      loadReviewData();
+      syncSectionFromHash();
+    });
+  </script>
+</body>
+</html>

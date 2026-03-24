@@ -7,6 +7,8 @@ from database import SessionLocal, User
 from auth import get_current_user, get_db
 from fastapi.responses import HTMLResponse
 import os
+import asyncio
+import time
 
 router = APIRouter()
 
@@ -38,25 +40,25 @@ async def training_page():
             margin: 0 auto;
         }
         .card {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(15, 23, 42, 0.86);
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            border: 2px solid rgba(6, 182, 212, 0.2);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.42);
+            border: 1px solid rgba(96, 165, 250, 0.18);
             backdrop-filter: blur(10px);
-            color: #0f172a;
+            color: #e2e8f0;
         }
         .card h1, .card h3, .card h5 {
-            color: #0f172a;
+            color: #f8fafc;
         }
         .stat-card {
             text-align: center;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(2, 6, 23, 0.42);
             border-radius: 10px;
             margin: 10px;
-            border: 1px solid rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(96, 165, 250, 0.18);
         }
         .stat-number {
             font-size: 2.5rem;
@@ -67,13 +69,13 @@ async def training_page():
             background-clip: text;
         }
         .stat-label {
-            color: #475569;
+            color: #94a3b8;
             margin-top: 10px;
         }
         .keyword-list {
             max-height: 400px;
             overflow-y: auto;
-            background: rgba(248, 250, 252, 0.8);
+            background: rgba(2, 6, 23, 0.35);
             padding: 15px;
             border-radius: 8px;
             margin-top: 15px;
@@ -81,11 +83,11 @@ async def training_page():
         .keyword-item {
             padding: 8px 12px;
             margin: 5px;
-            background: white;
+            background: rgba(15, 23, 42, 0.9);
             border-radius: 6px;
             display: inline-block;
-            border: 1px solid #e2e8f0;
-            color: #1e293b;
+            border: 1px solid rgba(96, 165, 250, 0.18);
+            color: #e2e8f0;
         }
         .btn-primary {
             background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
@@ -95,7 +97,7 @@ async def training_page():
             color: #06b6d4 !important;
         }
         .text-muted {
-            color: #475569 !important;
+            color: #94a3b8 !important;
         }
     </style>
 </head>
@@ -162,7 +164,7 @@ async def training_page():
             try {
                 const token = localStorage.getItem('access_token');
                 if (!token) {
-                    window.location.href = '/login';
+                    window.location.href = '/';
                     return;
                 }
                 
@@ -240,7 +242,103 @@ async def training_page():
 
 # Simple in-memory cache for training status (5 second TTL)
 _training_status_cache = {}
-_cache_ttl = 5  # seconds
+_cache_ttl = 10  # seconds
+_training_status_warmup = set()
+
+
+def _default_training_status(message: str = "Training status is warming up"):
+    return {
+        "status": "warming_up",
+        "message": message,
+        "total_learned_patterns": 0,
+        "total_keywords": 0,
+        "total_phrases": 0,
+        "total_patterns": 0,
+        "total_learned_items": 0,
+        "keywords_by_category": {},
+        "patterns_by_category": {},
+        "total_documents_processed": 0,
+        "learning_iterations": 0,
+        "learning_enabled": True,
+        "learned_keywords": {},
+        "learned_patterns": {},
+        "learned_phrases": {},
+        "extraction_stats": {},
+        "last_learning_session": {}
+    }
+
+
+def _extract_training_result_from_agent(agent):
+    """Build JSON response payload from an initialized agent."""
+    stats = agent.extraction_stats if hasattr(agent, 'extraction_stats') else {}
+    learned_patterns = agent.learned_patterns if hasattr(agent, 'learned_patterns') else {}
+    print(f"📊 Stats: {len(learned_patterns)} pattern categories found")
+    print(f"📊 Learned patterns type: {type(learned_patterns)}, keys: {list(learned_patterns.keys()) if isinstance(learned_patterns, dict) else 'N/A'}")
+
+    total_patterns = 0
+    total_keywords = 0
+    total_phrases = 0
+    keywords_by_category = {}
+    patterns_by_category = {}
+    phrases_by_category = {}
+
+    for category, data in learned_patterns.items():
+        if isinstance(data, dict):
+            keywords = data.get('keywords', set())
+            patterns = data.get('patterns', set())
+            phrases = data.get('phrases', set())
+
+            keywords_list = list(keywords) if isinstance(keywords, set) else (keywords if isinstance(keywords, list) else [])
+            patterns_list = list(patterns) if isinstance(patterns, set) else (patterns if isinstance(patterns, list) else [])
+            phrases_list = list(phrases) if isinstance(phrases, set) else (phrases if isinstance(phrases, list) else [])
+
+            total_keywords += len(keywords_list)
+            total_patterns += len(patterns_list)
+            total_phrases += len(phrases_list)
+
+            keywords_by_category[category] = keywords_list
+            patterns_by_category[category] = patterns_list
+            phrases_by_category[category] = phrases_list
+
+    total_learned_items = total_keywords + total_patterns + total_phrases
+
+    print(f"📊 Counted - Keywords: {total_keywords}, Patterns: {total_patterns}, Phrases: {total_phrases}, Total: {total_learned_items}")
+
+    result = {
+        "total_learned_patterns": total_learned_items,
+        "total_patterns": total_patterns,
+        "total_keywords": total_keywords,
+        "total_phrases": total_phrases,
+        "total_learned_items": total_learned_items,
+        "total_documents_processed": stats.get("total_documents", 0),
+        "learning_iterations": stats.get("learning_iterations", 0),
+        "learning_enabled": getattr(agent, "enable_self_learning", False),
+        "learned_keywords": keywords_by_category,
+        "learned_patterns": patterns_by_category,
+        "learned_phrases": phrases_by_category,
+        "extraction_stats": stats,
+        "last_learning_session": stats.get("last_learning_session", {})
+    }
+
+    print(f"📊 Returning result with total_learned_patterns: {result['total_learned_patterns']}, total_learned_items: {result['total_learned_items']}")
+    return result
+
+
+async def _warm_training_status_cache(cache_key: str, user_id_for_agent: int):
+    """Warm agent-based training status in background so requests stay responsive."""
+    try:
+        from rag_agent import get_agent
+        from utils.async_helpers import run_in_thread
+
+        print(f"🔥 Warming training status in background for user_id={user_id_for_agent}")
+        agent = await run_in_thread(get_agent, user_id=user_id_for_agent, timeout=30.0)
+        result = _extract_training_result_from_agent(agent)
+        _training_status_cache[cache_key] = (result, time.time())
+        print(f"✅ Training status cache warmed for user_id={user_id_for_agent}")
+    except Exception as e:
+        print(f"⚠️ Background warmup failed for user_id={user_id_for_agent}: {e}")
+    finally:
+        _training_status_warmup.discard(cache_key)
 
 @router.get("/api/training-status")
 async def get_training_status(
@@ -299,106 +397,14 @@ async def get_training_status(
     
     # Extract user_id before slow operations to avoid holding DB session
     user_id_for_agent = user_id
+
+    # On cache miss, avoid blocking the request path. Warm in background and return quickly.
+    if cache_key not in _training_status_warmup:
+        _training_status_warmup.add(cache_key)
+        asyncio.create_task(_warm_training_status_cache(cache_key, user_id_for_agent))
+
+    return _default_training_status("Training data is initializing in background. Please refresh shortly.")
     
-    try:
-        # Import here to avoid issues
-        from rag_agent import get_agent
-        from utils.async_helpers import run_in_thread
-        import asyncio
-        
-        print(f"📊 Getting training status for user_id={user_id_for_agent}...")
-        
-        # Get user-specific agent to show user's learning data
-        # Use async helper with timeout to avoid blocking
-        # Note: DB session will be closed by FastAPI dependency system after this function returns
-        try:
-            agent = await run_in_thread(get_agent, user_id=user_id_for_agent, timeout=30.0)
-            print(f"✅ Agent retrieved for user_id={user_id}")
-        except asyncio.TimeoutError:
-            # Return cached or default data if agent initialization times out
-            print(f"⚠️ Agent initialization timed out for user_id={user_id}, returning cached/default data")
-            return {
-                "status": "partial",
-                "message": "Training status partially loaded (agent initialization timed out)",
-                "total_learned_patterns": 0,
-                "total_keywords": 0,
-                "total_phrases": 0,
-                "total_patterns": 0,
-                "keywords_by_category": {},
-                "patterns_by_category": {},
-                "total_documents_processed": 0,
-                "learning_enabled": True
-            }
-        
-        # Get learning statistics
-        stats = agent.extraction_stats if hasattr(agent, 'extraction_stats') else {}
-        learned_patterns = agent.learned_patterns if hasattr(agent, 'learned_patterns') else {}
-        print(f"📊 Stats: {len(learned_patterns)} pattern categories found")
-        print(f"📊 Learned patterns type: {type(learned_patterns)}, keys: {list(learned_patterns.keys()) if isinstance(learned_patterns, dict) else 'N/A'}")
-        
-        # Count total patterns, keywords, and phrases
-        total_patterns = 0
-        total_keywords = 0
-        total_phrases = 0
-        total_learned_items = 0  # Total of all learned items
-        keywords_by_category = {}
-        patterns_by_category = {}
-        phrases_by_category = {}
-        
-        for category, data in learned_patterns.items():
-            if isinstance(data, dict):
-                keywords = data.get('keywords', set())
-                patterns = data.get('patterns', set())
-                phrases = data.get('phrases', set())
-                
-                keywords_list = list(keywords) if isinstance(keywords, set) else (keywords if isinstance(keywords, list) else [])
-                patterns_list = list(patterns) if isinstance(patterns, set) else (patterns if isinstance(patterns, list) else [])
-                phrases_list = list(phrases) if isinstance(phrases, set) else (phrases if isinstance(phrases, list) else [])
-                
-                total_keywords += len(keywords_list)
-                total_patterns += len(patterns_list)
-                total_phrases += len(phrases_list)
-                
-                keywords_by_category[category] = keywords_list
-                patterns_by_category[category] = patterns_list
-                phrases_by_category[category] = phrases_list
-        
-        # Total learned items = keywords + patterns + phrases
-        total_learned_items = total_keywords + total_patterns + total_phrases
-        
-        print(f"📊 Counted - Keywords: {total_keywords}, Patterns: {total_patterns}, Phrases: {total_phrases}, Total: {total_learned_items}")
-        
-        result = {
-            "total_learned_patterns": total_learned_items,  # Changed to include all learned items for display
-            "total_patterns": total_patterns,  # Just patterns
-            "total_keywords": total_keywords,
-            "total_phrases": total_phrases,
-            "total_learned_items": total_learned_items,  # Explicit total
-            "total_documents_processed": stats.get("total_documents", 0),
-            "learning_iterations": stats.get("learning_iterations", 0),
-            "learned_keywords": keywords_by_category,
-            "learned_patterns": patterns_by_category,
-            "learned_phrases": phrases_by_category,
-            "extraction_stats": stats
-        }
-        
-        print(f"📊 Returning result with total_learned_patterns: {result['total_learned_patterns']}, total_learned_items: {result['total_learned_items']}")
-        
-        # Cache the result
-        _training_status_cache[cache_key] = (result, current_time)
-        
-        return result
-    except Exception as e:
-        import traceback
-        print(f"Error getting training status: {traceback.format_exc()}")
-        # FastAPI will automatically close DB session via dependency system
-        return {
-            "total_learned_patterns": 0,
-            "total_keywords": 0,
-            "total_documents_processed": 0,
-            "learning_iterations": 0,
-            "learned_keywords": {},
-            "learned_patterns": {},
-            "extraction_stats": {}
-        }
+    # Unreachable fallback kept for safety in case flow changes.
+    return _default_training_status()
 

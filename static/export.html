@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Export & integrations</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .selector-row {
+      margin: 8px 0 14px;
+      max-width: 420px;
+    }
+
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .export-card {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .export-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .export-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1A1A1A;
+    }
+
+    .export-sub {
+      font-size: 11px;
+      color: #6B6B68;
+      line-height: 1.4;
+    }
+
+    .logo-pill {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .logo-jira { background: #0052CC; }
+    .logo-trello { background: #0079BF; }
+    .logo-download { background: #534AB7; }
+
+    .check-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 11px;
+      color: #1A1A1A;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .download-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .size-note {
+      font-size: 11px;
+      color: #6B6B68;
+    }
+
+    .history-table-wrap {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      padding: 14px;
+      overflow-x: auto;
+    }
+
+    @media (max-width: 1150px) {
+      .export-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <nav class="fm-nav">
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard"><span class="fm-dot"></span> Dashboard</a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload"><span class="fm-dot"></span> Upload document</a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements"><span class="fm-dot"></span> Requirements</a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics"><span class="fm-dot"></span> Analytics</a>
+      <a href="export.html" class="fm-nav-item" data-page="export"><span class="fm-dot"></span> Export & integrations</a>
+      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback"><span class="fm-dot"></span> Client feedback</a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients"><span class="fm-dot"></span> Client credentials</a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings"><span class="fm-dot"></span> Settings</a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">AM</div>
+      <div>
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main">
+    <div class="fm-topbar">
+      <h1 class="fm-page-title">Export & integrations</h1>
+    </div>
+
+    <div class="selector-row">
+      <label class="fm-label" for="fileSelect">Document</label>
+      <select id="fileSelect" class="fm-input"></select>
+    </div>
+
+    <section class="export-grid">
+      <article class="export-card">
+        <div class="export-head">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="logo-pill logo-jira">Ji</div>
+            <div>
+              <div class="export-title">Export to Jira</div>
+              <div class="export-sub">Create issues in your Jira project for each requirement</div>
+            </div>
+          </div>
+          <span id="jiraConnected" class="fm-badge badge-neutral">Not connected</span>
+        </div>
+
+        <div class="check-list" id="jiraTypeList"></div>
+        <button id="exportJiraBtn" class="fm-btn-primary">Export to Jira</button>
+      </article>
+
+      <article class="export-card">
+        <div class="export-head">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="logo-pill logo-trello">Tr</div>
+            <div>
+              <div class="export-title">Export to Trello</div>
+              <div class="export-sub">Create cards in your Trello board for each requirement</div>
+            </div>
+          </div>
+          <span id="trelloConnected" class="fm-badge badge-neutral">Not connected</span>
+        </div>
+
+        <div class="check-list" id="trelloTypeList"></div>
+        <button id="exportTrelloBtn" class="fm-btn-primary">Export to Trello</button>
+      </article>
+
+      <article class="export-card">
+        <div class="export-head">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="logo-pill logo-download">DL</div>
+            <div>
+              <div class="export-title">Download file</div>
+              <div class="export-sub">Download extracted requirements in CSV or JSON format</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="download-actions">
+          <button id="downloadCsvBtn" class="fm-btn-outline">Download CSV</button>
+          <button id="downloadJsonBtn" class="fm-btn-outline">Download JSON</button>
+        </div>
+        <div id="sizeEstimate" class="size-note">Estimated file size: -</div>
+      </article>
+    </section>
+
+    <section class="history-table-wrap">
+      <div class="fm-section-title" style="margin-bottom:8px;">Export history</div>
+      <table class="fm-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Document</th>
+            <th>Format</th>
+            <th>Count</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="5" class="fm-text-muted">Loading...</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    requireAuth();
+
+    const requirementTypes = ['functional', 'non-functional', 'business', 'system'];
+
+    function renderTypeChecks(targetId) {
+      const holder = document.getElementById(targetId);
+      holder.innerHTML = requirementTypes.map(type => {
+        const id = targetId + '-' + type;
+        const label = type === 'non-functional' ? 'Non-functional' : (type.charAt(0).toUpperCase() + type.slice(1));
+        return '<label class="check-row"><input type="checkbox" id="' + id + '" checked> ' + label + '</label>';
+      }).join('');
+    }
+
+    function getSelectedTypes(targetId) {
+      return requirementTypes.filter(type => {
+        const el = document.getElementById(targetId + '-' + type);
+        return el && el.checked;
+      });
+    }
+
+    function selectedFileId() {
+      return document.getElementById('fileSelect').value;
+    }
+
+    async function fetchConfigStatus() {
+      try {
+        const res = await apiFetch('/config');
+        if (!res.ok) throw new Error();
+        const cfg = await res.json();
+        const jiraOk = !!(cfg.jira_url && cfg.jira_email && cfg.jira_project_key);
+        const trelloOk = !!(cfg.trello_key && cfg.trello_board_id);
+
+        const jiraBadge = document.getElementById('jiraConnected');
+        jiraBadge.className = 'fm-badge ' + (jiraOk ? 'badge-success' : 'badge-neutral');
+        jiraBadge.textContent = jiraOk ? 'Connected' : 'Not connected';
+
+        const trelloBadge = document.getElementById('trelloConnected');
+        trelloBadge.className = 'fm-badge ' + (trelloOk ? 'badge-success' : 'badge-neutral');
+        trelloBadge.textContent = trelloOk ? 'Connected' : 'Not connected';
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function loadFiles() {
+      try {
+        const res = await apiFetch('/files');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const files = (data.files || []).filter(f => String(f.status || '').toLowerCase() === 'complete');
+        const select = document.getElementById('fileSelect');
+        if (!files.length) {
+          select.innerHTML = '<option value="">No completed files</option>';
+          document.getElementById('sizeEstimate').textContent = 'Estimated file size: -';
+          return;
+        }
+        select.innerHTML = files.map(f => '<option value="' + f.id + '" data-size="' + (f.file_size || 0) + '">' + f.filename + '</option>').join('');
+        updateSizeEstimate();
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    function updateSizeEstimate() {
+      const select = document.getElementById('fileSelect');
+      const option = select.options[select.selectedIndex];
+      const size = Number(option ? option.getAttribute('data-size') : 0);
+      const kb = (size / 1024).toFixed(1);
+      document.getElementById('sizeEstimate').textContent = 'Estimated file size: ~' + kb + ' KB';
+    }
+
+    async function postExport(kind) {
+      const fileId = selectedFileId();
+      if (!fileId) {
+        showToast('Select a document first', 'error');
+        return;
+      }
+      const listId = kind === 'jira' ? 'jiraTypeList' : 'trelloTypeList';
+      const selectedTypes = getSelectedTypes(listId);
+      if (!selectedTypes.length) {
+        showToast('Select at least one requirement type', 'error');
+        return;
+      }
+      try {
+        showToast('Pushing requirements to ' + (kind === 'jira' ? 'Jira' : 'Trello') + '...', '');
+        const res = await apiFetch('/export/' + kind + '/' + encodeURIComponent(fileId), {
+          method: 'POST',
+          body: JSON.stringify({ types: selectedTypes })
+        });
+        if (!res.ok) throw new Error();
+        showToast('Export completed', 'success');
+        loadHistory();
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function download(kind) {
+      const fileId = selectedFileId();
+      if (!fileId) {
+        showToast('Select a document first', 'error');
+        return;
+      }
+      try {
+        const res = await apiFetch('/export/' + kind + '/' + encodeURIComponent(fileId));
+        if (!res.ok) throw new Error();
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'requirements_' + fileId + '.' + (kind === 'csv' ? 'csv' : 'json');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function loadHistory() {
+      const body = document.getElementById('historyBody');
+      body.innerHTML = '<tr><td colspan="5" class="fm-text-muted">Loading...</td></tr>';
+      try {
+        const res = await apiFetch('/export/history');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (data.history || []);
+        const top10 = rows.slice(0, 10);
+        if (!top10.length) {
+          body.innerHTML = '<tr><td colspan="5" class="fm-text-muted">No export history found.</td></tr>';
+          return;
+        }
+        body.innerHTML = top10.map(r => {
+          const date = r.created_at ? new Date(r.created_at).toLocaleString() : '-';
+          const format = r.format || r.platform || '-';
+          const status = (r.status || 'done').toLowerCase();
+          const badge = status === 'failed' ? 'badge-danger' : (status === 'processing' ? 'badge-warning' : 'badge-success');
+          return '<tr>' +
+            '<td>' + date + '</td>' +
+            '<td>' + (r.document || r.filename || '-') + '</td>' +
+            '<td>' + format + '</td>' +
+            '<td>' + (r.count || r.items_count || 0) + '</td>' +
+            '<td><span class="fm-badge ' + badge + '">' + status + '</span></td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) {
+        body.innerHTML = '<tr><td colspan="5" class="fm-text-muted">Failed to load history.</td></tr>';
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    function init() {
+      setActivePage('export');
+      loadUser();
+      renderTypeChecks('jiraTypeList');
+      renderTypeChecks('trelloTypeList');
+      loadFiles();
+      loadHistory();
+      fetchConfigStatus();
+
+      document.getElementById('fileSelect').addEventListener('change', updateSizeEstimate);
+      document.getElementById('exportJiraBtn').addEventListener('click', () => postExport('jira'));
+      document.getElementById('exportTrelloBtn').addEventListener('click', () => postExport('trello'));
+      document.getElementById('downloadCsvBtn').addEventListener('click', () => download('csv'));
+      document.getElementById('downloadJsonBtn').addEventListener('click', () => download('json'));
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

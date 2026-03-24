@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Requirements</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .req-top-sub {
+      color: #6B6B68;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-search {
+      min-width: 280px;
+      flex: 1;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      border: 0.5px solid rgba(0,0,0,0.12);
+      background: #FFFFFF;
+      color: #6B6B68;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .filter-pill.active {
+      background: #534AB7;
+      color: #FFFFFF;
+      border-color: #534AB7;
+    }
+
+    .req-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .req-card {
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      border: 0.5px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .req-color {
+      background: #534AB7;
+    }
+
+    .req-content {
+      padding: 12px 14px;
+    }
+
+    .req-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1A1A1A;
+      margin-bottom: 5px;
+    }
+
+    .req-desc {
+      color: #6B6B68;
+      font-size: 12px;
+      margin-bottom: 10px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .req-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .req-btn {
+      border: 0.5px solid rgba(0,0,0,0.2);
+      background: #fff;
+      color: #1A1A1A;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .req-btn[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .req-btn-danger {
+      color: #A32D2D;
+      border-color: rgba(163,45,45,0.45);
+      background: #FCEBEB;
+    }
+
+    .req-edit-wrap {
+      display: none;
+      margin-top: 8px;
+      gap: 8px;
+      flex-direction: column;
+    }
+
+    .req-edit-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .file-picker-wrap {
+      margin: 10px 0 14px;
+      max-width: 420px;
+    }
+
+    .empty-state {
+      border: 0.5px dashed rgba(0,0,0,0.2);
+      border-radius: 12px;
+      background: #FFFFFF;
+      padding: 24px;
+      color: #6B6B68;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .skeleton-card {
+      height: 92px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #efefef 25%, #e5e5e5 37%, #efefef 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <nav class="fm-nav">
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard"><span class="fm-dot"></span> Dashboard</a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload"><span class="fm-dot"></span> Upload document</a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements"><span class="fm-dot"></span> Requirements</a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics"><span class="fm-dot"></span> Analytics</a>
+      <a href="export.html" class="fm-nav-item" data-page="export"><span class="fm-dot"></span> Export & integrations</a>
+      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback"><span class="fm-dot"></span> Client feedback</a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients"><span class="fm-dot"></span> Client credentials</a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings"><span class="fm-dot"></span> Settings</a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">AM</div>
+      <div>
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main">
+    <div class="fm-topbar">
+      <div>
+        <h1 class="fm-page-title">Requirements</h1>
+        <div class="req-top-sub" id="reqTopSub">Loading...</div>
+      </div>
+      <button id="exportAllBtn" class="fm-btn-primary">Export all -></button>
+    </div>
+
+    <div id="filePickerWrap" class="file-picker-wrap" style="display:none;">
+      <label class="fm-label" for="fileSelect">Select processed document</label>
+      <select id="fileSelect" class="fm-input"></select>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-search">
+        <input id="searchInput" class="fm-input" placeholder="Search requirements...">
+      </div>
+      <div id="filterPills" class="filter-pills"></div>
+    </div>
+
+    <section id="requirementsList" class="req-list"></section>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    requireAuth();
+
+    let currentFileId = new URLSearchParams(window.location.search).get('file_id');
+    let allRequirements = [];
+    let activeType = 'all';
+    let searchTerm = '';
+    let currentFilename = '';
+
+    const typeOrder = ['all', 'functional', 'non-functional', 'business', 'system'];
+    const typeLabels = {
+      all: 'All',
+      functional: 'Functional',
+      'non-functional': 'Non-functional',
+      business: 'Business',
+      system: 'System'
+    };
+
+    const typeColor = {
+      functional: '#534AB7',
+      'non-functional': '#1D9E75',
+      business: '#BA7517',
+      system: '#D85A30'
+    };
+
+    function normalizeType(category) {
+      const c = String(category || '').trim().toLowerCase();
+      if (c.includes('non')) return 'non-functional';
+      if (c.includes('business')) return 'business';
+      if (c.includes('system')) return 'system';
+      return 'functional';
+    }
+
+    function priorityClass(priority) {
+      const p = String(priority || '').toLowerCase();
+      if (p === 'high') return 'badge-danger';
+      if (p === 'low') return 'badge-success';
+      return 'badge-warning';
+    }
+
+    function setHeaderText() {
+      const count = getFilteredRequirements().length;
+      const filename = currentFilename || 'Selected file';
+      document.getElementById('reqTopSub').textContent = count + ' items · ' + filename;
+    }
+
+    function getFilteredRequirements() {
+      return allRequirements.filter(item => {
+        const t = normalizeType(item.category);
+        const matchesType = activeType === 'all' ? true : t === activeType;
+        const content = (String(item.req_id || '') + ' ' + String(item.title || '') + ' ' + String(item.description || '')).toLowerCase();
+        const matchesSearch = !searchTerm || content.includes(searchTerm);
+        return matchesType && matchesSearch;
+      });
+    }
+
+    function mapFeatureToRequirement(feature) {
+      const id = feature.id;
+      const description = String(feature.description || '').trim();
+      const firstLine = description.split(/\n+/)[0] || '';
+      const titleSeed = firstLine.length > 96 ? (firstLine.slice(0, 93) + '...') : firstLine;
+      const quality = Number(feature.quality_score || 0);
+      const priority = quality >= 80 ? 'Low' : (quality >= 50 ? 'Medium' : 'High');
+
+      return {
+        req_id: String(id),
+        title: titleSeed || ('Requirement ' + String(id)),
+        description: description || '-',
+        category: feature.category || 'functional',
+        priority,
+        _source: 'feature',
+        _feature_id: id
+      };
+    }
+
+    function parseRequirementsPayload(payload) {
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      if (payload && Array.isArray(payload.requirements)) {
+        return payload.requirements;
+      }
+      if (payload && Array.isArray(payload.features)) {
+        return payload.features.map(mapFeatureToRequirement);
+      }
+      return [];
+    }
+
+    function countByType(items) {
+      const map = { all: items.length, functional: 0, 'non-functional': 0, business: 0, system: 0 };
+      items.forEach(item => {
+        const t = normalizeType(item.category);
+        map[t] += 1;
+      });
+      return map;
+    }
+
+    function renderPills() {
+      const counts = countByType(allRequirements);
+      const holder = document.getElementById('filterPills');
+      holder.innerHTML = typeOrder.map(key => {
+        const active = key === activeType ? 'active' : '';
+        return '<button class="filter-pill ' + active + '" data-type="' + key + '">' + typeLabels[key] + ' (' + counts[key] + ')</button>';
+      }).join('');
+
+      holder.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeType = btn.dataset.type;
+          renderPills();
+          renderRequirements();
+        });
+      });
+    }
+
+    function renderLoading() {
+      const list = document.getElementById('requirementsList');
+      list.innerHTML = '<div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>';
+    }
+
+    function renderRequirements() {
+      const list = document.getElementById('requirementsList');
+      const items = getFilteredRequirements();
+      setHeaderText();
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-state">No requirements match your current filters.</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(item => {
+        const t = normalizeType(item.category);
+        const editId = 'edit-' + String(item.req_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const removeId = 'remove-' + String(item.req_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const titleInputId = 'title-' + editId;
+        const descInputId = 'desc-' + editId;
+        return '<article class="req-card" data-req-id="' + item.req_id + '">' +
+          '<div class="req-color" style="background:' + (typeColor[t] || '#534AB7') + ';"></div>' +
+          '<div class="req-content">' +
+            '<div class="req-title">' + (item.req_id || 'REQ') + ' · ' + (item.title || 'Untitled requirement') + '</div>' +
+            '<div class="req-desc">' + (item.description || '-') + '</div>' +
+            '<div class="req-footer">' +
+              '<span class="fm-badge badge-info">' + typeLabels[t] + '</span>' +
+              '<span class="fm-badge ' + priorityClass(item.priority) + '">' + (item.priority || 'Medium') + '</span>' +
+              '<button id="' + editId + '" class="req-btn">Edit</button>' +
+              '<button id="' + removeId + '" class="req-btn req-btn-danger">Remove</button>' +
+            '</div>' +
+            '<div class="req-edit-wrap" id="wrap-' + editId + '">' +
+              '<input id="' + titleInputId + '" class="fm-input" value="' + String(item.title || '').replace(/"/g, '&quot;') + '">' +
+              '<textarea id="' + descInputId + '" class="fm-input" rows="3">' + (item.description || '') + '</textarea>' +
+              '<div class="req-edit-actions">' +
+                '<button class="fm-btn-primary fm-btn-sm" data-action="save" data-req="' + item.req_id + '">Save</button>' +
+                '<button class="fm-btn-outline fm-btn-sm" data-action="cancel" data-target="wrap-' + editId + '">Cancel</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</article>';
+      }).join('');
+
+      items.forEach(item => bindCardActions(item));
+      list.querySelectorAll('[data-action="cancel"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.target);
+          if (target) target.style.display = 'none';
+        });
+      });
+      list.querySelectorAll('[data-action="save"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await saveRequirement(btn.dataset.req);
+        });
+      });
+    }
+
+    function bindCardActions(item) {
+      const key = String(item.req_id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const editBtn = document.getElementById('edit-' + key);
+      const removeBtn = document.getElementById('remove-' + key);
+      const editWrap = document.getElementById('wrap-edit-' + key);
+
+      if (editBtn && editWrap) {
+        editBtn.addEventListener('click', () => {
+          editWrap.style.display = 'flex';
+        });
+      }
+
+      if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+          const confirmed = window.confirm('Remove this requirement?');
+          if (!confirmed) return;
+          await removeRequirement(item);
+        });
+      }
+    }
+
+    async function removeRequirement(item) {
+      try {
+        const featureId = item._feature_id || item.req_id;
+        if (!featureId) {
+          showToast('This item cannot be removed from this view', 'warning');
+          return;
+        }
+
+        const res = await apiFetch('/api/features/' + encodeURIComponent(featureId), {
+          method: 'DELETE'
+        });
+        if (!res.ok) throw new Error();
+
+        allRequirements = allRequirements.filter(r => String(r.req_id) !== String(item.req_id));
+        renderRequirements();
+        renderPills();
+        showToast('Requirement removed', 'success');
+      } catch (e) {
+        showToast('Unable to remove requirement', 'error');
+      }
+    }
+
+    async function saveRequirement(reqId) {
+      try {
+        const key = String(reqId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const title = document.getElementById('title-edit-' + key).value.trim();
+        const description = document.getElementById('desc-edit-' + key).value.trim();
+        const existing = allRequirements.find(r => String(r.req_id) === String(reqId));
+
+        let res;
+        if (existing && existing._source === 'feature' && existing._feature_id) {
+          // Feature records don't expose editable title/description fields, so keep edits in feedback.
+          res = await apiFetch('/api/features/' + encodeURIComponent(existing._feature_id), {
+            method: 'PUT',
+            body: JSON.stringify({ feedback: description })
+          });
+        } else {
+          res = await apiFetch('/requirements/' + encodeURIComponent(reqId), {
+            method: 'PUT',
+            body: JSON.stringify({ title, description })
+          });
+        }
+        if (!res.ok) throw new Error();
+
+        const idx = allRequirements.findIndex(r => String(r.req_id) === String(reqId));
+        if (idx >= 0) {
+          allRequirements[idx].title = title;
+          allRequirements[idx].description = description;
+        }
+        renderRequirements();
+        renderPills();
+        showToast('Requirement updated', 'success');
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function loadFileListForPicker() {
+      try {
+        let files = [];
+
+        const res = await apiFetch('/files');
+        if (res.ok) {
+          const data = await res.json();
+          files = data.files || [];
+        }
+
+        if (!files.length) {
+          const docsRes = await apiFetch('/api/documents');
+          if (docsRes.ok) {
+            const docsData = await docsRes.json();
+            files = (docsData.documents || []).map(doc => ({
+              id: doc.id,
+              filename: doc.filename,
+              status: 'complete'
+            }));
+          }
+        }
+
+        const picker = document.getElementById('fileSelect');
+
+        if (!files.length) {
+          picker.innerHTML = '<option value="">No complete files available</option>';
+          return;
+        }
+
+        picker.innerHTML = files.map(f => '<option value="' + f.id + '">' + f.filename + '</option>').join('');
+        if (!currentFileId) {
+          const withRequirements = files.find(f => Number(f.requirements_count || f.feature_count || 0) > 0);
+          currentFileId = String((withRequirements || files[0]).id);
+        }
+        picker.value = String(currentFileId);
+        picker.addEventListener('change', () => {
+          currentFileId = picker.value;
+          const url = new URL(window.location.href);
+          url.searchParams.set('file_id', currentFileId);
+          window.history.replaceState({}, '', url.toString());
+          loadRequirements();
+        });
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function fetchRequirementsForFile(fileId) {
+      const reqRes = await apiFetch('/requirements/' + encodeURIComponent(fileId));
+      if (reqRes.ok) {
+        const reqData = await reqRes.json();
+        const parsed = parseRequirementsPayload(reqData);
+        if (parsed.length) {
+          return parsed;
+        }
+      }
+
+      const featuresRes = await apiFetch('/api/features?file_id=' + encodeURIComponent(fileId));
+      if (featuresRes.ok) {
+        const featuresData = await featuresRes.json();
+        const parsed = parseRequirementsPayload(featuresData);
+        if (parsed.length) {
+          return parsed;
+        }
+      }
+
+      return [];
+    }
+
+    async function loadRequirements() {
+      if (!currentFileId) {
+        document.getElementById('requirementsList').innerHTML = '<div class="empty-state">Select a document to view requirements.</div>';
+        document.getElementById('reqTopSub').textContent = 'No file selected';
+        return;
+      }
+
+      renderLoading();
+      try {
+        const fileRes = await apiFetch('/files/' + encodeURIComponent(currentFileId));
+        if (fileRes.ok) {
+          const fileData = await fileRes.json();
+          currentFilename = fileData.filename || '';
+        } else {
+          currentFilename = 'Selected file';
+        }
+
+        allRequirements = await fetchRequirementsForFile(currentFileId);
+        renderPills();
+        renderRequirements();
+      } catch (e) {
+        allRequirements = [];
+        renderPills();
+        renderRequirements();
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    async function exportAllCsv() {
+      if (!currentFileId) {
+        showToast('Please select a document first', 'error');
+        return;
+      }
+
+      if (!allRequirements.length) {
+        showToast('No requirements to export', 'error');
+        return;
+      }
+
+      const escapeCsv = (value) => {
+        const text = String(value == null ? '' : value);
+        if (/[",\n]/.test(text)) {
+          return '"' + text.replace(/"/g, '""') + '"';
+        }
+        return text;
+      };
+
+      try {
+        const headers = ['req_id', 'title', 'description', 'category', 'priority'];
+        const rows = allRequirements.map(item => [
+          item.req_id,
+          item.title,
+          item.description,
+          normalizeType(item.category),
+          item.priority || 'Medium'
+        ]);
+
+        const csv = [headers, ...rows]
+          .map(row => row.map(escapeCsv).join(','))
+          .join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = String((currentFilename || ('requirements_' + currentFileId)).replace(/\.[^/.]+$/, '')).replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = safeName + '_requirements.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('CSV exported successfully', 'success');
+      } catch (e) {
+        showToast('Could not export CSV', 'error');
+      }
+    }
+
+    function init() {
+      setActivePage('requirements');
+      loadUser();
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchTerm = String(e.target.value || '').toLowerCase();
+        renderRequirements();
+      });
+
+      document.getElementById('exportAllBtn').addEventListener('click', exportAllCsv);
+
+      if (!currentFileId) {
+        document.getElementById('filePickerWrap').style.display = 'block';
+      }
+
+      loadFileListForPicker().then(loadRequirements);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

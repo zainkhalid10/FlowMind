@@ -185,7 +185,7 @@
         .card label,
         .card span,
         .card div:not(.card-icon) {
-            color: #1e293b;
+            color: #dbeafe;
         }
         
         .card:hover {
@@ -383,13 +383,115 @@
         }
         
         .alert-danger {
-            background: #fee2e2;
-            color: #dc2626;
+            background: rgba(127, 29, 29, 0.55);
+            color: #fecaca;
         }
         
         .alert-success {
-            background: #d1fae5;
-            color: #0891b2;
+            background: rgba(6, 95, 70, 0.45);
+            color: #ccfbf1;
+        }
+
+        body {
+            background: linear-gradient(135deg, #020617 0%, #0f172a 40%, #172554 100%);
+        }
+
+        .data-fall-container {
+            display: none;
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.86);
+            border: 1px solid rgba(96, 165, 250, 0.18);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.42);
+            backdrop-filter: none;
+        }
+
+        .navbar h2 {
+            color: #f8fafc;
+            letter-spacing: -0.02em;
+        }
+
+        .header {
+            color: #e2e8f0;
+            margin-bottom: 28px;
+        }
+
+        .header h1 {
+            color: #f8fafc;
+            font-size: 2.4rem;
+        }
+
+        .header p {
+            color: #cbd5e1;
+        }
+
+        .card {
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(96, 165, 250, 0.18);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.42);
+            backdrop-filter: none;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 22px 46px rgba(15, 23, 42, 0.12);
+            border-color: rgba(37, 99, 235, 0.24);
+        }
+
+        .btn,
+        .btn-success {
+            background: linear-gradient(135deg, #0f3d5e 0%, #2563eb 100%);
+            box-shadow: none;
+        }
+
+        .btn:hover,
+        .btn-success:hover {
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+            border-color: rgba(37, 99, 235, 0.18);
+        }
+
+        .file-input-label:hover {
+            background: rgba(37, 99, 235, 0.05);
+            border-width: 2px;
+        }
+
+        .file-input-label {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(96, 165, 250, 0.2);
+            color: #e2e8f0;
+        }
+
+        .card-title,
+        .card-subtitle,
+        #username-display,
+        .progress-time,
+        #basic-progress-text,
+        #agent-progress-text {
+            color: #e2e8f0;
+        }
+
+        .card-subtitle,
+        .progress-time,
+        #basic-progress-text,
+        #agent-progress-text {
+            color: #94a3b8;
+        }
+
+        .form-select {
+            background-color: rgba(15, 23, 42, 0.92);
+            color: #f8fafc;
+            border-color: rgba(96, 165, 250, 0.2);
+        }
+
+        .form-select option {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        .output-container pre,
+        .output-container code {
+            color: #e2e8f0;
         }
     </style>
 </head>
@@ -400,10 +502,13 @@
     </div>
     <div class="container">
         <div class="navbar">
-            <h2><i class="fas fa-brain"></i> FlowMind</h2>
+            <h2><i class="fas fa-briefcase"></i> FlowMind Workspace</h2>
             <div class="user-info">
+                <select id="projectSelector" class="form-select form-select-sm" style="min-width: 220px;">
+                    <option value="">No Project Selected</option>
+                </select>
                 <span id="username-display"></span>
-                <a href="/approve" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none; background: linear-gradient(135deg, #0891b2, #2563eb, #7c3aed); margin-right: 10px;">
+                <a href="/approve" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none; margin-right: 10px;">
                     <i class="fas fa-check-circle"></i> Approve
                 </a>
                 <a href="/dashboard" class="btn btn-sm" style="padding: 8px 16px; text-decoration: none;">
@@ -416,8 +521,8 @@
         </div>
         
         <div class="header">
-            <h1><i class="fas fa-file-upload"></i> Extract Documents</h1>
-            <p>Upload and analyze your documents with AI-powered extraction</p>
+            <h1><i class="fas fa-file-upload"></i> Document Intake Workspace</h1>
+            <p>Upload client material and run extraction inside the active project context.</p>
         </div>
         
         <div class="main-content">
@@ -428,7 +533,7 @@
                     </div>
                     <div>
                         <div class="card-title">Basic Extraction</div>
-                        <div class="card-subtitle">Quick text and image extraction</div>
+                        <div class="card-subtitle">Fast text and image pass for newly received material</div>
                     </div>
                 </div>
                 
@@ -465,7 +570,7 @@
                     </div>
                     <div>
                         <div class="card-title">AI Agent Analysis</div>
-                        <div class="card-subtitle">Advanced RAG-powered requirements extraction</div>
+                        <div class="card-subtitle">Requirement-focused extraction for approval and planning</div>
                     </div>
                 </div>
                 
@@ -545,7 +650,40 @@
         function logout() {
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
+            localStorage.removeItem('current_project_id');
+            localStorage.removeItem('current_project_name');
             window.location.href = '/';
+        }
+
+        function getSelectedProjectId() {
+            const raw = document.getElementById('projectSelector')?.value || localStorage.getItem('current_project_id');
+            return raw ? parseInt(raw, 10) : null;
+        }
+
+        async function loadProjects() {
+            const token = localStorage.getItem('access_token');
+            const selector = document.getElementById('projectSelector');
+            if (!token || !selector) return;
+
+            try {
+                const response = await fetch('/api/projects', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load projects');
+
+                const data = await response.json();
+                const projects = Array.isArray(data.projects) ? data.projects : [];
+                const storedProjectId = localStorage.getItem('current_project_id');
+                selector.innerHTML = '<option value="">No Project Selected</option>' + projects.map(project =>
+                    `<option value="${project.id}">${escapeHtml(project.name)}</option>`
+                ).join('');
+
+                if (storedProjectId && projects.some(project => String(project.id) === storedProjectId)) {
+                    selector.value = storedProjectId;
+                }
+            } catch (error) {
+                console.error('Extract Page: Error loading projects:', error);
+            }
         }
         
         function showAlert(containerId, message, type = 'danger') {
@@ -735,22 +873,22 @@
                         <i class="fas fa-brain" style="color: white; font-size: 1.2rem;"></i>
                     </div>
                     <div>
-                        <div style="font-weight: 600; color: #1e293b; font-size: 1.1rem;">Model Learning Status</div>
-                        <div style="color: #64748b; font-size: 0.9rem;">Click to view details</div>
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 1.1rem;">Model Learning Status</div>
+                        <div style="color: #94a3b8; font-size: 0.9rem;">Click to view details</div>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
-                    <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <div style="text-align: center; padding: 15px; background: rgba(15, 23, 42, 0.78); border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.12);">
                         <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${totalPatterns}</div>
-                        <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Patterns</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">Patterns</div>
                     </div>
-                    <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <div style="text-align: center; padding: 15px; background: rgba(15, 23, 42, 0.78); border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.12);">
                         <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${totalDocs}</div>
-                        <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Documents</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">Documents</div>
                     </div>
-                    <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <div style="text-align: center; padding: 15px; background: rgba(15, 23, 42, 0.78); border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.12);">
                         <div style="font-size: 1.8rem; font-weight: 700; color: #06b6d4;">${learningIterations}</div>
-                        <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Iterations</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">Iterations</div>
                     </div>
                 </div>
                 <a href="/training" style="display: block; text-align: center; margin-top: 15px; padding: 10px; background: linear-gradient(135deg, #06b6d4, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">
@@ -763,6 +901,20 @@
         // Use setTimeout to ensure page is fully rendered first
         // Only load once per page load to reduce server load
         let learningStatusLoaded = false;
+        loadProjects();
+
+        document.getElementById('projectSelector').addEventListener('change', function() {
+            const value = this.value;
+            if (value) {
+                const selectedText = this.options[this.selectedIndex]?.text || '';
+                localStorage.setItem('current_project_id', value);
+                localStorage.setItem('current_project_name', selectedText);
+            } else {
+                localStorage.removeItem('current_project_id');
+                localStorage.removeItem('current_project_name');
+            }
+        });
+
         setTimeout(() => {
             if (!learningStatusLoaded) {
                 loadLearningStatus();
@@ -962,6 +1114,10 @@
                 
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
+                const projectId = getSelectedProjectId();
+                if (projectId) {
+                    formData.append('project_id', String(projectId));
+                }
                 
                 try {
                 console.log('Extract Basic: Making request to /upload_client_doc');
@@ -1103,6 +1259,10 @@
                 
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
+                const projectId = getSelectedProjectId();
+                if (projectId) {
+                    formData.append('project_id', String(projectId));
+                }
                 
                 // Add Basic Extraction results if available
                 if (window.lastBasicExtraction) {
@@ -1130,15 +1290,24 @@
                 progressBar.style.width = '10%';
                 progressText.textContent = 'Uploading file...';
                 
-                const response = await fetch('/upload_agent_doc', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                        // Don't set Content-Type for FormData - browser will set it with boundary
-                    },
-                    credentials: 'include',  // Include credentials for CORS
-                    body: formData
-                });
+                // Timeout after 10 minutes so user sees a message instead of infinite loading
+                const uploadTimeoutMs = 10 * 60 * 1000;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), uploadTimeoutMs);
+                let response;
+                try {
+                    response = await fetch('/upload_agent_doc', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        credentials: 'include',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(timeoutId);
+                }
                 
                 console.log('Extract Agent: Response headers:', [...response.headers.entries()]);
                 console.log('Extract Agent: Response status:', response.status);
@@ -1280,7 +1449,9 @@
                 console.error('Extract Agent: Error message:', error.message);
                 
                 let errorMsg = 'Network error. Please check your connection.';
-                if (error.message) {
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Request timed out (10 minutes). The document may be large or the server is busy. Try a smaller file or try again later.';
+                } else if (error.message) {
                     errorMsg += ` (${error.message})`;
                 }
                 showError('agent-alert', errorMsg);

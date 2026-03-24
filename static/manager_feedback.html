@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Client Feedback</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .top-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .summary-banner {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      background: #FFFFFF;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metrics-row {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 10px;
+    }
+
+    .metric-box {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 9px;
+      padding: 10px;
+      background: #FCFCFB;
+      font-size: 11px;
+      color: #6B6B68;
+    }
+
+    .metric-box strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+      color: #1A1A1A;
+    }
+
+    .metric-approved strong { color: #3B6D11; }
+    .metric-rejected strong { color: #A32D2D; }
+    .metric-mod strong { color: #854F0B; }
+    .metric-pending strong { color: #534AB7; }
+
+    .reviewed-text {
+      font-size: 12px;
+      color: #6B6B68;
+      margin-bottom: 8px;
+    }
+
+    .status-banner {
+      border-radius: 9px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-banner.submitted {
+      background: #EAF3DE;
+      color: #3B6D11;
+      border: 0.5px solid rgba(59,109,17,0.35);
+    }
+
+    .status-banner.pending {
+      background: #FAEEDA;
+      color: #854F0B;
+      border: 0.5px solid rgba(133,79,11,0.35);
+    }
+
+    .feedback-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab-pill {
+      border: 0.5px solid rgba(0,0,0,0.16);
+      border-radius: 999px;
+      background: #fff;
+      color: #6B6B68;
+      font-size: 11px;
+      padding: 5px 11px;
+      cursor: pointer;
+    }
+
+    .tab-pill.active {
+      background: #534AB7;
+      border-color: #534AB7;
+      color: #fff;
+    }
+
+    .feedback-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .feedback-card {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 11px;
+      background: #FFFFFF;
+      padding: 12px;
+    }
+
+    .feedback-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 6px;
+    }
+
+    .feedback-desc {
+      font-size: 12px;
+      color: #6B6B68;
+      margin-bottom: 7px;
+      white-space: pre-wrap;
+    }
+
+    .quote-amber {
+      border-left: 3px solid #BA7517;
+      background: #FEF7EC;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #854F0B;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .resolved-badge {
+      border: 0.5px solid rgba(59,109,17,0.35);
+      color: #3B6D11;
+      background: #EAF3DE;
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    .client-added-badge {
+      border: 0.5px solid rgba(133,79,11,0.35);
+      color: #854F0B;
+      background: #FAEEDA;
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .inline-invite {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+      margin-bottom: 0;
+    }
+
+    .inline-invite.open {
+      max-height: 360px;
+      margin-bottom: 12px;
+    }
+
+    .inline-card {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 11px;
+      background: #FFFFFF;
+      padding: 12px;
+    }
+
+    .inline-card .fm-label {
+      color: #1A1A1A !important;
+      font-weight: 600;
+    }
+
+    .inline-card .fm-input::placeholder {
+      color: #7B7B77;
+      opacity: 1;
+    }
+
+    .password-box {
+      margin-top: 8px;
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      background: #F7F7F4;
+      color: #1A1A1A;
+      word-break: break-all;
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      .metrics-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .fm-main {
+        margin-left: 0;
+        padding: 16px;
+      }
+      .fm-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <nav class="fm-nav">
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard"><span class="fm-dot"></span> Dashboard</a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload"><span class="fm-dot"></span> Upload document</a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements"><span class="fm-dot"></span> Requirements</a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics"><span class="fm-dot"></span> Analytics</a>
+      <a href="export.html" class="fm-nav-item" data-page="export"><span class="fm-dot"></span> Export & integrations</a>
+      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback"><span class="fm-dot"></span> Client feedback</a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients"><span class="fm-dot"></span> Client credentials</a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings"><span class="fm-dot"></span> Settings</a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">PM</div>
+      <div>
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main">
+    <div class="fm-topbar">
+      <h1 class="fm-page-title">Client feedback</h1>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <a href="clients.html" class="fm-btn-outline" style="text-decoration:none;">Client credentials</a>
+        <button id="bulkActionBtn" class="fm-btn-outline" style="display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-users" style="font-size:12px;"></i>Bulk Actions
+        </button>
+        <button id="inviteToggleBtn" class="fm-btn-primary">Invite client</button>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <label for="fileSelect" class="fm-label" style="margin:0;">Document</label>
+      <select id="fileSelect" class="fm-input" style="max-width:430px;"></select>
+    </div>
+
+    <section id="inviteWrap" class="inline-invite">
+      <div class="inline-card">
+        <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;">
+          <div>
+            <label class="fm-label" for="inviteName" style="color:#1A1A1A !important; font-weight:600;">Client name</label>
+            <input id="inviteName" class="fm-input" placeholder="Client name" style="color:#1A1A1A; background:#FFFFFF;">
+          </div>
+          <div>
+            <label class="fm-label" for="inviteEmail" style="color:#1A1A1A !important; font-weight:600;">Client email</label>
+            <input id="inviteEmail" class="fm-input" type="email" placeholder="client@example.com" style="color:#1A1A1A; background:#FFFFFF;">
+          </div>
+          <div>
+            <label class="fm-label" for="inviteDue" style="color:#1A1A1A !important; font-weight:600;">Review deadline</label>
+            <input id="inviteDue" class="fm-input" type="date" style="color:#1A1A1A; background:#FFFFFF;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="sendInviteBtn" class="fm-btn-primary fm-btn-sm">Send invitation</button>
+          <button id="cancelInviteBtn" class="fm-btn-outline fm-btn-sm">Cancel</button>
+        </div>
+        <div id="tempPasswordBox" class="password-box"></div>
+      </div>
+    </section>
+
+    <section class="summary-banner">
+      <div class="metrics-row">
+        <div class="metric-box metric-approved">Approved<strong id="metricApproved">0</strong></div>
+        <div class="metric-box metric-rejected">Rejected<strong id="metricRejected">0</strong></div>
+        <div class="metric-box metric-mod">Modifications requested<strong id="metricMod">0</strong></div>
+        <div class="metric-box metric-pending">Pending<strong id="metricPending">0</strong></div>
+      </div>
+      <div class="reviewed-text" id="reviewedText">0% reviewed</div>
+      <div id="submissionBanner" class="status-banner pending">Awaiting client review</div>
+    </section>
+
+    <section class="feedback-tabs" id="tabs"></section>
+
+    <section class="summary-banner" id="clientStatusSection" style="display:none; margin-bottom:14px;">
+      <h3 style="margin:0 0 10px; font-size:13px; color:#1a1a1a; font-weight:600;">Client Review Status</h3>
+      <div id="clientStatusList" style="display:grid; gap:8px;"></div>
+    </section>
+
+    <section class="summary-banner" id="analyticsSection" style="display:none; margin-bottom:14px;">
+      <h3 style="margin:0 0 10px; font-size:13px; color:#1a1a1a; font-weight:600;">Performance Analytics</h3>
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Completion Rate</div>
+          <div style="font-size:16px; font-weight:600; color:#534AB7; margin-top:4px;"><span id="completionRate">0</span>%</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Approved Rate</div>
+          <div style="font-size:16px; font-weight:600; color:#3B6D11; margin-top:4px;"><span id="approvalRate">0</span>%</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Rejection Rate</div>
+          <div style="font-size:16px; font-weight:600; color:#A32D2D; margin-top:4px;"><span id="rejectionRate">0</span>%</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Modification Rate</div>
+          <div style="font-size:16px; font-weight:600; color:#854F0B; margin-top:4px;"><span id="modificationRate">0</span>%</div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-top:10px;">
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Avg. Response Time</div>
+          <div style="font-size:14px; font-weight:600; color:#1a1a1a; margin-top:4px;"><span id="avgResponseTime">-</span></div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Total Reviewed</div>
+          <div style="font-size:14px; font-weight:600; color:#1a1a1a; margin-top:4px;"><span id="totalReviewed">0</span> / <span id="totalRequirements">0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="feedbackList" class="feedback-list"></section>
+
+    <div id="bulkActionsModal" class="modal-host" style="display:none;">
+      <div class="modal-card">
+        <h3 style="margin:0 0 12px; font-size:16px; color:#1a1a1a;">Bulk Actions</h3>
+        <p style="margin:0 0 14px; color:#6B6B68; font-size:12px;">Select an action to perform on client reviews:</p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="remindPendingBtn" class="fm-btn-outline" style="text-align:left; justify-content:flex-start; padding:10px;">
+            <div style="font-weight:600;">Send Reminders to Pending Reviews</div>
+            <div style="font-size:11px; color:#6B6B68; font-weight:400;">Email clients who haven't reviewed yet</div>
+          </button>
+          <button id="resendInvitesBtn" class="fm-btn-outline" style="text-align:left; justify-content:flex-start; padding:10px;">
+            <div style="font-weight:600;">Resend Invitations to All</div>
+            <div style="font-size:11px; color:#6B6B68; font-weight:400;">Re-send invitations to all assigned clients</div>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+          <button id="closeBulkModalBtn" class="fm-btn-outline fm-btn-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    requireAuth();
+    const role = getRole();
+    if (role === 'client') {
+      window.location.href = '/client-review';
+    }
+
+    setActivePage('feedback');
+    loadUser();
+
+    let fileId = new URLSearchParams(window.location.search).get('file_id');
+    let summary = null;
+    let detail = { modification_requests: [], rejected: [], client_added: [], approved: [] };
+    let activeTab = 'modification_requests';
+
+    const tabConfig = [
+      { key: 'modification_requests', label: 'Modification requests' },
+      { key: 'rejected', label: 'Rejected requirements' },
+      { key: 'client_added', label: 'Client-added requirements' },
+      { key: 'approved', label: 'Approved' }
+    ];
+
+    function renderTabs() {
+      const holder = document.getElementById('tabs');
+      holder.innerHTML = tabConfig.map(tab => {
+        const count = (detail[tab.key] || []).length;
+        const active = tab.key === activeTab ? 'active' : '';
+        return '<button class="tab-pill ' + active + '" data-tab="' + tab.key + '">' + tab.label + ' (' + count + ')</button>';
+      }).join('');
+
+      holder.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeTab = btn.dataset.tab;
+          renderTabs();
+          renderFeedbackList();
+        });
+      });
+    }
+
+    function renderSummary() {
+      if (!summary) return;
+      const total = Number(summary.total || 0);
+      const approved = Number(summary.approved || 0);
+      const rejected = Number(summary.rejected || 0);
+      const mod = Number(summary.modification_requested || 0);
+      const pending = Number(summary.pending || 0);
+      const reviewed = total ? Math.round(((approved + rejected + mod) / total) * 100) : 0;
+
+      document.getElementById('metricApproved').textContent = approved;
+      document.getElementById('metricRejected').textContent = rejected;
+      document.getElementById('metricMod').textContent = mod;
+      document.getElementById('metricPending').textContent = pending;
+      document.getElementById('reviewedText').textContent = reviewed + '% reviewed';
+
+      const banner = document.getElementById('submissionBanner');
+      if (summary.submitted) {
+        banner.className = 'status-banner submitted';
+        banner.textContent = 'Client submitted their review';
+      } else {
+        banner.className = 'status-banner pending';
+        banner.textContent = 'Awaiting client review';
+      }
+    }
+
+    function cardHtml(item) {
+      const comment = item.comment ? '<div class="quote-amber">Client says: ' + item.comment + '</div>' : '';
+      const resolved = item.resolved ? '<span class="resolved-badge">Resolved</span>' : '';
+      const added = item.source === 'client' ? '<span class="client-added-badge">Added by client</span>' : '';
+
+      let actions = '';
+      if (activeTab === 'modification_requests') {
+        actions = '<div class="card-actions">'
+          + '<button class="fm-btn-outline fm-btn-sm" data-action="resolve" data-feedback="' + (item.feedback_id || '') + '">Mark as resolved</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" data-action="edit">Edit requirement</button>'
+          + '</div>';
+      } else if (activeTab === 'rejected') {
+        actions = '<div class="card-actions">'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="remove">Remove from project</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" data-action="keep">Keep anyway</button>'
+          + '</div>';
+      } else if (activeTab === 'client_added') {
+        actions = '<div class="card-actions">'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#3B6D11; border-color:#3B6D11;" data-action="accept" data-req="' + item.req_id + '">Accept & add</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="decline" data-req="' + item.req_id + '">Decline</button>'
+          + '</div>';
+      }
+
+      return '<article class="feedback-card" data-req-id="' + item.req_id + '">'
+        + '<div class="feedback-title">REQ-' + item.req_id + ' · ' + (item.title || 'Requirement') + added + resolved + '</div>'
+        + '<div class="feedback-desc">' + (item.description || '-') + '</div>'
+        + comment
+        + actions
+        + '</article>';
+    }
+
+    function bindCardActions() {
+      document.querySelectorAll('[data-action="resolve"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const feedbackId = btn.dataset.feedback;
+          if (!feedbackId) return;
+          try {
+            const res = await apiFetch('/review/feedback/' + encodeURIComponent(feedbackId) + '/resolve', {
+              method: 'PUT',
+              body: JSON.stringify({ resolved: true, manager_note: 'Addressed by manager' })
+            });
+            if (!res.ok) throw new Error();
+            showToast('Marked as resolved', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="accept"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reqId = btn.dataset.req;
+          const item = (detail.client_added || []).find(row => String(row.req_id) === String(reqId));
+          if (!item) return;
+          try {
+            const res = await apiFetch('/requirements', {
+              method: 'POST',
+              body: JSON.stringify({
+                file_id: Number(fileId),
+                title: item.title,
+                description: item.description,
+                category: item.category,
+                priority: item.priority,
+                source: 'client_approved'
+              })
+            });
+            if (!res.ok) throw new Error();
+            showToast('Requirement accepted', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="decline"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reqId = btn.dataset.req;
+          detail.client_added = (detail.client_added || []).filter(item => String(item.req_id) !== String(reqId));
+          renderTabs();
+          renderFeedbackList();
+          showToast('Declined locally for demo', 'success');
+        });
+      });
+
+      document.querySelectorAll('[data-action="remove"], [data-action="keep"], [data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', () => showToast('Action captured for demo', 'success'));
+      });
+    }
+
+    function renderFeedbackList() {
+      const list = document.getElementById('feedbackList');
+      const items = detail[activeTab] || [];
+      if (!items.length) {
+        list.innerHTML = '<div class="fm-card" style="padding:16px; color:#6B6B68; font-size:12px;">No items in this tab.</div>';
+        return;
+      }
+      list.innerHTML = items.map(cardHtml).join('');
+      bindCardActions();
+    }
+
+    async function loadFiles() {
+      try {
+        let res = await apiFetch('/files');
+        if (!res.ok) {
+          res = await apiFetch('/api/documents');
+        }
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const files = data.files || [];
+        const select = document.getElementById('fileSelect');
+
+        if (!files.length) {
+          select.innerHTML = '<option value="">No files found</option>';
+          return;
+        }
+
+        select.innerHTML = files.map(f => '<option value="' + f.id + '">' + f.filename + '</option>').join('');
+        if (!fileId) fileId = String(files[0].id);
+        select.value = String(fileId);
+
+        select.addEventListener('change', () => {
+          fileId = String(select.value);
+          const url = new URL(window.location.href);
+          url.searchParams.set('file_id', fileId);
+          window.history.replaceState({}, '', url.toString());
+          refreshData();
+        });
+      } catch (e) {
+        showToast('Could not load files', 'error');
+      }
+    }
+
+    async function refreshData() {
+      if (!fileId) return;
+      try {
+        const [summaryRes, detailRes] = await Promise.all([
+          apiFetch('/review/' + encodeURIComponent(fileId) + '/summary'),
+          apiFetch('/review/' + encodeURIComponent(fileId) + '/manager-feedback')
+        ]);
+        if (!summaryRes.ok || !detailRes.ok) throw new Error();
+
+        summary = await summaryRes.json();
+        detail = await detailRes.json();
+        renderSummary();
+        renderTabs();
+        renderFeedbackList();
+        calcAnalytics();
+        loadClientReviewStatuses();
+      } catch (e) {
+        showToast('No review assignment yet for this file', 'error');
+        summary = { total: 0, approved: 0, rejected: 0, modification_requested: 0, pending: 0, submitted: false };
+        detail = { modification_requests: [], rejected: [], client_added: [], approved: [] };
+        renderSummary();
+        renderTabs();
+        renderFeedbackList();
+        calcAnalytics();
+      }
+    }
+
+    async function loadClientReviewStatuses() {
+      try {
+        if (!fileId) return;
+        // Fetch review assignments for this file
+        const res = await apiFetch('/api/assignments?file_id=' + fileId);
+        if (!res.ok) {
+          document.getElementById('clientStatusSection').style.display = 'none';
+          return;
+        }
+        
+        const assignments = await res.json();
+        if (!assignments || assignments.length === 0) {
+          document.getElementById('clientStatusSection').style.display = 'none';
+          return;
+        }
+
+        const statusList = document.getElementById('clientStatusList');
+        const section = document.getElementById('clientStatusSection');
+        
+        let html = '';
+        assignments.forEach(assign => {
+          const name = assign.client_name || assign.client_email || 'Unknown Client';
+          const isSubmitted = !!assign.submitted_at;
+          const submittedDate = assign.submitted_at ? new Date(assign.submitted_at).toLocaleDateString() : '';
+          const dueDate = assign.due_date ? new Date(assign.due_date).toLocaleDateString() : 'Not set';
+          
+          const statusColor = isSubmitted ? '#3B6D11' : '#854F0B';
+          const statusBg = isSubmitted ? '#EAF3DE' : '#FAEEDA';
+          const statusText = isSubmitted ? '✓ Review Submitted' : '◯ Pending Review';
+          
+          html += '<div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:8px; padding:10px; background:#f9fafb;">'
+            + '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">'
+            + '<div style="font-size:12px; font-weight:600; color:#1a1a1a;">' + name + '</div>'
+            + '<div style="background:' + statusBg + '; color:' + statusColor + '; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:500;">' + statusText + '</div>'
+            + '</div>'
+            + '<div style="font-size:11px; color:#6B6B68;">'
+            + '<div>Due: ' + dueDate + '</div>'
+            + (isSubmitted ? '<div>Submitted: ' + submittedDate + '</div>' : '')
+            + '</div>'
+            + '</div>';
+        });
+        
+        statusList.innerHTML = html;
+        section.style.display = 'block';
+      } catch (e) {
+        document.getElementById('clientStatusSection').style.display = 'none';
+      }
+    }
+
+    function setupInviteForm() {
+      const wrap = document.getElementById('inviteWrap');
+      const pwdBox = document.getElementById('tempPasswordBox');
+      document.getElementById('inviteToggleBtn').addEventListener('click', () => wrap.classList.toggle('open'));
+      document.getElementById('cancelInviteBtn').addEventListener('click', () => wrap.classList.remove('open'));
+
+      document.getElementById('sendInviteBtn').addEventListener('click', async () => {
+        const name = (document.getElementById('inviteName').value || '').trim();
+        const email = (document.getElementById('inviteEmail').value || '').trim();
+        const due = document.getElementById('inviteDue').value;
+
+        if (!email || !name) {
+          showToast('Name and email are required', 'error');
+          return;
+        }
+        if (!fileId) {
+          showToast('Select a document first', 'error');
+          return;
+        }
+
+        try {
+          const payload = { email, name, file_id: Number(fileId), due_date: due ? (due + 'T23:59:00') : null };
+          let res = await apiFetch('/auth/invite-client', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok && (res.status === 404 || res.status === 405)) {
+            res = await apiFetch('/api/manager/invite-client', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+          }
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || data.message || 'Invite failed');
+
+          const successMessage = [
+            'Client invitation sent successfully!',
+            '',
+            (data.email_delivery_enabled === false) ? 'Email was not sent (configuration issue).' : ('Email sent to: ' + email),
+            (data.email_delivery_enabled === false) ? 'Please fix Gmail app password in .env and try again.' : 'Confirmation email sent to your inbox',
+            '',
+            'View all clients: ',
+            ''
+          ].join('\n');
+
+          pwdBox.style.display = 'block';
+          pwdBox.innerHTML = '<div style="line-height:1.6;">' + successMessage.split('\n').map(line => 
+            line === '' ? '<br>' : (line.includes('View all clients:') ? 
+              '<a href="/static/clients.html" style="color:#534AB7; text-decoration:none; font-weight:600;">Click here to view client credentials</a>' : 
+              line)
+          ).join('\n') + '</div>';
+          pwdBox.setAttribute('title', 'Invitation sent to ' + email);
+          wrap.classList.add('open');
+          if (data.email_warning) {
+            showToast(data.email_warning, 'error');
+          } else {
+            showToast('Invitation sent successfully', 'success');
+          }
+
+          document.getElementById('inviteName').value = '';
+          document.getElementById('inviteEmail').value = '';
+          document.getElementById('inviteDue').value = '';
+        } catch (e) {
+          showToast(e && e.message ? e.message : 'Something went wrong', 'error');
+        }
+      });
+    }
+
+    function setupBulkActions() {
+      const modal = document.getElementById('bulkActionsModal');
+      document.getElementById('bulkActionBtn').addEventListener('click', () => {
+        modal.style.display = 'flex';
+      });
+      document.getElementById('closeBulkModalBtn').addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+
+      document.getElementById('remindPendingBtn').addEventListener('click', async () => {
+        if (!fileId) {
+          showToast('No file selected', 'error');
+          return;
+        }
+        try {
+          const res = await apiFetch('/api/bulk/remind-pending?file_id=' + fileId, { method: 'POST' });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          showToast('Reminders sent to ' + (data.count || 0) + ' clients', 'success');
+          modal.style.display = 'none';
+        } catch (e) {
+          showToast('Could not send reminders', 'error');
+        }
+      });
+
+      document.getElementById('resendInvitesBtn').addEventListener('click', async () => {
+        if (!fileId) {
+          showToast('No file selected', 'error');
+          return;
+        }
+        try {
+          const res = await apiFetch('/api/bulk/resend-invites?file_id=' + fileId, { method: 'POST' });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          showToast('Invitations resent to ' + (data.count || 0) + ' clients', 'success');
+          modal.style.display = 'none';
+        } catch (e) {
+          showToast('Could not resend invitations', 'error');
+        }
+      });
+    }
+
+    function calcAnalytics() {
+      if (!summary) {
+        document.getElementById('analyticsSection').style.display = 'none';
+        return;
+      }
+
+      const total = Number(summary.total || 0);
+      const approved = Number(summary.approved || 0);
+      const rejected = Number(summary.rejected || 0);
+      const mod = Number(summary.modification_requested || 0);
+      const pending = Number(summary.pending || 0);
+      const reviewed = approved + rejected + mod;
+
+      // Calculate rates
+      const completionRate = total > 0 ? Math.round((reviewed / total) * 100) : 0;
+      const approvalRate = reviewed > 0 ? Math.round((approved / reviewed) * 100) : 0;
+      const rejectionRate = reviewed > 0 ? Math.round((rejected / reviewed) * 100) : 0;
+      const modificationRate = reviewed > 0 ? Math.round((mod / reviewed) * 100) : 0;
+
+      document.getElementById('completionRate').textContent = completionRate;
+      document.getElementById('approvalRate').textContent = approvalRate;
+      document.getElementById('rejectionRate').textContent = rejectionRate;
+      document.getElementById('modificationRate').textContent = modificationRate;
+      document.getElementById('totalReviewed').textContent = reviewed;
+      document.getElementById('totalRequirements').textContent = total;
+
+      // Calculate average response time if we have submission data
+      const assignments = document.querySelectorAll('[data-submitted-at]');
+      if (assignments.length > 0) {
+        let totalDays = 0;
+        let count = 0;
+        assignments.forEach(el => {
+          const submittedAt = el.dataset.submittedAt;
+          const assignedAt = el.dataset.assignedAt;
+          if (submittedAt && assignedAt) {
+            const submitted = new Date(submittedAt);
+            const assigned = new Date(assignedAt);
+            const days = Math.ceil((submitted - assigned) / (1000 * 60 * 60 * 24));
+            if (days >= 0) {
+              totalDays += days;
+              count++;
+            }
+          }
+        });
+        const avgDays = count > 0 ? Math.round(totalDays / count) : 0;
+        document.getElementById('avgResponseTime').textContent = avgDays + ' days';
+      } else {
+        document.getElementById('avgResponseTime').textContent = '-';
+      }
+
+      document.getElementById('analyticsSection').style.display = 'block';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      setupInviteForm();
+      setupBulkActions();
+      await loadFiles();
+      await refreshData();
+    });
+  </script>
+</body>
+</html>

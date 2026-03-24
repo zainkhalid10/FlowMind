@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Processing document</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .page-subtitle {
+      color: #6B6B68;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .pipeline {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stage-row {
+      border: 0.5px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      background: #FFFFFF;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      align-items: start;
+      gap: 10px;
+    }
+
+    .stage-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid #c9c9c7;
+      position: relative;
+      margin-top: 2px;
+    }
+
+    .stage-icon.done {
+      background: #EAF3DE;
+      border-color: #3B6D11;
+    }
+
+    .stage-icon.done::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 6px;
+      height: 10px;
+      border: solid #3B6D11;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .stage-icon.running {
+      border-color: #534AB7;
+      border-top-color: #B8B2EE;
+      animation: rotate 0.8s linear infinite;
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .stage-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1A1A1A;
+      margin-bottom: 2px;
+    }
+
+    .stage-desc {
+      font-size: 12px;
+      color: #6B6B68;
+    }
+
+    .stage-status {
+      font-size: 11px;
+      color: #6B6B68;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .stage-progress {
+      margin-top: 8px;
+      height: 4px;
+      border-radius: 4px;
+      background: #E6E6E3;
+      overflow: hidden;
+      display: none;
+    }
+
+    .stage-progress-fill {
+      height: 100%;
+      width: 0;
+      background: #534AB7;
+      transition: width 0.2s;
+    }
+
+    .banner {
+      margin-top: 14px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .banner.success {
+      display: block;
+      background: #EAF3DE;
+      color: #3B6D11;
+      border: 0.5px solid rgba(59,109,17,0.35);
+    }
+
+    .banner.error {
+      display: block;
+      background: #FCEBEB;
+      color: #A32D2D;
+      border: 0.5px solid rgba(163,45,45,0.35);
+    }
+
+    .after-actions {
+      margin-top: 12px;
+      display: none;
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <nav class="fm-nav">
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard">
+        <span class="fm-dot"></span> Dashboard
+      </a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload">
+        <span class="fm-dot"></span> Upload document
+      </a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements">
+        <span class="fm-dot"></span> Requirements
+      </a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics">
+        <span class="fm-dot"></span> Analytics
+      </a>
+      <a href="export.html" class="fm-nav-item" data-page="export">
+        <span class="fm-dot"></span> Export & integrations
+      </a>
+      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback">
+        <span class="fm-dot"></span> Client feedback
+      </a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients">
+        <span class="fm-dot"></span> Client credentials
+      </a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings">
+        <span class="fm-dot"></span> Settings
+      </a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">AM</div>
+      <div>
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main">
+    <div class="fm-topbar" style="margin-bottom: 0;">
+      <div>
+        <h1 class="fm-page-title">Processing document</h1>
+        <p class="page-subtitle">Your document is running through the AI pipeline. This usually takes 30–60 seconds.</p>
+      </div>
+    </div>
+
+    <section class="fm-card" style="margin-top: 16px;">
+      <div class="fm-section-title" style="margin-bottom: 8px;">File info</div>
+      <div class="info-grid">
+        <div class="fm-metric">
+          <div class="fm-metric-label">Filename</div>
+          <div class="fm-metric-val" style="font-size:16px;" id="fileName">Loading...</div>
+        </div>
+        <div class="fm-metric">
+          <div class="fm-metric-label">File size</div>
+          <div class="fm-metric-val" style="font-size:16px;" id="fileSize">-</div>
+        </div>
+      </div>
+
+      <div class="pipeline" id="pipeline"></div>
+
+      <div id="statusBanner" class="banner"></div>
+
+      <div id="afterActions" class="after-actions">
+        <a id="viewRequirementsBtn" class="fm-btn-primary" href="#">View requirements</a>
+        <button id="retryBtn" type="button" class="fm-btn-outline">Retry</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const fileId = params.get('file_id');
+    let pollHandle = null;
+
+    const stageRows = [
+      {
+        id: 'agent1',
+        name: 'Agent 1 - Document parsing',
+        desc: 'Reading file structure, sections, and initial content map.'
+      },
+      {
+        id: 'agent2',
+        name: 'Agent 2 - OCR & VLM analysis',
+        desc: 'Extracting image text and visual meaning from document assets.'
+      },
+      {
+        id: 'agent3',
+        name: 'Agent 3 - Requirement extraction',
+        desc: 'Identifying and classifying requirement statements.'
+      },
+      {
+        id: 'agent4',
+        name: 'Agent 4 - Dashboard & export',
+        desc: 'Saving outputs and preparing dashboard/export artifacts.'
+      }
+    ];
+
+    const stageMap = {
+      UPLOADING: 0,
+      PARSING: 0,
+      TEXT_EXTRACTION: 1,
+      IMAGE_DETECTION: 1,
+      OCR_PROCESSING: 1,
+      IMAGE_SUMMARIZATION: 2,
+      FINALIZING: 2,
+      COMPLETE: 3
+    };
+
+    function formatSize(bytes) {
+      if (!bytes && bytes !== 0) return '-';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function renderPipeline() {
+      const holder = document.getElementById('pipeline');
+      holder.innerHTML = stageRows.map((s, idx) => (
+        '<div class="stage-row" data-stage-index="' + idx + '">'
+          + '<div class="stage-icon" id="icon-' + idx + '"></div>'
+          + '<div>'
+            + '<div class="stage-name">' + s.name + '</div>'
+            + '<div class="stage-desc" id="desc-' + idx + '">' + s.desc + '</div>'
+            + '<div class="stage-progress" id="prog-' + idx + '"><div class="stage-progress-fill" id="progfill-' + idx + '"></div></div>'
+          + '</div>'
+          + '<div class="stage-status" id="status-' + idx + '">Waiting...</div>'
+        + '</div>'
+      )).join('');
+    }
+
+    function setStageVisual(currentIdx, progress, isComplete, isFailed) {
+      for (let i = 0; i < stageRows.length; i++) {
+        const icon = document.getElementById('icon-' + i);
+        const txt = document.getElementById('status-' + i);
+        const bar = document.getElementById('prog-' + i);
+        const fill = document.getElementById('progfill-' + i);
+
+        icon.className = 'stage-icon';
+        bar.style.display = 'none';
+        fill.style.width = '0%';
+
+        if (isFailed) {
+          txt.textContent = i < currentIdx ? 'Complete' : (i === currentIdx ? 'Failed' : 'Waiting...');
+          if (i < currentIdx) {
+            icon.classList.add('done');
+          }
+          continue;
+        }
+
+        if (isComplete) {
+          icon.classList.add('done');
+          txt.textContent = 'Complete';
+          continue;
+        }
+
+        if (i < currentIdx) {
+          icon.classList.add('done');
+          txt.textContent = 'Complete';
+        } else if (i === currentIdx) {
+          icon.classList.add('running');
+          txt.textContent = 'Running - ' + progress + '% complete';
+          bar.style.display = 'block';
+          fill.style.width = String(progress) + '%';
+        } else {
+          txt.textContent = 'Waiting...';
+        }
+      }
+    }
+
+    async function loadFileInfo() {
+      if (!fileId) {
+        showToast('Missing file_id', 'error');
+        return;
+      }
+      try {
+        const res = await apiFetch('/files/' + encodeURIComponent(fileId));
+        if (!res.ok) {
+          throw new Error('Failed to load file');
+        }
+        const data = await res.json();
+        document.getElementById('fileName').textContent = data.filename || '-';
+        document.getElementById('fileSize').textContent = formatSize(data.file_size);
+      } catch (e) {
+        showToast('Could not load file details', 'error');
+      }
+    }
+
+    function showComplete(requirementsCount) {
+      const banner = document.getElementById('statusBanner');
+      const actions = document.getElementById('afterActions');
+      const viewBtn = document.getElementById('viewRequirementsBtn');
+
+      banner.className = 'banner success';
+      banner.textContent = 'Processing complete! ' + String(requirementsCount || 0) + ' requirements extracted.';
+      actions.style.display = 'flex';
+      viewBtn.href = 'requirements.html?file_id=' + encodeURIComponent(fileId);
+
+      const retryBtn = document.getElementById('retryBtn');
+      retryBtn.style.display = 'none';
+    }
+
+    function showFailed() {
+      const banner = document.getElementById('statusBanner');
+      const actions = document.getElementById('afterActions');
+      const retryBtn = document.getElementById('retryBtn');
+      const viewBtn = document.getElementById('viewRequirementsBtn');
+
+      banner.className = 'banner error';
+      banner.textContent = 'Processing failed. Please retry this document.';
+      actions.style.display = 'flex';
+      retryBtn.style.display = 'inline-block';
+      viewBtn.style.display = 'none';
+    }
+
+    async function pollStatus() {
+      if (!fileId) return;
+      try {
+        const res = await apiFetch('/status/' + encodeURIComponent(fileId));
+        if (!res.ok) {
+          throw new Error('Status request failed');
+        }
+        const data = await res.json();
+        const stage = data.stage || 'PARSING';
+        const progress = Number(data.progress || 0);
+        const idx = stageMap[stage] !== undefined ? stageMap[stage] : 0;
+
+        if (stage === 'COMPLETE') {
+          setStageVisual(3, 100, true, false);
+          showComplete(data.requirements_count || 0);
+          if (pollHandle) clearInterval(pollHandle);
+          return;
+        }
+
+        if (stage === 'FAILED') {
+          setStageVisual(idx, progress, false, true);
+          showFailed();
+          if (pollHandle) clearInterval(pollHandle);
+          return;
+        }
+
+        setStageVisual(idx, progress, false, false);
+      } catch (e) {
+        showToast('Could not fetch processing status', 'error');
+      }
+    }
+
+    async function retryProcessing() {
+      try {
+        const res = await apiFetch('/retry/' + encodeURIComponent(fileId), { method: 'POST' });
+        if (!res.ok) {
+          throw new Error('Retry failed');
+        }
+        document.getElementById('statusBanner').className = 'banner';
+        document.getElementById('afterActions').style.display = 'none';
+        setStageVisual(0, 5, false, false);
+        pollHandle = setInterval(pollStatus, 2000);
+        showToast('Retry queued', 'success');
+      } catch (e) {
+        showToast('Retry failed', 'error');
+      }
+    }
+
+    function init() {
+      requireAuth();
+      loadUser();
+      setActivePage('upload');
+      renderPipeline();
+      loadFileInfo();
+      pollStatus();
+      pollHandle = setInterval(pollStatus, 2000);
+      document.getElementById('retryBtn').addEventListener('click', retryProcessing);
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (pollHandle) clearInterval(pollHandle);
+    });
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

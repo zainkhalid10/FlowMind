@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowMind - Analytics</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .selector-row {
+      margin: 8px 0 14px;
+      max-width: 420px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .chart-card {
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 320px;
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: #1A1A1A;
+      margin-bottom: 10px;
+    }
+
+    .chart-wrap {
+      width: 100%;
+      height: 280px;
+    }
+
+    .empty-state {
+      margin-top: 10px;
+      border: 0.5px dashed rgba(0,0,0,0.2);
+      border-radius: 12px;
+      background: #FFFFFF;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      color: #6B6B68;
+      gap: 8px;
+    }
+
+    .empty-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #EEEDFE;
+      color: #534AB7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+    }
+
+    @media (max-width: 1100px) {
+      .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="fm-sidebar">
+    <div class="fm-logo">Flow<span>Mind</span></div>
+    <nav class="fm-nav">
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard"><span class="fm-dot"></span> Dashboard</a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload"><span class="fm-dot"></span> Upload document</a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements"><span class="fm-dot"></span> Requirements</a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics"><span class="fm-dot"></span> Analytics</a>
+      <a href="export.html" class="fm-nav-item" data-page="export"><span class="fm-dot"></span> Export & integrations</a>
+      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback"><span class="fm-dot"></span> Client feedback</a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients"><span class="fm-dot"></span> Client credentials</a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings"><span class="fm-dot"></span> Settings</a>
+    </nav>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">AM</div>
+      <div>
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="fm-main">
+    <div class="fm-topbar">
+      <h1 class="fm-page-title">Analytics</h1>
+    </div>
+
+    <div class="selector-row">
+      <label class="fm-label" for="fileSelect">Document</label>
+      <select id="fileSelect" class="fm-input"></select>
+    </div>
+
+    <section id="metricsSection" class="metrics-grid" style="display:none;">
+      <div class="fm-metric"><div class="fm-metric-label">Total requirements</div><div id="mTotal" class="fm-metric-val">0</div></div>
+      <div class="fm-metric"><div class="fm-metric-label">Functional count</div><div id="mFunctional" class="fm-metric-val">0</div></div>
+      <div class="fm-metric"><div class="fm-metric-label">Non-functional count</div><div id="mNonFunctional" class="fm-metric-val">0</div></div>
+      <div class="fm-metric"><div class="fm-metric-label">Exported count</div><div id="mExported" class="fm-metric-val">0</div></div>
+    </section>
+
+    <section id="emptyState" class="empty-state">
+      <div class="empty-icon">A</div>
+      <div>Select a document above to view analytics</div>
+    </section>
+
+    <section id="chartsSection" class="charts-grid" style="display:none;">
+      <div class="chart-card">
+        <div class="chart-title">Requirement breakdown by type</div>
+        <div class="chart-wrap"><canvas id="typeChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Requirements by priority</div>
+        <div class="chart-wrap"><canvas id="priorityChart"></canvas></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+  <script>
+    requireAuth();
+
+    let typeChart = null;
+    let priorityChart = null;
+
+    function destroyCharts() {
+      if (typeChart) { typeChart.destroy(); typeChart = null; }
+      if (priorityChart) { priorityChart.destroy(); priorityChart = null; }
+    }
+
+    async function loadFiles() {
+      try {
+        let files = [];
+        const res = await apiFetch('/files');
+        if (res.ok) {
+          const data = await res.json();
+          files = (data.files || []).filter(f => String(f.status || '').toLowerCase() === 'complete');
+        }
+
+        if (!files.length) {
+          const docsRes = await apiFetch('/api/documents');
+          if (docsRes.ok) {
+            const docsData = await docsRes.json();
+            files = (docsData.documents || []).map(doc => ({ id: doc.id, filename: doc.filename, status: 'complete' }));
+          }
+        }
+
+        const select = document.getElementById('fileSelect');
+
+        if (!files.length) {
+          select.innerHTML = '<option value="">No completed files</option>';
+          return;
+        }
+
+        select.innerHTML = '<option value="">Select file</option>' + files.map(f => '<option value="' + f.id + '">' + f.filename + '</option>').join('');
+        const qsFile = new URLSearchParams(window.location.search).get('file_id');
+        if (qsFile && files.some(f => String(f.id) === String(qsFile))) {
+          select.value = String(qsFile);
+          loadAnalytics(qsFile);
+        }
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    function setMetrics(data) {
+      document.getElementById('mTotal').textContent = String(data.total || 0);
+      document.getElementById('mFunctional').textContent = String((data.by_type && (data.by_type.functional || 0)) || 0);
+      document.getElementById('mNonFunctional').textContent = String((data.by_type && (data.by_type['non-functional'] || 0)) || 0);
+      document.getElementById('mExported').textContent = String(data.exported || 0);
+    }
+
+    function drawCharts(data) {
+      destroyCharts();
+
+      const typeData = data.by_type || {};
+      const prio = data.by_priority || {};
+
+      typeChart = new Chart(document.getElementById('typeChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Functional', 'Non-functional', 'Business', 'System'],
+          datasets: [{
+            data: [typeData.functional || 0, typeData['non-functional'] || 0, typeData.business || 0, typeData.system || 0],
+            backgroundColor: ['#534AB7', '#1D9E75', '#BA7517', '#D85A30']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      priorityChart = new Chart(document.getElementById('priorityChart'), {
+        type: 'bar',
+        data: {
+          labels: ['High', 'Medium', 'Low'],
+          datasets: [{
+            data: [prio.high || 0, prio.medium || 0, prio.low || 0],
+            backgroundColor: ['#A32D2D', '#854F0B', '#3B6D11']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    async function loadAnalytics(fileId) {
+      if (!fileId) {
+        document.getElementById('chartsSection').style.display = 'none';
+        document.getElementById('metricsSection').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'flex';
+        destroyCharts();
+        return;
+      }
+
+      try {
+        let payload = null;
+        const res = await apiFetch('/analytics/' + encodeURIComponent(fileId));
+        if (res.ok) {
+          payload = await res.json();
+        } else {
+          // Fallback compute from requirements/features endpoints if analytics endpoint is unavailable.
+          let list = [];
+
+          const rr = await apiFetch('/requirements/' + encodeURIComponent(fileId));
+          if (rr.ok) {
+            const reqs = await rr.json();
+            list = Array.isArray(reqs) ? reqs : (reqs.requirements || []);
+          }
+
+          if (!list.length) {
+            const fr = await apiFetch('/api/features?file_id=' + encodeURIComponent(fileId));
+            if (fr.ok) {
+              const fdata = await fr.json();
+              list = (fdata.features || []).map(item => {
+                const quality = Number(item.quality_score || 0);
+                return {
+                  category: item.category || 'functional',
+                  priority: item.priority || (quality >= 80 ? 'Low' : (quality >= 50 ? 'Medium' : 'High'))
+                };
+              });
+            }
+          }
+
+          if (!list.length) throw new Error();
+
+          const byType = { functional: 0, 'non-functional': 0, business: 0, system: 0 };
+          const byPriority = { high: 0, medium: 0, low: 0 };
+          list.forEach(r => {
+            const c = String(r.category || '').toLowerCase();
+            const p = String(r.priority || 'medium').toLowerCase();
+            const t = c.includes('non') ? 'non-functional' : (c.includes('business') ? 'business' : (c.includes('system') ? 'system' : 'functional'));
+            byType[t] += 1;
+            if (p === 'high' || p === 'low') byPriority[p] += 1; else byPriority.medium += 1;
+          });
+          payload = { by_type: byType, by_priority: byPriority, total: list.length, exported: 0 };
+        }
+
+        setMetrics(payload);
+        drawCharts(payload);
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('metricsSection').style.display = 'grid';
+        document.getElementById('chartsSection').style.display = 'grid';
+      } catch (e) {
+        showToast('Something went wrong', 'error');
+      }
+    }
+
+    function init() {
+      setActivePage('analytics');
+      loadUser();
+      loadFiles();
+
+      document.getElementById('fileSelect').addEventListener('change', (e) => {
+        const fileId = e.target.value;
+        const url = new URL(window.location.href);
+        if (fileId) url.searchParams.set('file_id', fileId); else url.searchParams.delete('file_id');
+        window.history.replaceState({}, '', url.toString());
+        loadAnalytics(fileId);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

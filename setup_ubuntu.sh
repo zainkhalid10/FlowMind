@@ -147,7 +147,7 @@ TESSERACT_CMD=/usr/bin/tesseract
 
 # VLM (Visual Language Model) Configuration
 FLOWMIND_USE_VLM=true
-FLOWMIND_VLM_MODELS=llava:13b,llava:latest
+FLOWMIND_VLM_MODELS=qwen2.5-vl,llava:13b
 FLOWMIND_OLLAMA_VLM_MODEL=llava:13b
 FLOWMIND_OLLAMA_MODEL=llama3:8b
 FLOWMIND_VLM_TIMEOUT_MS=12000

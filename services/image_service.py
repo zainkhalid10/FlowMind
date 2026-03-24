@@ -251,9 +251,47 @@ def check_ollama_status() -> Dict:
     return {'running': False, 'models': []}
 
 
+def _try_vlm_model(model: str, b64: str, prompt: str, ollama_models: list, vlm_timeout: float) -> str:
+    """Try a single VLM model. Returns interpretation string or empty."""
+    if model not in ollama_models:
+        print(f"   ⚠️  Model '{model}' not in Ollama, skipping")
+        return ""
+    try:
+        test_img = Image.new('RGB', (5, 5), color='red')
+        test_buf = io.BytesIO()
+        test_img.save(test_buf, format='PNG')
+        test_b64 = base64.b64encode(test_buf.getvalue()).decode()
+        test_resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": model, "prompt": "OK", "images": [test_b64], "stream": False,
+                  "options": {"num_predict": 5, "temperature": 0.1}},
+            timeout=15
+        )
+        if not test_resp.ok:
+            return ""
+    except Exception:
+        return ""
+    resp = requests.post(
+        "http://localhost:11434/api/generate",
+        json={
+            "model": model,
+            "prompt": prompt,
+            "images": [b64],
+            "stream": False,
+            "options": {"temperature": 0.2, "top_p": 0.9, "num_predict": 500, "num_ctx": 2048, "repeat_penalty": 1.1}
+        },
+        timeout=vlm_timeout
+    )
+    if resp.ok:
+        result = resp.json().get("response", "").strip()
+        return result if result else ""
+    return ""
+
+
 def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, context: str = "") -> Dict:
     """
     Enhanced VLM analysis with smart prompts based on image type and context.
+    Supports FLOWMIND_VLM_MODELS (comma-separated) for hybrid Qwen2.5-VL and LLaVA-13B.
     Returns comprehensive interpretation.
     """
     if not _get_env_bool("FLOWMIND_USE_VLM", False):
@@ -277,12 +315,19 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             'confidence': 0
         }
     
-    model = os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")
+    # Support FLOWMIND_VLM_MODELS (qwen2.5-vl,llava:13b) or single FLOWMIND_OLLAMA_VLM_MODEL
+    vlm_models_str = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
+    if vlm_models_str:
+        models = [m.strip() for m in vlm_models_str.split(",") if m.strip()]
+    else:
+        models = [os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")]
     
-    if model not in ollama_status['models']:
-        print(f"   ❌ Model '{model}' not found in Ollama!")
-        print(f"   📦 Available models: {', '.join(ollama_status['models']) if ollama_status['models'] else 'None'}")
-        print(f"   💡 Install with: ollama pull {model}")
+    ollama_models = ollama_status.get('models', [])
+    available = [m for m in models if m in ollama_models]
+    if not available:
+        print(f"   ❌ No VLM models found. Tried: {models}")
+        print(f"   📦 Available: {', '.join(ollama_models) if ollama_models else 'None'}")
+        print(f"   💡 Install with: ollama pull qwen2.5-vl  or  ollama pull llava:13b")
         return {
             'interpretation': '',
             'requirements': [],
@@ -290,149 +335,70 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             'confidence': 0
         }
     
-    print(f"   🤖 Using VLM: {model}")
+    print(f"   🤖 Using VLM models: {', '.join(available)}")
+    
+    vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+    vlm_enabled = os.getenv("FLOWMIND_USE_VLM", "true").lower() == "true"
+    if not vlm_enabled:
+        print(f"   ⚠️  VLM is disabled (FLOWMIND_USE_VLM=false), skipping VLM analysis")
+        return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
     
     try:
         with open(image_path, 'rb') as f:
             image_data = f.read()
-            # Optimize: Check image size and warn if very large
             image_size_mb = len(image_data) / (1024 * 1024)
             if image_size_mb > 10:
                 print(f"   ⚠️  Large image detected ({image_size_mb:.1f} MB) - processing may take longer")
             b64 = base64.b64encode(image_data).decode('utf-8')
         
-        # Build smart prompt based on image type
         prompt = build_smart_prompt(image_type, ocr_text, context)
         
-        # Get timeout from environment or use default (60 seconds - reduced for faster failure)
-        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+        print(f"   📤 Sending image to VLM... (timeout: {vlm_timeout}s per model)")
+        interpretations = []
+        for model in available:
+            print(f"   🔍 Trying model: {model}")
+            result = _try_vlm_model(model, b64, prompt, ollama_models, vlm_timeout)
+            if result:
+                interpretations.append((model, result))
+                print(f"   ✅ {model}: {len(result)} chars")
+            else:
+                print(f"   ⚠️  {model}: no response or failed")
         
-        # Check if VLM is enabled (can be disabled if models are slow/unavailable)
-        vlm_enabled = os.getenv("FLOWMIND_USE_VLM", "true").lower() == "true"
-        if not vlm_enabled:
-            print(f"   ⚠️  VLM is disabled (FLOWMIND_USE_VLM=false), skipping VLM analysis")
-            return {
-                'interpretation': '',
-                'requirements': [],
-                'components': [],
-                'confidence': 0
-            }
+        if not interpretations:
+            print(f"   ⚠️  All VLM models failed or returned empty")
+            return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
         
-        # Quick health check - test if model responds quickly (skip if slow)
-        print(f"   🔍 Quick VLM health check (15s timeout)...")
-        try:
-            # Test with tiny image first
-            test_img = Image.new('RGB', (5, 5), color='red')
-            test_buf = io.BytesIO()
-            test_img.save(test_buf, format='PNG')
-            test_b64 = base64.b64encode(test_buf.getvalue()).decode()
-            
-            test_resp = requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": model,
-                    "prompt": "OK",
-                    "images": [test_b64],
-                    "stream": False,
-                    "options": {"num_predict": 5, "temperature": 0.1}
-                },
-                timeout=15  # Quick 15s test
-            )
-            if not test_resp.ok:
-                print(f"   ⚠️  VLM model {model} is not responding (HTTP {test_resp.status_code}), skipping")
-                return {
-                    'interpretation': '',
-                    'requirements': [],
-                    'components': [],
-                    'confidence': 0
-                }
-            print(f"   ✅ VLM health check passed")
-        except requests.exceptions.Timeout:
-            print(f"   ⚠️  VLM model {model} timed out on health check (15s), skipping VLM analysis")
-            print(f"   💡 VLM models appear to be slow or unavailable")
-            print(f"   💡 Set FLOWMIND_USE_VLM=false in .env to disable VLM permanently")
-            return {
-                'interpretation': '',
-                'requirements': [],
-                'components': [],
-                'confidence': 0
-            }
-        except Exception as e:
-            print(f"   ⚠️  VLM health check failed: {type(e).__name__}: {str(e)[:50]}, skipping VLM")
-            return {
-                'interpretation': '',
-                'requirements': [],
-                'components': [],
-                'confidence': 0
-            }
+        # Merge interpretations: concatenate with separator, deduplicate lines
+        merged = "\n\n---\n\n".join(r for _, r in interpretations)
+        seen_lines = set()
+        deduped_lines = []
+        for line in merged.split("\n"):
+            line_stripped = line.strip()
+            key = line_stripped.lower()
+            if key and key not in seen_lines:
+                seen_lines.add(key)
+                deduped_lines.append(line)
+        merged = "\n".join(deduped_lines)
         
-        print(f"   📤 Sending image to VLM... (this may take 30-120 seconds, timeout: {vlm_timeout}s)")
-        print(f"   ⏳ Please wait, VLM models can take time to process images...")
-        
-        # Optimize request parameters - reduce for faster processing
-        resp = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": model,
-                "prompt": prompt,
-                "images": [b64],
-                "stream": False,
-                "options": {
-                    "temperature": 0.2,
-                    "top_p": 0.9,
-                    "num_predict": 500,  # Reduced from 1000 for faster processing
-                    "num_ctx": 2048,  # Reduced from 4096
-                    "repeat_penalty": 1.1
-                }
-            },
-            timeout=vlm_timeout
-        )
-        
-        if resp.ok:
-            result = resp.json().get("response", "").strip()
-            
-            if not result:
-                print(f"   ⚠️  VLM returned empty response")
-                return {
-                    'interpretation': '',
-                    'requirements': [],
-                    'components': [],
-                    'confidence': 0
-                }
-            
-            print(f"   ✅ VLM analysis complete ({len(result)} chars)")
-            
-            # Parse structured response
-            parsed = parse_vlm_response(result, image_type)
-            
-            return {
-                'interpretation': result,
-                'requirements': parsed.get('requirements', []),
-                'components': parsed.get('components', []),
-                'relationships': parsed.get('relationships', []),
-                'confidence': 85
-            }
-        else:
-            print(f"   ❌ VLM request failed: HTTP {resp.status_code}")
-            print(f"   Error: {resp.text[:200]}")
+        print(f"   ✅ VLM analysis complete ({len(merged)} chars from {len(interpretations)} model(s))")
+        parsed = parse_vlm_response(merged, image_type)
+        return {
+            'interpretation': merged,
+            'requirements': parsed.get('requirements', []),
+            'components': parsed.get('components', []),
+            'relationships': parsed.get('relationships', []),
+            'confidence': 85
+        }
             
     except requests.exceptions.Timeout:
-        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
         print(f"   ⏱️  VLM request timed out after {vlm_timeout}s")
-        print(f"   ⚠️  VLM model {model} appears to be slow or unavailable")
-        print(f"   💡 To disable VLM: Set FLOWMIND_USE_VLM=false in .env")
-        print(f"   💡 To increase timeout: Set FLOWMIND_VLM_TIMEOUT=120 in .env")
+        print(f"   💡 Set FLOWMIND_USE_VLM=false or FLOWMIND_VLM_TIMEOUT=120 in .env")
     except Exception as e:
         print(f"   ❌ VLM analysis exception: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
     
-    return {
-        'interpretation': '',
-        'requirements': [],
-        'components': [],
-        'confidence': 0
-    }
+    return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
 
 
 def build_smart_prompt(image_type: str, ocr_text: str, context: str) -> str:

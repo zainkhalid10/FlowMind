@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Lead Workspace - FlowMind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: Inter, sans-serif; background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #134e4a 100%); min-height: 100vh; padding: 24px; color: #e2e8f0; }
+        .shell { max-width: 1240px; margin: 0 auto; }
+        .panel { background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(45, 212, 191, 0.18); border-radius: 20px; box-shadow: 0 20px 45px rgba(2, 6, 23, 0.42); padding: 22px; }
+        .panel p, .muted { color: #94a3b8; }
+        .metric { padding: 20px; border-radius: 16px; background: rgba(2, 6, 23, 0.35); border: 1px solid rgba(45, 212, 191, 0.12); }
+        .value { font-size: 1.9rem; font-weight: 700; color: #f8fafc; }
+        .list-row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+        .list-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="panel mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                <div>
+                    <h1 class="mb-2"><i class="fas fa-users"></i> Team Lead Workspace</h1>
+                    <p class="mb-0">Team-level execution view. Track member load, assign approved requirements, and push work forward.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="/approve" class="btn btn-outline-light"><i class="fas fa-tasks"></i> Assign Work</a>
+                    <a href="/dashboard" class="btn btn-outline-light"><i class="fas fa-layer-group"></i> Shared Dashboard</a>
+                    <a href="/" class="btn btn-outline-light"><i class="fas fa-house"></i> Home</a>
+                </div>
+            </div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+            <div class="row g-3">
+                <div class="col-md-4"><div class="metric"><div class="muted">Team Uploads</div><div class="value" id="team-uploads">0</div></div></div>
+                <div class="col-md-4"><div class="metric"><div class="muted">Team Requirements</div><div class="value" id="team-features">0</div></div></div>
+                <div class="col-md-4"><div class="metric"><div class="muted">Assigned Tasks</div><div class="value" id="team-tasks">0</div></div></div>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-5">
+                <div class="panel h-100">
+                    <h3 class="h5 mb-3">Team Members</h3>
+                    <div id="members"></div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="panel h-100">
+                    <h3 class="h5 mb-3">Execution Queue</h3>
+                    <div id="tasks"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) { window.location.href = '/'; }
+        const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+        function showError(message) {
+            const el = document.getElementById('error');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        async function load() {
+            try {
+                const meResponse = await fetch('/api/me?token=' + encodeURIComponent(token), { headers });
+                if (!meResponse.ok) throw new Error('Failed to load user profile');
+                const me = await meResponse.json();
+                if (me.team_id == null) {
+                    showError('You are not assigned to a team yet.');
+                    return;
+                }
+
+                const [progress, users, projects] = await Promise.all([
+                    fetch('/api/progress?token=' + encodeURIComponent(token), { headers }).then(r => r.json()),
+                    fetch('/api/teams/' + me.team_id + '/users?token=' + encodeURIComponent(token), { headers }).then(r => r.json()),
+                    fetch('/api/projects', { headers }).then(r => r.json())
+                ]);
+
+                document.getElementById('team-uploads').textContent = progress.uploads || 0;
+                document.getElementById('team-features').textContent = progress.features || 0;
+
+                const members = users.users || [];
+                document.getElementById('members').innerHTML = members.map(function(user) {
+                    return '<div class="list-row"><div><strong>' + (user.username || user.email) + '</strong><div class="muted">' + (user.role || 'member').replace('_', ' ') + '</div></div><div class="muted">Team ' + me.team_id + '</div></div>';
+                }).join('') || '<p class="muted mb-0">No members assigned.</p>';
+
+                const memberIds = members.map(function(user) { return user.id; });
+                let tasks = [];
+                for (const project of (projects.projects || [])) {
+                    const taskResponse = await fetch('/api/projects/' + project.id + '/tasks', { headers });
+                    if (!taskResponse.ok) continue;
+                    const taskData = await taskResponse.json();
+                    const visible = (taskData.tasks || []).filter(function(task) {
+                        return task.assigned_to_user_id && memberIds.includes(task.assigned_to_user_id);
+                    }).map(function(task) {
+                        return Object.assign({ project_name: project.name }, task);
+                    });
+                    tasks = tasks.concat(visible);
+                }
+
+                document.getElementById('team-tasks').textContent = tasks.length;
+                document.getElementById('tasks').innerHTML = tasks.map(function(task) {
+                    return '<div class="list-row"><div><strong>' + task.title + '</strong><div class="muted">' + task.project_name + '</div></div><div class="text-end"><div>' + (task.status || 'todo') + '</div><div class="muted">Assignee #' + task.assigned_to_user_id + '</div></div></div>';
+                }).join('') || '<p class="muted mb-0">No assigned project tasks yet. Use the approval page to assign approved work.</p>';
+            } catch (error) {
+                showError(error.message || 'Failed to load team workspace');
+            }
+        }
+
+        load();
+    </script>
+</body>
+</html>

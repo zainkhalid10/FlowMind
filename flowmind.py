@@ -2,9 +2,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, sta
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 import pytesseract
-from database import SessionLocal, ParsedFile, ImageMeta, User, Feature, init_db
+from database import SessionLocal, ParsedFile, ImageMeta, User, Feature, Team, init_db
 from rag_agent import get_agent
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -16,6 +17,7 @@ from pypdf import PdfReader
 import docx
 import pptx
 import os
+import time
 import uuid
 import html
 import hashlib
@@ -130,6 +132,21 @@ elif not tesseract_path:
 
 load_dotenv()  # load env from .env so reload keeps VLM settings
 
+
+def _get_soffice_path():
+    """Return path to LibreOffice soffice for DOC/PPT conversion. Cross-platform."""
+    env_path = os.getenv("LIBREOFFICE_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
+    candidates = [
+        shutil.which("soffice"),
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",  # macOS
+        r"C:\Program Files\LibreOffice\program\soffice.exe",  # Windows default
+        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",  # Windows x86
+    ]
+    return next((p for p in candidates if p and os.path.exists(p)), None)
+
+
 # CORS configuration
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -146,7 +163,7 @@ app.add_middleware(
 )
 
 # Include routers
-from routes import auth_routes, upload_routes, dashboard_routes, training_routes, approval_routes
+from routes import auth_routes, upload_routes, dashboard_routes, training_routes, approval_routes, integration_routes, project_routes, google_oauth_routes, review_routes
 from routes.approval_routes import parse_and_save_features
 
 app.include_router(auth_routes.router)
@@ -154,8 +171,14 @@ app.include_router(upload_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(training_routes.router)
 app.include_router(approval_routes.router)
+app.include_router(integration_routes.router)
+app.include_router(project_routes.router)
+app.include_router(google_oauth_routes.router)
+app.include_router(review_routes.router)
 
-UPLOAD_DIR = "uploads"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Favicon endpoint
@@ -166,7 +189,10 @@ async def favicon():
     return Response(content="", media_type="image/x-icon")
 
 # Serve static uploaded files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# Serve static frontend files
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 REQUIREMENTS_VIEWS = {}
 
@@ -180,9 +206,9 @@ def load_views():
         if os.path.exists(VIEWS_FILE):
             with open(VIEWS_FILE, "r", encoding="utf-8") as f:
                 REQUIREMENTS_VIEWS = json.load(f)
-                print(f"📚 Loaded {len(REQUIREMENTS_VIEWS)} persisted views")
+                print(f"[views] Loaded {len(REQUIREMENTS_VIEWS)} persisted views")
     except Exception as e:
-        print(f"⚠️ Failed to load views: {str(e)}")
+        print(f"[views] Failed to load views: {str(e)}")
         REQUIREMENTS_VIEWS = {}
 
 def save_views():
@@ -191,7 +217,7 @@ def save_views():
         with open(VIEWS_FILE, "w", encoding="utf-8") as f:
             json.dump(REQUIREMENTS_VIEWS, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"⚠️ Failed to save views: {str(e)}")
+        print(f"[views] Failed to save views: {str(e)}")
 
 # Load views on startup
 load_views()
@@ -205,6 +231,7 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    role: Optional[str] = None  # Optional: Manager, Team Head, Member - validated at login
 
 @app.post("/api/signup")
 async def signup(request: SignupRequest, db: Session = Depends(get_db)):
@@ -229,21 +256,22 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
             )
         
         # No maximum length limit - using pbkdf2_sha256 which has no 72-byte restriction
-        
-        # Create new user immediately
+        default_team = db.query(Team).first()
         hashed_password = get_password_hash(request.password)
         new_user = User(
             email=request.email,
             username=request.username,
-            hashed_password=hashed_password
+            hashed_password=hashed_password,
+            role="member",
+            team_id=default_team.id if default_team else None
         )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
-        # Create access token
-        access_token = create_access_token(data={"sub": new_user.id})
-        
+        role = getattr(new_user, "role", "member") or "member"
+        team_id = getattr(new_user, "team_id", None)
+        access_token = create_access_token(data={"sub": new_user.id, "role": role, "team_id": team_id})
+        team_name = default_team.name if default_team else None
         return {
             "status": "success",
             "message": "Account created successfully",
@@ -252,7 +280,10 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
             "user": {
                 "id": new_user.id,
                 "email": new_user.email,
-                "username": new_user.username
+                "username": new_user.username,
+                "role": role,
+                "team_id": team_id,
+                "team_name": team_name
             }
         }
     except HTTPException:
@@ -291,19 +322,24 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is inactive"
             )
-        
-        # Create access token
-        access_token = create_access_token(data={"sub": user.id})
-        
-        # Run model health check in background (non-blocking)
+        role = getattr(user, "role", "member") or "member"
+        role_sel = (request.role or "").strip().lower()
+        if role_sel and role_sel not in ("manager", "team_head", "member"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role selected")
+        if role_sel and role_sel != role.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This account is a {role.replace('_', ' ').title()}. Please select '{role.replace('_', ' ').title()}' or use the correct account."
+            )
+        team_id = getattr(user, "team_id", None)
+        access_token = create_access_token(data={"sub": user.id, "role": role, "team_id": team_id})
+        team_name = (getattr(user, "team", None) and getattr(user.team, "name", None)) or None
         try:
             from services.model_health import check_models_async
-            # Schedule background task
             asyncio.create_task(check_models_async())
             print(f"🔍 Model health check scheduled for user {user.id}")
         except Exception as e:
             print(f"⚠️ Failed to schedule model health check: {e}")
-        
         return {
             "status": "success",
             "message": "Login successful",
@@ -312,7 +348,10 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             "user": {
                 "id": user.id,
                 "email": user.email,
-                "username": user.username
+                "username": user.username,
+                "role": role,
+                "team_id": team_id,
+                "team_name": team_name
             }
         }
     except HTTPException:
@@ -363,7 +402,13 @@ def _vlm_summarize(image_path: str, context: str) -> str:
 # MAIN ANALYZE FUNCTION
 # ==============================================================
 
-async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_session = None, progress_tracker_id: str = None):
+async def _analyze_document_internal(
+    file: UploadFile,
+    user_id: int = None,
+    db_session=None,
+    progress_tracker_id: str = None,
+    project_id: int = None,
+):
     """Internal function: Extracts text, images, and OCR from any uploaded document."""
     from services.progress_service import ProcessingStage
     from services.progress_storage import get_progress_tracker
@@ -509,11 +554,7 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
     # ----------- DOC (legacy) PARSING via LibreOffice conversion -----------
     elif file.filename.endswith(".doc"):
         # Convert .doc to .docx using LibreOffice if available
-        soffice_path_candidates = [
-            shutil.which("soffice"),
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-        ]
-        soffice = next((p for p in soffice_path_candidates if p and os.path.exists(p)), None)
+        soffice = _get_soffice_path()
         if not soffice:
             text_output = "Unsupported file format (.doc) and LibreOffice not found for conversion."
         else:
@@ -599,11 +640,7 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
 
     # ----------- PPT (legacy) PARSING via LibreOffice conversion -----------
     elif file.filename.endswith(".ppt"):
-        soffice_path_candidates = [
-            shutil.which("soffice"),
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-        ]
-        soffice = next((p for p in soffice_path_candidates if p and os.path.exists(p)), None)
+        soffice = _get_soffice_path()
         if not soffice:
             text_output = "Unsupported file format (.ppt) and LibreOffice not found for conversion."
         else:
@@ -751,7 +788,8 @@ async def _analyze_document_internal(file: UploadFile, user_id: int = None, db_s
             detected_shapes=image_count,
             summary=summary,
             full_text_path=text_file_path,
-            user_id=user_id  # Link to user
+            user_id=user_id,  # Link to user
+            project_id=project_id,
         )
         db.add(record)
         db.commit()
@@ -1047,6 +1085,16 @@ async def login_page():
         
         <form id="loginForm">
             <div class="mb-3">
+                <label for="loginRole" class="form-label">Select your role</label>
+                <select class="form-control form-select" id="loginRole" name="role" style="padding: 0.875rem 1rem; border-radius: 12px; font-size: 1rem;">
+                    <option value="">— Choose role (optional) —</option>
+                    <option value="manager">Manager</option>
+                    <option value="team_head">Team Head</option>
+                    <option value="member">Member</option>
+                </select>
+                <small class="text-muted">Pick the role that matches your account.</small>
+            </div>
+            <div class="mb-3">
                 <label for="email" class="form-label">Email Address</label>
                 <input type="email" class="form-control" id="email" name="email" required autocomplete="email" placeholder="Enter your email">
             </div>
@@ -1180,9 +1228,11 @@ async def login_page():
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
             
+            const roleEl = document.getElementById('loginRole');
             const formData = {
                 email: document.getElementById('email').value,
-                password: document.getElementById('password').value
+                password: document.getElementById('password').value,
+                role: roleEl ? roleEl.value : ''
             };
             
             try {
@@ -1198,14 +1248,19 @@ async def login_page():
                     localStorage.setItem('access_token', data.access_token);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     showAlert('Login successful! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = '/extract', 1000);
+                    const role = (data.user && data.user.role) || 'member';
+                    const target = role === 'manager' ? '/manager' : (role === 'team_head' ? '/team' : '/dashboard');
+                    setTimeout(() => window.location.href = target, 1000);
                 } else {
-                    showAlert(data.detail || 'Login failed. Please try again.');
+                    let msg = data.detail || 'Login failed. Please try again.';
+                    if (Array.isArray(msg)) msg = (msg[0] && msg[0].msg) ? msg.map(function(x){ return x.msg; }).join('; ') : String(msg);
+                    else if (msg && typeof msg === 'object' && msg.msg) msg = msg.msg;
+                    showAlert(msg);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
                 }
             } catch (error) {
-                showAlert('Network error. Please check your connection and try again.');
+                showAlert('Network error: ' + (error.message || 'Please check your connection and try again.'));
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
             }
@@ -1732,6 +1787,18 @@ async def about_page():
                     process and understand their documents.
                 </p>
                 
+                <h2>Implementation Phases (Role-Based Access)</h2>
+                <p>The following six phases are implemented in the application:</p>
+                <ul>
+                    <li><strong>Phase 1 &ndash; Schema:</strong> Teams table, User role and team_id; DB migration and seed.</li>
+                    <li><strong>Phase 2 &ndash; Auth:</strong> JWT includes role and team_id; login/signup return role and team_name.</li>
+                    <li><strong>Phase 3 &ndash; Scoped APIs:</strong> My uploads, progress, features, and teams APIs filtered by Manager / Team Head / Member visibility.</li>
+                    <li><strong>Phase 4 &ndash; Manager &amp; Team UI:</strong> Manager and My Team pages and dashboard nav (visible when your role is manager or team_head).</li>
+                    <li><strong>Phase 5 &ndash; Requirements UI:</strong> Simplified requirements view and collapsible feedback on the approve page.</li>
+                    <li><strong>Phase 6 &ndash; Post-login redirect:</strong> Redirect to dashboard, manager, or team based on role after login.</li>
+                </ul>
+                <p>To see Manager / My Team links, log in as a user with role <code>manager</code> or <code>team_head</code>. Restart the server after code changes to load the latest implementation.</p>
+                
                 <h2>Technology Stack</h2>
                 <p>
                     FlowMind is built using state-of-the-art technologies including FastAPI, LangChain, ChromaDB, 
@@ -1748,11 +1815,18 @@ async def about_page():
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the landing page."""
-    import os
-    landing_path = os.path.join("static", "landing.html")
+    # Try to serve index.html from root first
+    index_path = os.path.join(BASE_DIR, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    
+    # Fallback to static/landing.html
+    landing_path = os.path.join(STATIC_DIR, "landing.html")
     if os.path.exists(landing_path):
         with open(landing_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
+    
     # Fallback to embedded HTML if static file doesn't exist
     return """
     <!DOCTYPE html>
@@ -3052,6 +3126,26 @@ async def root():
     """
 
 
+@app.get("/index.html", response_class=HTMLResponse)
+async def serve_index():
+    """Serve the index.html landing page."""
+    index_path = os.path.join(BASE_DIR, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return RedirectResponse(url="/", status_code=302)
+
+
+@app.get("/login.html", response_class=HTMLResponse)
+async def serve_login():
+    """Serve the login.html page."""
+    login_path = os.path.join(BASE_DIR, "login.html")
+    if os.path.exists(login_path):
+        with open(login_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return RedirectResponse(url="/", status_code=302)
+
+
 # NOTE: Upload endpoints moved to routes/upload_routes.py to avoid duplicate route definitions
 # The routes are included via app.include_router(upload_router) below
 
@@ -3613,6 +3707,7 @@ def get_records(current_user: User = Depends(get_current_user)):
 # ==============================================================
 # RAG AGENT ENDPOINTS
 # ==============================================================
+_DEBUG_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug-0e985e.log")
 
 @app.post("/analyze_with_agent")
 async def _analyze_with_agent_internal(
@@ -3620,7 +3715,8 @@ async def _analyze_with_agent_internal(
     user_id: int = None,
     db_session = None,
     progress_tracker_id: str = None,
-    basic_extraction_data: dict = None
+    basic_extraction_data: dict = None,
+    project_id: int = None,
 ):
     """Internal function for AI agent analysis - ensures response is always returned.
     Optionally merges Basic Extraction data (text + image summaries) for improved results."""
@@ -3638,6 +3734,12 @@ async def _analyze_with_agent_internal(
             # Tracker should already be in UPLOADING stage from start()
             pass
     
+    # #region agent log
+    try:
+        f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "A", "location": "flowmind.py:_analyze_with_agent_internal", "message": "entry processing started", "data": {"filename": file.filename}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+    except Exception:
+        pass
+    # #endregion
     try:
         # First, extract text using existing functionality
         filepath = os.path.join(UPLOAD_DIR, file.filename)
@@ -3746,11 +3848,7 @@ async def _analyze_with_agent_internal(
                 pass
 
         elif file.filename.endswith(".doc"):
-            soffice_path_candidates = [
-                shutil.which("soffice"),
-                "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-            ]
-            soffice = next((p for p in soffice_path_candidates if p and os.path.exists(p)), None)
+            soffice = _get_soffice_path()
             if not soffice:
                 text_output = "Unsupported file format (.doc) and LibreOffice not found for conversion."
             else:
@@ -3821,11 +3919,7 @@ async def _analyze_with_agent_internal(
                         pass
 
         elif file.filename.endswith(".ppt"):
-            soffice_path_candidates = [
-                shutil.which("soffice"),
-                "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-            ]
-            soffice = next((p for p in soffice_path_candidates if p and os.path.exists(p)), None)
+            soffice = _get_soffice_path()
             if not soffice:
                 text_output = "Unsupported file format (.ppt) and LibreOffice not found for conversion."
             else:
@@ -4099,7 +4193,13 @@ IMPORTANT:
         
         # Get agent in thread pool to avoid blocking (with timeout)
         try:
-            agent = await run_in_thread(get_agent, user_id=user_id, timeout=60.0)
+            agent = await run_in_thread(get_agent, user_id=user_id, timeout=180.0)
+            # #region agent log
+            try:
+                f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "D", "location": "flowmind.py:after get_agent", "message": "agent initialized", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+            except Exception:
+                pass
+            # #endregion
             print("✅ AI agent initialized, processing document...")
         except asyncio.TimeoutError:
             raise HTTPException(
@@ -4150,7 +4250,12 @@ IMPORTANT:
                 status_code=500,
                 detail=f"Error processing document: {str(e)}"
             )
-        
+        # #region agent log
+        try:
+            f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "D", "location": "flowmind.py:after process_document", "message": "process_document done", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+        except Exception:
+            pass
+        # #endregion
         if agent_result.get("status") != "success":
             msg = agent_result.get("message") or "Agent failed to process document"
             raise HTTPException(status_code=500, detail=msg)
@@ -4194,7 +4299,12 @@ IMPORTANT:
             
             print(f"📊 Result keys: {list(requirements_result.keys())}")
             print(f"📊 Result status: {requirements_result.get('status', 'N/A')}")
-            
+            # #region agent log
+            try:
+                f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "D", "location": "flowmind.py:after extract_requirements", "message": "extract_requirements done", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+            except Exception:
+                pass
+            # #endregion
             # Validate result structure
             if requirements_result.get("status") != "success":
                 print(f"⚠️ Extraction returned non-success status: {requirements_result.get('status')}")
@@ -4325,12 +4435,19 @@ complete context from both basic extraction and AI analysis.
                 summary=f"Processed with RAG agent. {agent_result['message']}",
                 full_text_path=text_file_path,
                 user_id=user_id,  # Link to user
+                project_id=project_id,
                 view_id=view_id  # Set view_id upfront
             )
             db.add(record)
             db.commit()
             db.refresh(record)
 
+            # #region agent log
+            try:
+                f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "B", "location": "flowmind.py:before ImageMeta loop", "message": "about to save image metadata", "data": {"n_images": len(image_metadata)}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+            except Exception:
+                pass
+            # #endregion
             # Save image metadata
             for image_id, image_path, page_num, ocr_text in image_metadata:
                 img_meta = ImageMeta(
@@ -4344,6 +4461,12 @@ complete context from both basic extraction and AI analysis.
             
             print(f"✅ Database record saved: view_id={view_id}, file_id={record.id}")
         except Exception as e:
+            # #region agent log
+            try:
+                f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "B", "location": "flowmind.py:db except", "message": "database block raised", "data": {"error": str(e), "type": type(e).__name__}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+            except Exception:
+                pass
+            # #endregion
             print(f"❌ Database error: {str(e)}")
             import traceback
             traceback.print_exc()
@@ -4371,9 +4494,8 @@ complete context from both basic extraction and AI analysis.
             
             # Also try to get from image_metadata if VLM summaries are available
             # This would be populated if VLM processing was done
-            if not image_summaries_for_features:
-                # Try to get from database ImageMeta records (if they have VLM summaries stored)
-                from database import ImageMeta
+            # (ImageMeta is used at module level above; do not add a local import here or it shadows and causes UnboundLocalError at first use.)
+            if not image_summaries_for_features and record is not None:
                 db_img = SessionLocal()
                 try:
                     img_records = db_img.query(ImageMeta).filter(ImageMeta.file_id == record.id).all()
@@ -4405,7 +4527,8 @@ complete context from both basic extraction and AI analysis.
                             user_id, 
                             record.id, 
                             db_features,
-                            image_summaries=image_summaries_for_features
+                            image_summaries=image_summaries_for_features,
+                            project_id=project_id,
                         )
                         print(f"📋 Saved {features_count} features for user approval (merged from text + images)")
                     finally:
@@ -4438,6 +4561,7 @@ complete context from both basic extraction and AI analysis.
                 "filename": file.filename,
                 "summary": f"Extracted {len(text_output.split())} words and {image_count} image(s)",
                 "response": requirements_result.get("response", ""),
+                "project_id": project_id,
                 "images": image_summaries
             }
             # Save views asynchronously to avoid blocking
@@ -4695,19 +4819,13 @@ async def view_requirements(view_id: str):
         for item_text, status_info in items:
             status_class = ""
             status_badge = ""
-            quality_badge = ""
-            
             if status_info:
                 status = status_info.get("status", "pending")
                 status_class = f" status-{status}"
                 status_label = status.capitalize()
                 status_badge = f'<span class="status-pill status-{status}">{status_label}</span>'
-                
-                quality_score = status_info.get("quality_score", 0)
-                if quality_score:
-                    quality_badge = f'<span class="quality-pill">Q{quality_score}</span>'
 
-            safe_html += f'<li class="simple-item{status_class}"><span class="item-text">{item_text}</span>{status_badge}{quality_badge}</li>'
+            safe_html += f'<li class="simple-item{status_class}"><span class="item-text">{item_text}</span>{status_badge}</li>'
         
         safe_html += '''
                 </ul>
@@ -4722,20 +4840,22 @@ async def view_requirements(view_id: str):
     pending_count = feature_stats.get("pending", 0)
     total_count = feature_stats.get("total", 0)
     status_summary_html = f"""
-        <div class="status-summary">
-            <div class="status-chip chip-approved"><i class='fas fa-check-circle'></i> Approved: {approved_count}</div>
-            <div class="status-chip chip-pending"><i class='fas fa-hourglass-half'></i> Pending: {pending_count}</div>
-            <div class="status-chip chip-denied"><i class='fas fa-times-circle'></i> Denied: {denied_count}</div>
-            <div class="status-chip chip-total"><i class='fas fa-list'></i> Total tracked: {total_count}</div>
+        <div class="status-summary" style="margin-bottom:1rem;font-size:0.9rem;color:#64748b;">
+            <strong>Summary:</strong> Approved: {approved_count} | Pending: {pending_count} | Denied: {denied_count} | Total: {total_count}
         </div>
     """
     
-    # Build images section HTML
+    # Build images section HTML - normalize path so "View Image" works (always /uploads/...)
     items = []
     for img in images:
         image_id = esc(str(img.get("image_id", "")))
         page = esc(str(img.get("page", "?")))
-        path = esc((img.get("path", "") or "").replace("\\", "/"))
+        raw_path = (img.get("path", "") or "").replace("\\", "/")
+        if "uploads" in raw_path:
+            path = raw_path.split("uploads", 1)[-1].lstrip("/")
+            path = esc("uploads/" + path if path else "uploads")
+        else:
+            path = esc("uploads/" + os.path.basename(raw_path) if raw_path else "uploads")
         ocr = esc((img.get("ocr") or "").strip()[:1500])
         raw_summary = (img.get("summary") or "").strip()
         summary = esc(raw_summary)
@@ -4887,6 +5007,71 @@ async def view_requirements(view_id: str):
             .back-btn:hover {{
                 background: #1d4ed8;
             }}
+
+            .export-integrate-bar {{
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+                padding: 1rem 1.25rem;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+            }}
+            .export-label {{
+                font-size: 0.9rem;
+                color: #64748b;
+                font-weight: 500;
+            }}
+            .export-btn {{
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.5rem 1rem;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+                border-radius: 6px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                transition: all 0.2s;
+            }}
+            .export-btn:hover {{
+                background: #1d4ed8;
+                color: white;
+            }}
+            .export-divider {{
+                color: #cbd5e1;
+                margin: 0 0.25rem;
+            }}
+            .integrate-btn {{
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.5rem 1rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                cursor: pointer;
+                background: #fff;
+                color: #334155;
+                transition: all 0.2s;
+            }}
+            .integrate-btn:hover {{
+                background: #f1f5f9;
+                border-color: #cbd5e1;
+            }}
+            .integrate-btn.integrate-trello:hover {{ background: #0079bf; color: white; border-color: #0079bf; }}
+            .integrate-btn.integrate-jira:hover {{ background: #0052cc; color: white; border-color: #0052cc; }}
+            .integrate-status {{
+                font-size: 0.85rem;
+                color: #64748b;
+                margin-left: auto;
+            }}
+            .integrate-status.success {{ color: #166534; }}
+            .integrate-status.error {{ color: #991b1b; }}
 
             .card {{
                 background: #ffffff;
@@ -5261,6 +5446,9 @@ async def view_requirements(view_id: str):
         </style>
         <script>
             document.addEventListener('DOMContentLoaded', function() {{
+                const viewId = '{view_id}';
+                const statusEl = document.getElementById('integrate-status');
+
                 // Add click handlers to all dropdown toggles
                 document.querySelectorAll('.dropdown-toggle').forEach(function(button) {{
                     button.addEventListener('click', function() {{
@@ -5279,6 +5467,29 @@ async def view_requirements(view_id: str):
                         }}
                     }});
                 }});
+
+                // Trello / Jira integration buttons (send auth token when available for integration log)
+                document.querySelectorAll('.integrate-btn').forEach(function(btn) {{
+                    btn.addEventListener('click', async function() {{
+                        const platform = this.getAttribute('data-platform');
+                        statusEl.textContent = 'Sending...';
+                        statusEl.className = 'integrate-status';
+                        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
+                        const headers = {{ 'Content-Type': 'application/json' }};
+                        if (token) headers['Authorization'] = 'Bearer ' + token;
+                        try {{
+                            const url = '/api/integration/' + platform + '/' + viewId;
+                            const res = await fetch(url, {{ method: 'POST', headers: headers, body: '{{}}' }});
+                            const data = await res.json();
+                            statusEl.textContent = data.message || (data.success ? 'Done!' : 'Failed');
+                            statusEl.className = 'integrate-status ' + (data.success ? 'success' : 'error');
+                        }} catch (e) {{
+                            statusEl.textContent = 'Error: ' + e.message;
+                            statusEl.className = 'integrate-status error';
+                        }}
+                        setTimeout(function() {{ statusEl.textContent = ''; }}, 5000);
+                    }});
+                }});
             }});
         </script>
     </head>
@@ -5293,6 +5504,21 @@ async def view_requirements(view_id: str):
                 <i class="fas fa-arrow-left"></i>
                 Back to FlowMind
             </a>
+
+            <div class="export-integrate-bar">
+                <span class="export-label"><i class="fas fa-download"></i> Export:</span>
+                <a href="/api/export/{view_id}/csv" class="export-btn" download><i class="fas fa-file-csv"></i> CSV</a>
+                <a href="/api/export/{view_id}/json" class="export-btn" download><i class="fas fa-file-code"></i> JSON</a>
+                <span class="export-divider">|</span>
+                <span class="export-label"><i class="fas fa-paper-plane"></i> Integrate:</span>
+                <button type="button" class="integrate-btn integrate-trello" data-platform="trello" title="Push to Trello (requires TRELLO_API_KEY, TRELLO_TOKEN, TRELLO_LIST_ID in .env)">
+                    <i class="fab fa-trello"></i> Trello
+                </button>
+                <button type="button" class="integrate-btn integrate-jira" data-platform="jira" title="Push to Jira (requires JIRA_URL, JIRA_PROJECT_KEY, JIRA_EMAIL, JIRA_API_TOKEN in .env)">
+                    <i class="fab fa-jira"></i> Jira
+                </button>
+                <span id="integrate-status" class="integrate-status"></span>
+            </div>
 
             <div class="card">
                 <div class="card-header">

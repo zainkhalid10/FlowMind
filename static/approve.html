@@ -32,17 +32,17 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(15, 23, 42, 0.86);
+            border: 1px solid rgba(96, 165, 250, 0.18);
             border-radius: 24px;
-            box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35),
-                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 70px rgba(2, 6, 23, 0.45),
+                        0 0 0 1px rgba(96, 165, 250, 0.08);
             padding: 40px;
             backdrop-filter: blur(20px);
             animation: fadeInUp 0.6s ease-out;
             position: relative;
             overflow: hidden;
-            color: #0f172a;
+            color: #e2e8f0;
         }
         
         .container h1,
@@ -51,7 +51,7 @@
         .container p,
         .container span,
         .container div:not([class*="gradient"]) {
-            color: #0f172a;
+            color: #e2e8f0;
         }
         
         .container::before {
@@ -707,12 +707,93 @@
         .features-list .feature-card {
             animation-delay: calc(var(--index) * 0.1s);
         }
+
+        body {
+            background: linear-gradient(180deg, #e2e8f0 0%, #f8fafc 45%, #eef2f7 100%);
+            color: #0f172a;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+            backdrop-filter: none;
+        }
+
+        .container::before {
+            height: 3px;
+            background: linear-gradient(90deg, #0f3d5e, #2563eb, #0f766e);
+            animation: none;
+        }
+
+        .header::after {
+            background: linear-gradient(90deg, #0f3d5e, #2563eb);
+        }
+
+        h1 {
+            color: #0f172a;
+            background: none;
+            -webkit-text-fill-color: initial;
+        }
+
+        h1::after {
+            content: none;
+        }
+
+        .btn {
+            box-shadow: none;
+        }
+
+        .btn::before {
+            content: none;
+        }
+
+        .btn-primary {
+            background: #0f3d5e;
+        }
+
+        .btn-primary:hover {
+            background: #14507a;
+            box-shadow: 0 10px 20px rgba(15, 61, 94, 0.18);
+        }
+
+        .btn-secondary {
+            background: #2563eb;
+        }
+
+        .btn-secondary:hover {
+            background: #1d4ed8;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+        }
+
+        .btn-ghost {
+            background: #ffffff;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-ghost:hover {
+            border-color: #94a3b8;
+            box-shadow: 0 10px 20px rgba(148, 163, 184, 0.16);
+        }
+
+        .stat-card.total { background: linear-gradient(135deg, #0f3d5e, #2563eb); }
+        .stat-card.pending { background: linear-gradient(135deg, #475569, #334155); }
+        .stat-card.approved { background: linear-gradient(135deg, #0f766e, #14b8a6); }
+        .stat-card.denied { background: linear-gradient(135deg, #b45309, #f59e0b); }
+
+        .filters,
+        .feature-card,
+        .document-card,
+        .integration-card {
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎯 Approve Features</h1>
+            <h1>Requirements Review</h1>
             <div class="nav-buttons">
                 <a href="/approve" class="btn btn-primary nav-btn">Approve</a>
                 <a href="/dashboard" class="btn btn-secondary nav-btn">Dashboard</a>
@@ -740,11 +821,15 @@
         </div>
         
         <div class="filters">
+            <select class="filter-select" id="projectFilter" style="min-width: 250px;">
+                <option value="">All Projects</option>
+            </select>
+
             <select class="filter-select" id="documentFilter" style="min-width: 250px;">
                 <option value="">All Documents</option>
             </select>
             
-            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search features...">
+            <input type="text" class="search-box" id="searchBox" placeholder="Search requirements...">
             
             <select class="filter-select" id="statusFilter">
                 <option value="">All Status</option>
@@ -764,6 +849,8 @@
             <button class="btn btn-secondary btn-small" onclick="selectAll()">Select All</button>
             <button class="btn btn-secondary btn-small" onclick="deselectAll()">Deselect All</button>
             <button class="btn btn-secondary btn-small" onclick="cleanupOldFeatures()" style="background: #dc3545; color: white;">🗑️ Clean Old Runs</button>
+            <button class="btn btn-small" id="btnPushTrello" onclick="pushApprovedToTrello()" style="background: #0079bf; color: white;">📋 Push to Trello</button>
+            <button class="btn btn-small" id="btnPushJira" onclick="pushApprovedToJira()" style="background: #0052cc; color: white;">🔗 Push to Jira</button>
         </div>
         
         <div class="bulk-actions" id="bulkActions">
@@ -784,6 +871,42 @@
         let allFeatures = [];
         let selectedFeatures = new Set();
         let currentFileId = null;
+        let availableProjects = [];
+
+        function getSelectedProjectId() {
+            const raw = document.getElementById('projectFilter')?.value || localStorage.getItem('current_project_id');
+            return raw ? parseInt(raw, 10) : null;
+        }
+
+        async function loadProjects() {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch('/api/projects', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load projects');
+                }
+
+                const data = await response.json();
+                availableProjects = Array.isArray(data.projects) ? data.projects : [];
+
+                const select = document.getElementById('projectFilter');
+                const storedProjectId = localStorage.getItem('current_project_id');
+                select.innerHTML = '<option value="">All Projects</option>' + availableProjects.map(project =>
+                    `<option value="${project.id}">${escapeHtml(project.name)}</option>`
+                ).join('');
+
+                if (storedProjectId && availableProjects.some(project => String(project.id) === storedProjectId)) {
+                    select.value = storedProjectId;
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
         
         // Load documents for the document filter
         async function loadDocuments() {
@@ -795,7 +918,11 @@
                 }
                 
                 console.log('Loading documents...');
-                const response = await fetch('/api/documents', {
+                const params = new URLSearchParams();
+                const projectId = getSelectedProjectId();
+                if (projectId) params.set('project_id', String(projectId));
+
+                const response = await fetch('/api/documents' + (params.toString() ? `?${params.toString()}` : ''), {
                     headers: { 
                         'Authorization': `Bearer ${token}`,
                         'Cache-Control': 'no-cache',
@@ -878,10 +1005,12 @@
                     return;
                 }
                 
-                let url = '/api/features/stats';
-                if (currentFileId) {
-                    url += `?file_id=${parseInt(currentFileId)}`;
-                }
+                const params = new URLSearchParams();
+                const projectId = getSelectedProjectId();
+                if (projectId) params.set('project_id', String(projectId));
+                if (currentFileId) params.set('file_id', String(parseInt(currentFileId)));
+
+                let url = '/api/features/stats' + (params.toString() ? `?${params.toString()}` : '');
                 
                 const response = await fetch(url, {
                     headers: { 
@@ -925,13 +1054,17 @@
                 const documentFilter = document.getElementById('documentFilter').value;
                 const statusFilter = document.getElementById('statusFilter').value;
                 const categoryFilter = document.getElementById('categoryFilter').value;
+                const projectId = getSelectedProjectId();
                 
                 currentFileId = documentFilter ? parseInt(documentFilter) : null;
                 
-                let url = '/api/features?';
-                if (documentFilter) url += `file_id=${parseInt(documentFilter)}&`;
-                if (statusFilter) url += `status=${statusFilter}&`;
-                if (categoryFilter) url += `category=${categoryFilter}`;
+                const params = new URLSearchParams();
+                if (projectId) params.set('project_id', String(projectId));
+                if (documentFilter) params.set('file_id', String(parseInt(documentFilter)));
+                if (statusFilter) params.set('status', statusFilter);
+                if (categoryFilter) params.set('category', categoryFilter);
+
+                let url = '/api/features?' + params.toString();
                 
                 const response = await fetch(url, {
                     headers: { 
@@ -956,6 +1089,16 @@
                 const data = await response.json();
                 console.log('Features loaded:', data.features?.length || 0, 'total:', data.total);
                 allFeatures = data.features || [];
+                // Load assignable users for Manager/Team Head (for "Assign to" dropdown)
+                try {
+                    const assignResp = await fetch('/api/assignable-users', { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (assignResp.ok) {
+                        const assignData = await assignResp.json();
+                        window.assignableUsers = assignData.users || [];
+                    } else {
+                        window.assignableUsers = [];
+                    }
+                } catch (_) { window.assignableUsers = []; }
                 renderFeatures(allFeatures);
                 
             } catch (error) {
@@ -990,36 +1133,44 @@
                 return;
             }
             
-            container.innerHTML = '<div class="features-list">' + features.map((feature, index) => `
-                <div class="feature-card ${feature.status}" style="--index: ${index}; animation-delay: ${index * 0.1}s;">
+            container.innerHTML = '<div class="features-list">' + features.map((feature, index) => {
+                const fid = feature.id;
+                const hasFeedback = feature.feedback && feature.feedback.trim();
+                return `
+                <div class="feature-card ${feature.status}" style="--index: ${index}; animation-delay: ${index * 0.05}s;">
                     <div class="feature-header">
                         <div class="feature-meta">
-                            <input type="checkbox" class="checkbox" data-id="${feature.id}" onchange="toggleSelection(${feature.id})">
+                            <input type="checkbox" class="checkbox" data-id="${fid}" onchange="toggleSelection(${fid})">
                             <span class="category-badge category-${feature.category}">${formatCategory(feature.category)}</span>
-                            ${feature.quality_score > 0 ? `<span class="quality-badge">Quality: ${feature.quality_score}/100</span>` : ''}
-                            <span class="status-badge status-${feature.status}">${feature.status.toUpperCase()}</span>
+                            <span class="status-badge status-${feature.status}">${feature.status}</span>
+                            ${feature.username ? `<span class="text-muted small">${escapeHtml(feature.username)}</span>` : ''}
                         </div>
-                        <small style="color: #6c757d;">📄 ${feature.filename}</small>
                     </div>
                     <div class="feature-description">${escapeHtml(feature.description)}</div>
-                    <div class="feedback-section" style="margin-top: 15px; margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #0f172a;">💬 Your Feedback:</label>
-                        <textarea 
-                            class="feedback-input" 
-                            data-feature-id="${feature.id}"
-                            placeholder="Add your feedback, comments, or suggestions for this requirement..."
-                            style="width: 100%; min-height: 80px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
-                            onblur="saveFeedback(${feature.id}, this.value)"
-                        >${escapeHtml(feature.feedback || '')}</textarea>
-                        ${feature.feedback ? `<small style="color: #28a745; display: block; margin-top: 5px;">✓ Feedback saved</small>` : ''}
+                    <div class="feature-actions" style="margin-top: 10px;">
+                        ${feature.status !== 'approved' ? `<button class="btn btn-approve btn-small" onclick="updateStatus(${fid}, 'approved')">Approve</button>` : ''}
+                        ${feature.status !== 'denied' ? `<button class="btn btn-deny btn-small" onclick="updateStatus(${fid}, 'denied')">Deny</button>` : ''}
+                        ${feature.status !== 'pending' ? `<button class="btn btn-secondary btn-small" onclick="updateStatus(${fid}, 'pending')">Reset</button>` : ''}
+                        <button type="button" class="btn btn-outline-secondary btn-small" onclick="var card=this.closest('.feature-card');var el=card.querySelector('.feedback-section');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='block'?'Hide feedback':'Feedback';">
+                            Feedback
+                        </button>
+                        ${(window.assignableUsers && window.assignableUsers.length) ? `
+                        <label class="small text-muted ms-2 align-middle">Assign to</label>
+                        <select class="form-select form-select-sm d-inline-block ms-1 align-middle" style="width: auto; min-width: 140px;" data-feature-id="${fid}" onchange="updateAssignment(${fid}, this.value)">
+                            <option value="">— Unassigned —</option>
+                            ${(window.assignableUsers || []).map(u => '<option value="' + u.id + '"' + (feature.assigned_to_user_id === u.id ? ' selected' : '') + '>' + escapeHtml(u.username || '') + '</option>').join('')}
+                        </select>
+                        ${feature.assigned_to_username ? '<span class="small text-success ms-1">→ ' + escapeHtml(feature.assigned_to_username) + '</span>' : ''}
+                        ` : ''}
                     </div>
-                    <div class="feature-actions">
-                        ${feature.status !== 'approved' ? `<button class="btn btn-approve btn-small" onclick="updateStatus(${feature.id}, 'approved')">✓ Approve</button>` : ''}
-                        ${feature.status !== 'denied' ? `<button class="btn btn-deny btn-small" onclick="updateStatus(${feature.id}, 'denied')">✗ Deny</button>` : ''}
-                        ${feature.status !== 'pending' ? `<button class="btn btn-secondary btn-small" onclick="updateStatus(${feature.id}, 'pending')">⟲ Reset</button>` : ''}
+                    <div class="feedback-section" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <label class="small fw-bold text-secondary">Your feedback</label>
+                        <textarea class="feedback-input form-control form-control-sm mt-1" data-feature-id="${fid}" placeholder="Optional feedback..." style="min-height: 60px; resize: vertical;" onblur="saveFeedback(${fid}, this.value)">${escapeHtml(feature.feedback || '')}</textarea>
+                        ${hasFeedback ? '<small class="text-success d-block mt-1">Saved</small>' : ''}
                     </div>
                 </div>
-            `).join('') + '</div>';
+            `;
+            }).join('') + '</div>';
         }
         
         function formatCategory(category) {
@@ -1116,6 +1267,27 @@
             }
         }
         
+        async function updateAssignment(featureId, userId) {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+                const assigned_to_user_id = (userId === '' || userId === undefined) ? null : parseInt(userId, 10);
+                const response = await fetch(`/api/features/${featureId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ assigned_to_user_id: assigned_to_user_id })
+                });
+                if (response.ok) {
+                    await loadFeatures();
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to update assignment');
+                }
+            } catch (e) {
+                console.error('Error updating assignment:', e);
+            }
+        }
+        
         function toggleSelection(featureId) {
             const checkbox = document.querySelector(`input[data-id="${featureId}"]`);
             if (checkbox.checked) {
@@ -1197,6 +1369,58 @@
             }
         }
         
+        async function pushApprovedToTrello() {
+            const token = localStorage.getItem('access_token');
+            if (!token) { window.location.href = '/login'; return; }
+            const btn = document.getElementById('btnPushTrello');
+            const fileId = document.getElementById('documentFilter').value ? parseInt(document.getElementById('documentFilter').value) : null;
+            const projectId = getSelectedProjectId();
+            const params = new URLSearchParams();
+            if (fileId) params.set('file_id', String(fileId));
+            if (projectId) params.set('project_id', String(projectId));
+            let url = '/api/integration/trello/approved' + (params.toString() ? `?${params.toString()}` : '');
+            btn.disabled = true;
+            btn.textContent = 'Pushing...';
+            try {
+                const res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    alert('✅ ' + (data.message || 'Pushed to Trello'));
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to push to Trello'));
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+            btn.disabled = false;
+            btn.textContent = '📋 Push to Trello';
+        }
+        async function pushApprovedToJira() {
+            const token = localStorage.getItem('access_token');
+            if (!token) { window.location.href = '/login'; return; }
+            const btn = document.getElementById('btnPushJira');
+            const fileId = document.getElementById('documentFilter').value ? parseInt(document.getElementById('documentFilter').value) : null;
+            const projectId = getSelectedProjectId();
+            const params = new URLSearchParams();
+            if (fileId) params.set('file_id', String(fileId));
+            if (projectId) params.set('project_id', String(projectId));
+            let url = '/api/integration/jira/approved' + (params.toString() ? `?${params.toString()}` : '');
+            btn.disabled = true;
+            btn.textContent = 'Pushing...';
+            try {
+                const res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    alert('✅ ' + (data.message || 'Pushed to Jira'));
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to push to Jira'));
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+            btn.disabled = false;
+            btn.textContent = '🔗 Push to Jira';
+        }
         async function cleanupOldFeatures() {
             if (!confirm('This will delete ALL features from the database and page. Patterns and self-learning will remain intact. Continue?')) {
                 return;
@@ -1250,6 +1474,23 @@
         });
         
         // Filter change handlers
+        document.getElementById('projectFilter').addEventListener('change', () => {
+            const value = document.getElementById('projectFilter').value;
+            if (value) {
+                const project = availableProjects.find(item => String(item.id) === value);
+                localStorage.setItem('current_project_id', value);
+                localStorage.setItem('current_project_name', project ? project.name : '');
+            } else {
+                localStorage.removeItem('current_project_id');
+                localStorage.removeItem('current_project_name');
+            }
+            document.getElementById('documentFilter').value = '';
+            currentFileId = null;
+            loadDocuments();
+            loadStats();
+            loadFeatures();
+        });
+
         document.getElementById('documentFilter').addEventListener('change', () => {
             loadStats();
             loadFeatures();
@@ -1379,7 +1620,7 @@
         window.onload = () => {
             if (checkAuth()) {
                 addScrollToTopButton();
-                loadDocuments().then(() => {
+                loadProjects().then(() => loadDocuments()).then(() => {
                     loadStats();
                     loadFeatures();
                     setTimeout(animateStats, 200);

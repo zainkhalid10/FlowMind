@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 from pydantic import BaseModel
-from database import SessionLocal, Feature, ParsedFile
-from auth import get_current_user, User
+from database import SessionLocal, Feature, ParsedFile, User
+from auth import get_current_user, get_visible_user_ids, can_user_access_project, User
 from datetime import datetime
 import re
 
@@ -48,8 +48,9 @@ class FeatureResponse(BaseModel):
         from_attributes = True
 
 class FeatureUpdate(BaseModel):
-    status: str  # approved or denied
+    status: Optional[str] = None  # approved, denied, or pending
     feedback: Optional[str] = None  # Client feedback on the requirement
+    assigned_to_user_id: Optional[int] = None  # Team head/manager assigns to a member
 
 class BulkFeatureUpdate(BaseModel):
     feature_ids: List[int]
@@ -60,32 +61,40 @@ async def get_features(
     status: Optional[str] = None,
     category: Optional[str] = None,
     file_id: Optional[int] = None,
+    project_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all features for the current user with optional filters.
-    When file_id is not specified, only returns features from the most recent run of each file."""
-    query = db.query(Feature).filter(Feature.user_id == current_user.id)
-    
+    """Get features for users the current user can see (self, team, or all for manager)."""
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"features": [], "total": 0}, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed for this project")
+
+    query = db.query(Feature).filter(Feature.user_id.in_(visible_ids))
+    if project_id is not None:
+        query = query.filter(Feature.project_id == project_id)
     if status:
         query = query.filter(Feature.status == status)
     if category:
         query = query.filter(Feature.category == category)
     if file_id:
-        # If specific file_id is provided, filter by it
         query = query.filter(Feature.file_id == file_id)
     else:
-        # If no file_id specified, only show features from the most recent run of each file
-        # Each run creates a new ParsedFile record with a unique auto-incrementing ID
-        # Get the most recent ParsedFile.id for each unique filename
-        # Use both max(id) and max(created_at) to ensure we get the absolute latest
-        subquery = db.query(
+        parsed_query = db.query(
             ParsedFile.filename,
+            ParsedFile.user_id,
             func.max(ParsedFile.id).label('latest_file_id'),
             func.max(ParsedFile.created_at).label('latest_created_at')
         ).filter(
-            ParsedFile.user_id == current_user.id
-        ).group_by(ParsedFile.filename).subquery()
+            ParsedFile.user_id.in_(visible_ids)
+        )
+        if project_id is not None:
+            parsed_query = parsed_query.filter(ParsedFile.project_id == project_id)
+
+        subquery = parsed_query.group_by(ParsedFile.filename, ParsedFile.user_id).subquery()
         
         # Get the list of latest file IDs (these represent the current/most recent run for each file)
         latest_file_ids = [row[0] for row in db.query(subquery.c.latest_file_id).all()]
@@ -103,10 +112,11 @@ async def get_features(
     
     features = query.order_by(Feature.created_at.desc()).all()
     
-    # Join with file info
     result = []
     for feature in features:
         file = db.query(ParsedFile).filter(ParsedFile.id == feature.file_id).first()
+        uploader = db.query(User).filter(User.id == feature.user_id).first()
+        assignee = db.query(User).filter(User.id == feature.assigned_to_user_id).first() if getattr(feature, "assigned_to_user_id", None) else None
         result.append({
             "id": feature.id,
             "category": feature.category,
@@ -116,7 +126,11 @@ async def get_features(
             "file_id": feature.file_id,
             "filename": file.filename if file else "Unknown",
             "feedback": feature.feedback or "",
-            "created_at": feature.created_at.isoformat() if feature.created_at else None
+            "created_at": feature.created_at.isoformat() if feature.created_at else None,
+            "user_id": feature.user_id,
+            "username": uploader.username if uploader else None,
+            "assigned_to_user_id": getattr(feature, "assigned_to_user_id", None),
+            "assigned_to_username": assignee.username if assignee else None,
         })
     
     from fastapi.responses import JSONResponse
@@ -128,26 +142,35 @@ async def get_features(
 @router.get("/api/features/stats")
 async def get_feature_stats(
     file_id: Optional[int] = None,
+    project_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get feature statistics for the current user, optionally filtered by file_id.
-    When file_id is not specified, only counts features from the most recent run of each file."""
+    """Get feature statistics for users the current user can see."""
     from fastapi.responses import JSONResponse
-    
-    query = db.query(Feature).filter(Feature.user_id == current_user.id)
-    
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        return JSONResponse(content={"total": 0, "approved": 0, "denied": 0, "pending": 0}, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed for this project")
+
+    query = db.query(Feature).filter(Feature.user_id.in_(visible_ids))
+    if project_id is not None:
+        query = query.filter(Feature.project_id == project_id)
     if file_id:
         query = query.filter(Feature.file_id == file_id)
     else:
-        # If no file_id specified, only count features from the most recent run of each file
-        # Each run creates a new ParsedFile record with a unique auto-incrementing ID
-        subquery = db.query(
+        parsed_query = db.query(
             ParsedFile.filename,
+            ParsedFile.user_id,
             func.max(ParsedFile.id).label('latest_file_id')
         ).filter(
-            ParsedFile.user_id == current_user.id
-        ).group_by(ParsedFile.filename).subquery()
+            ParsedFile.user_id.in_(visible_ids)
+        )
+        if project_id is not None:
+            parsed_query = parsed_query.filter(ParsedFile.project_id == project_id)
+
+        subquery = parsed_query.group_by(ParsedFile.filename, ParsedFile.user_id).subquery()
         
         # Get the list of latest file IDs (these represent the current/most recent run for each file)
         latest_file_ids = [row[0] for row in db.query(subquery.c.latest_file_id).all()]
@@ -184,21 +207,36 @@ async def get_feature_stats(
 
 @router.get("/api/documents")
 async def get_user_documents(
+    project_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all documents for the current user that have features.
+    """Get all documents for the current visible users that have features.
     Only returns the most recent run of each unique filename."""
     from fastapi.responses import JSONResponse
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        return JSONResponse(
+            content={"documents": []},
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
+        )
+
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed for this project")
     
     # Get the most recent ParsedFile.id for each unique filename that has features
-    subquery = db.query(
+    parsed_query = db.query(
         ParsedFile.filename,
+        ParsedFile.user_id,
         func.max(ParsedFile.id).label('latest_file_id')
     ).join(Feature).filter(
-        ParsedFile.user_id == current_user.id,
-        Feature.user_id == current_user.id
-    ).group_by(ParsedFile.filename).subquery()
+        ParsedFile.user_id.in_(visible_ids),
+        Feature.user_id.in_(visible_ids)
+    )
+    if project_id is not None:
+        parsed_query = parsed_query.filter(Feature.project_id == project_id)
+
+    subquery = parsed_query.group_by(ParsedFile.filename, ParsedFile.user_id).subquery()
     
     # Get the actual ParsedFile records for these latest file IDs
     latest_file_ids = [row[0] for row in db.query(subquery.c.latest_file_id).all()]
@@ -217,7 +255,7 @@ async def get_user_documents(
     for doc in documents:
         feature_count = db.query(Feature).filter(
             Feature.file_id == doc.id,
-            Feature.user_id == current_user.id
+            Feature.user_id.in_(visible_ids)
         ).count()
         # Format the timestamp for display
         run_label = "Current Run"
@@ -236,7 +274,9 @@ async def get_user_documents(
             "filename": doc.filename,
             "created_at": doc.created_at.isoformat() if doc.created_at else None,
             "feature_count": feature_count,
-            "run_label": run_label
+            "run_label": run_label,
+            "project_id": getattr(doc, "project_id", None),
+            "user_id": doc.user_id,
         })
     
     return JSONResponse(
@@ -251,10 +291,11 @@ async def update_feature_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update feature approval status and/or feedback."""
+    """Update feature approval status and/or feedback. Allowed for owner or visible users (team head/manager)."""
+    visible_ids = get_visible_user_ids(current_user, db)
     feature = db.query(Feature).filter(
         Feature.id == feature_id,
-        Feature.user_id == current_user.id
+        Feature.user_id.in_(visible_ids)
     ).first()
     
     if not feature:
@@ -267,9 +308,20 @@ async def update_feature_status(
         feature.status = update.status
     if update.feedback is not None:
         feature.feedback = update.feedback
+    # Team head / manager can assign feature to a team member (must be in visible users)
+    if update.assigned_to_user_id is not None:
+        if getattr(current_user, "role", None) not in ("manager", "team_head"):
+            raise HTTPException(status_code=403, detail="Only manager or team head can assign features")
+        if update.assigned_to_user_id == 0:
+            feature.assigned_to_user_id = None
+        else:
+            target_user = db.query(User).filter(User.id == update.assigned_to_user_id, User.is_active == 1).first()
+            if not target_user or target_user.id not in visible_ids:
+                raise HTTPException(status_code=400, detail="Invalid assignee or not in your team")
+            feature.assigned_to_user_id = target_user.id
     db.commit()
     
-    return {"success": True, "feature_id": feature_id, "status": feature.status, "feedback": feature.feedback or ""}
+    return {"success": True, "feature_id": feature_id, "status": feature.status, "feedback": feature.feedback or "", "assigned_to_user_id": getattr(feature, "assigned_to_user_id", None)}
 
 class FeedbackUpdate(BaseModel):
     feedback: str
@@ -281,10 +333,11 @@ async def update_feature_feedback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update feedback for a specific feature."""
+    """Update feedback for a specific feature. Allowed for owner or visible users."""
+    visible_ids = get_visible_user_ids(current_user, db)
     feature = db.query(Feature).filter(
         Feature.id == feature_id,
-        Feature.user_id == current_user.id
+        Feature.user_id.in_(visible_ids)
     ).first()
     
     if not feature:
@@ -301,14 +354,13 @@ async def bulk_update_features(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Bulk update feature statuses."""
+    """Bulk update feature statuses. Allowed for visible users' features."""
     if update.status not in ["approved", "denied", "pending"]:
         raise HTTPException(status_code=400, detail="Invalid status")
-    
-    # Update all specified features
+    visible_ids = get_visible_user_ids(current_user, db)
     updated = db.query(Feature).filter(
         Feature.id.in_(update.feature_ids),
-        Feature.user_id == current_user.id
+        Feature.user_id.in_(visible_ids)
     ).update({"status": update.status}, synchronize_session=False)
     
     db.commit()
@@ -321,10 +373,11 @@ async def delete_feature(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a feature."""
+    """Delete a feature. Allowed for owner or visible users."""
+    visible_ids = get_visible_user_ids(current_user, db)
     feature = db.query(Feature).filter(
         Feature.id == feature_id,
-        Feature.user_id == current_user.id
+        Feature.user_id.in_(visible_ids)
     ).first()
     
     if not feature:
@@ -383,7 +436,14 @@ async def cleanup_all_features(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting features: {str(e)}")
 
-def parse_and_save_features(extracted_text: str, user_id: int, file_id: int, db: Session, image_summaries: list = None):
+def parse_and_save_features(
+    extracted_text: str,
+    user_id: int,
+    file_id: int,
+    db: Session,
+    image_summaries: list = None,
+    project_id: Optional[int] = None,
+):
     """
     Parse extracted requirements text and save as individual features.
     Merges content from both text extraction and image summaries.
@@ -496,6 +556,7 @@ def parse_and_save_features(extracted_text: str, user_id: int, file_id: int, db:
                 if current_category:
                     feature = Feature(
                         user_id=user_id,
+                        project_id=project_id,
                         file_id=file_id,
                         category=current_category,
                         description=description,

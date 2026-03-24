@@ -2,13 +2,17 @@
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, BackgroundTasks, Form
 from sqlalchemy.orm import Session
 from database import SessionLocal, ParsedFile, User
-from auth import get_current_user, get_db
+from auth import get_current_user, get_db, can_user_access_project
 from services.document_service import analyze_document, analyze_with_agent
 from services.progress_storage import create_progress_tracker, remove_progress_tracker
 import asyncio
 import os
+import json
+import time
+from datetime import datetime, timedelta
 
 router = APIRouter()
+_DEBUG_LOG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "debug-0e985e.log")
 
 # Store results temporarily
 _processing_results = {}
@@ -30,6 +34,7 @@ def validate_file_size(file_size: int) -> bool:
 @router.post("/upload_client_doc")
 async def upload_client_doc(
     file: UploadFile = File(...),
+    project_id: int = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None
@@ -59,10 +64,19 @@ async def upload_client_doc(
     # Create progress tracker
     tracker_id, tracker = create_progress_tracker()
     tracker.start()
+
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed to upload into this project")
     
     try:
         # Process document with progress tracking
-        result = await analyze_document(file, current_user.id, db, progress_tracker_id=tracker_id)
+        result = await analyze_document(
+            file,
+            current_user.id,
+            db,
+            progress_tracker_id=tracker_id,
+            project_id=project_id,
+        )
         # Add tracker ID to response
         result["progress_tracker_id"] = tracker_id
         return result
@@ -72,8 +86,10 @@ async def upload_client_doc(
 
 
 @router.post("/upload_agent_doc")
+@router.post("/upload/agent_doc")
 async def upload_agent_doc(
     file: UploadFile = File(...),
+    project_id: int = Form(None),
     basic_extraction_text: str = Form(None),
     basic_extraction_full_text: str = Form(None),
     basic_extraction_image_summaries: str = Form(None),
@@ -124,7 +140,16 @@ async def upload_agent_doc(
     # Create progress tracker
     tracker_id, tracker = create_progress_tracker()
     tracker.start()
+
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed to upload into this project")
     
+    # #region agent log
+    try:
+        f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "A", "location": "upload_routes.py:upload_agent_doc", "message": "upload_agent_doc before analyze_with_agent", "data": {"filename": file.filename}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+    except Exception:
+        pass
+    # #endregion
     try:
         # Process document with progress tracking and Basic Extraction data
         result = await analyze_with_agent(
@@ -132,12 +157,43 @@ async def upload_agent_doc(
             current_user.id, 
             db, 
             progress_tracker_id=tracker_id,
-            basic_extraction_data=basic_extraction_data
+            basic_extraction_data=basic_extraction_data,
+            project_id=project_id,
         )
+        # #region agent log
+        try:
+            f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "C", "location": "upload_routes.py:upload_agent_doc", "message": "analyze_with_agent returned success", "data": {"filename": file.filename}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+        except Exception:
+            pass
+        # #endregion
         # Add tracker ID to response
         result["progress_tracker_id"] = tracker_id
+        try:
+            view_id = result.get("view_id") if isinstance(result, dict) else None
+            if view_id:
+                row = db.query(ParsedFile).filter(ParsedFile.view_id == view_id).order_by(ParsedFile.id.desc()).first()
+                if row:
+                    result["file_id"] = row.id
+            # Fallback: resolve latest matching file for this user when view_id lookup is late.
+            if not result.get("file_id"):
+                cutoff = datetime.utcnow() - timedelta(minutes=10)
+                row = db.query(ParsedFile).filter(
+                    ParsedFile.user_id == current_user.id,
+                    ParsedFile.filename == file.filename,
+                    ParsedFile.created_at >= cutoff,
+                ).order_by(ParsedFile.created_at.desc()).first()
+                if row:
+                    result["file_id"] = row.id
+        except Exception:
+            pass
         return result
     except Exception as e:
+        # #region agent log
+        try:
+            f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "B", "location": "upload_routes.py:upload_agent_doc except", "message": "analyze_with_agent raised", "data": {"error": str(e), "type": type(e).__name__}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
+        except Exception:
+            pass
+        # #endregion
         import traceback
         tb = traceback.format_exc()
         print("Analyze_with_agent error:", tb)

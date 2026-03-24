@@ -7,7 +7,7 @@ import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from database import SessionLocal, User
+from database import SessionLocal, User, Project, ProjectMember
 
 # JWT settings - use environment variable for security
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
@@ -76,11 +76,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create a JWT access token."""
+    """Create a JWT access token. data may include sub, role, team_id."""
     to_encode = data.copy()
     # JWT requires 'sub' to be a string, so convert if it's an int
     if "sub" in to_encode and isinstance(to_encode["sub"], int):
         to_encode["sub"] = str(to_encode["sub"])
+    if "team_id" in to_encode and to_encode["team_id"] is not None:
+        to_encode["team_id"] = int(to_encode["team_id"])
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -134,6 +136,16 @@ def get_current_user(
     return user
 
 
+def get_visible_user_ids(user: User, db: Session) -> list:
+    """Return list of user IDs the current user is allowed to see.
+    Manager: all active users. Team head: same team members. Member: only self."""
+    if getattr(user, "role", None) == "manager":
+        return [u.id for u in db.query(User).filter(User.is_active == 1).all()]
+    if getattr(user, "role", None) == "team_head" and getattr(user, "team_id", None):
+        return [u.id for u in db.query(User).filter(User.team_id == user.team_id, User.is_active == 1).all()]
+    return [user.id]
+
+
 def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: Session = Depends(get_db)
@@ -158,4 +170,22 @@ def get_current_user_optional(
         return None
     
     return user
+
+
+def can_user_access_project(user: User, project_id: int, db: Session) -> bool:
+    """Return True if user can access a project by ownership, membership, or manager role."""
+    if project_id is None:
+        return False
+    if getattr(user, "role", None) == "manager":
+        return db.query(Project).filter(Project.id == project_id).first() is not None
+
+    owned = db.query(Project).filter(Project.id == project_id, Project.created_by == user.id).first()
+    if owned:
+        return True
+
+    membership = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user.id,
+    ).first()
+    return membership is not None
 
