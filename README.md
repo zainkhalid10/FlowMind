@@ -28,6 +28,19 @@ uvicorn flowmind:app --host 127.0.0.1 --port 8000
 
 Open: http://127.0.0.1:8000
 
+Recommended one-command startup (Windows):
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+.\run_server.ps1
+```
+
+Optional flags:
+
+```powershell
+.\run_server.ps1 -HostName 127.0.0.1 -Port 8000 -Reload
+```
+
 ### Ubuntu / WSL
 
 ```bash
