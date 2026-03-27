@@ -1,0 +1,50 @@
+{
+  "generated_at_utc": "2026-03-27T03:49:14.128936+00:00",
+  "database_path": "D:\\fyp_phase2\\FlowMind\\flowmind.db",
+  "counts": {
+    "users": 7,
+    "parsed_files": 5,
+    "features": 313,
+    "review_assignments": 8,
+    "review_feedback": 140
+  },
+  "features": {
+    "average_quality_score": 0.0,
+    "min_quality_score": 0,
+    "max_quality_score": 0,
+    "client_review_status_distribution": {
+      "pending": 175,
+      "approved": 122,
+      "rejected": 10,
+      "modification_requested": 5,
+      "pending_manager_approval": 1
+    },
+    "source_distribution": {
+      "system": 312,
+      "client": 1
+    },
+    "avg_features_per_file": 62.6
+  },
+  "reviews": {
+    "action_distribution": {
+      "approve": 125,
+      "reject": 10,
+      "request_modification": 5
+    },
+    "approval_rate": 0.8929,
+    "decision_count": 140,
+    "assignments_total": 8,
+    "assignments_completed": 3,
+    "assignment_completion_rate": 0.375
+  },
+  "timing": {
+    "avg_assignment_turnaround_hours": 0.63,
+    "samples_for_turnaround": 3
+  },
+  "integration": {
+    "runs": 0,
+    "items_processed": 0,
+    "items_successful": 0,
+    "success_rate": null
+  }
+}

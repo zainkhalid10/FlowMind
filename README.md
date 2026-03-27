@@ -102,6 +102,30 @@ Optional Windows setting:
 - Requirements extraction quality includes confidence/quality scoring
 - Deduplication logic targets near-zero duplicate requirements
 
+## Automated Learning Maintenance (Recommended)
+
+Run the self-learning maintenance pipeline manually:
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+.\run_learning_maintenance.ps1 -NFeedback 50 -BackfillLimit 0
+```
+
+This will:
+- Backfill new review feedback into the learning loop (incremental)
+- Generate a fresh baseline metrics snapshot
+- Generate a self-learning improvement report
+- Persist maintenance state for the next run
+
+Schedule it daily on Windows:
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+.\setup_learning_maintenance_task.ps1 -TaskName "FlowMind-LearningMaintenance" -RunTime "02:00"
+```
+
+Outputs are written to the `reports/` directory (including run summaries and logs).
+
 ## Collaboration Workflow
 
 ### Push latest code

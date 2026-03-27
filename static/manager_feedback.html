@@ -332,6 +332,34 @@
       </div>
     </section>
 
+    <section class="summary-banner" id="learningStatusSection" style="display:none; margin-bottom:14px;">
+      <h3 style="margin:0 0 10px; font-size:13px; color:#1a1a1a; font-weight:600;">Learning Maintenance</h3>
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:10px;">
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Processed Feedback</div>
+          <div id="lmProcessed" style="font-size:16px; font-weight:600; color:#1A1A1A; margin-top:4px;">0</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Promoted Patterns</div>
+          <div id="lmPromoted" style="font-size:16px; font-weight:600; color:#3B6D11; margin-top:4px;">0</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Demoted Patterns</div>
+          <div id="lmDemoted" style="font-size:16px; font-weight:600; color:#A32D2D; margin-top:4px;">0</div>
+        </div>
+        <div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:6px; padding:8px; background:#f9fafb;">
+          <div style="font-size:11px; color:#6B6B68;">Last Feedback ID</div>
+          <div id="lmLastFeedback" style="font-size:16px; font-weight:600; color:#534AB7; margin-top:4px;">-</div>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center;">
+        <div id="lmMeta" style="font-size:11px; color:#6B6B68;">Maintenance status unavailable.</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <a id="lmReportLink" href="#" target="_blank" class="fm-btn-outline fm-btn-sm" style="text-decoration:none; display:none;">Open Latest Report</a>
+        </div>
+      </div>
+    </section>
+
     <section id="feedbackList" class="feedback-list"></section>
 
     <div id="bulkActionsModal" class="modal-host" style="display:none;">
@@ -794,11 +822,52 @@
       document.getElementById('analyticsSection').style.display = 'block';
     }
 
+    async function loadLearningMaintenanceStatus() {
+      try {
+        const res = await apiFetch('/api/learning-maintenance-status');
+        if (!res.ok) {
+          document.getElementById('learningStatusSection').style.display = 'none';
+          return;
+        }
+        const data = await res.json();
+        if (!data || !data.has_state) {
+          document.getElementById('learningStatusSection').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('lmProcessed').textContent = Number(data.processed_feedback_rows || 0);
+        document.getElementById('lmPromoted').textContent = Number(data.promoted_patterns || 0);
+        document.getElementById('lmDemoted').textContent = Number(data.demoted_patterns || 0);
+        document.getElementById('lmLastFeedback').textContent = data.last_feedback_id != null ? String(data.last_feedback_id) : '-';
+
+        const actions = data.actions || {};
+        const runTime = data.last_run_utc ? new Date(data.last_run_utc).toLocaleString() : 'Unknown';
+        document.getElementById('lmMeta').textContent =
+          'Last run: ' + runTime +
+          ' | Actions: approve ' + Number(actions.approve || 0) +
+          ', reject ' + Number(actions.reject || 0) +
+          ', modify ' + Number(actions.request_modification || 0);
+
+        const reportLink = document.getElementById('lmReportLink');
+        if (data.last_report_file) {
+          reportLink.href = '/api/learning-maintenance-report/latest';
+          reportLink.style.display = 'inline-flex';
+        } else {
+          reportLink.style.display = 'none';
+        }
+
+        document.getElementById('learningStatusSection').style.display = 'block';
+      } catch (e) {
+        document.getElementById('learningStatusSection').style.display = 'none';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       setupInviteForm();
       setupBulkActions();
       await loadFiles();
       await refreshData();
+      await loadLearningMaintenanceStatus();
     });
   </script>
 </body>

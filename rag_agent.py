@@ -129,6 +129,12 @@ class RequirementsExtractionAgent:
             self.learning_collection_name = "learning_patterns"
             self.performance_collection_name = "extraction_performance"
             print("🌐 Using global learning collections")
+
+        self.persist_learning_to_chroma = os.getenv("FLOWMIND_PERSIST_LEARNING_TO_CHROMA", "0") == "1"
+        self.learning_state_dir = os.path.join(".", "reports")
+        os.makedirs(self.learning_state_dir, exist_ok=True)
+        state_suffix = f"user_{user_id}" if user_id is not None else "global"
+        self.learning_state_file = os.path.join(self.learning_state_dir, f"learning_state_{state_suffix}.json")
         
         # Initialize learning components
         self._init_learning_system()
@@ -164,8 +170,18 @@ class RequirementsExtractionAgent:
                 "category_accuracy": {},
                 "learning_iterations": 0,
                 "average_quality_score": 0.0,
-                "domain_contexts": {}
+                "domain_contexts": {},
+                "feedback_events": 0,
+                "feedback_action_counts": {
+                    "approve": 0,
+                    "reject": 0,
+                    "request_modification": 0,
+                }
             }
+
+            # Feedback-driven weighting store:
+            # {category: {keywords|phrases|patterns: {pattern: {score, approved, rejected, modified, seen}}}}
+            self.feedback_pattern_scores = {}
             
             # Advanced features
             self.enable_quality_scoring = True
@@ -174,6 +190,7 @@ class RequirementsExtractionAgent:
             
             # Load existing learned patterns
             self._load_learned_patterns()
+            self._load_feedback_pattern_scores()
             
             learned_count = len(self.learning_collection.get()['ids']) if hasattr(self, 'learning_collection') else 0
             print(f"📚 Loaded {learned_count} learned patterns from collection")
@@ -191,8 +208,15 @@ class RequirementsExtractionAgent:
                 "category_accuracy": {},
                 "learning_iterations": 0,
                 "average_quality_score": 0.0,
-                "domain_contexts": {}
+                "domain_contexts": {},
+                "feedback_events": 0,
+                "feedback_action_counts": {
+                    "approve": 0,
+                    "reject": 0,
+                    "request_modification": 0,
+                }
             }
+            self.feedback_pattern_scores = {}
             self.enable_quality_scoring = True
             self.enable_priority_detection = True
             self.enable_context_awareness = True
@@ -204,6 +228,26 @@ class RequirementsExtractionAgent:
         """Load previously learned patterns from the learning collection."""
         try:
             if not self.enable_self_learning:
+                return
+
+            # Fast path: load from local JSON state first.
+            payload = self._read_learning_state()
+            lp = payload.get("learned_patterns", {}) if isinstance(payload, dict) else {}
+            for category, pdata in lp.items():
+                if category not in self.learned_patterns or not isinstance(pdata, dict):
+                    continue
+                for ptype in ("keywords", "phrases", "patterns"):
+                    vals = pdata.get(ptype, [])
+                    if isinstance(vals, list):
+                        self.learned_patterns[category][ptype].update([str(v) for v in vals if v])
+
+            # Optional slow path: merge from Chroma only if explicitly enabled.
+            if not self.persist_learning_to_chroma:
+                total_loaded = sum(len(patterns['keywords']) + len(patterns['phrases']) + len(patterns['patterns']) for patterns in self.learned_patterns.values())
+                if total_loaded > 0:
+                    print(f"📚 Loaded {total_loaded} learned patterns from JSON state")
+                else:
+                    print("📚 No learned patterns found - starting fresh")
                 return
                 
             # Get all learned patterns
@@ -234,6 +278,26 @@ class RequirementsExtractionAgent:
         """Save learned patterns to the learning collection."""
         try:
             if not self.enable_self_learning:
+                return
+
+            # Always persist to lightweight JSON state for fast and reliable writes.
+            payload = {
+                "learned_patterns": {
+                    category: {
+                        "keywords": sorted(list(patterns.get("keywords", set()))),
+                        "phrases": sorted(list(patterns.get("phrases", set()))),
+                        "patterns": sorted(list(patterns.get("patterns", set()))),
+                    }
+                    for category, patterns in self.learned_patterns.items()
+                },
+                "extraction_stats": self.extraction_stats,
+                "feedback_pattern_scores": self.feedback_pattern_scores,
+                "updated_at": time.time(),
+            }
+            self._write_learning_state(payload)
+
+            # Optional Chroma persistence (disabled by default for performance).
+            if not self.persist_learning_to_chroma:
                 return
                 
             # Get existing IDs to avoid duplicates
@@ -279,6 +343,247 @@ class RequirementsExtractionAgent:
                 
         except Exception as e:
             print(f"⚠️ Failed to save learned patterns: {str(e)}")
+
+    def _category_to_key(self, category: str) -> str:
+        """Normalize category labels from DB/UI to learning keys."""
+        raw = (category or "").strip().lower()
+        mapping = {
+            "functional": "functional",
+            "non_functional": "non_functional",
+            "non-functional": "non_functional",
+            "non functional": "non_functional",
+            "user": "user",
+            "user_requirements": "user",
+            "user_stories": "user",
+            "system": "system",
+            "business": "business",
+            "feature": "features",
+            "features": "features",
+            "general": "features",
+        }
+        return mapping.get(raw, "features")
+
+    def _read_learning_state(self) -> Dict[str, Any]:
+        """Read local learning state JSON safely."""
+        if not os.path.exists(self.learning_state_file):
+            return {}
+        try:
+            with open(self.learning_state_file, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            return payload if isinstance(payload, dict) else {}
+        except Exception:
+            return {}
+
+    def _write_learning_state(self, payload: Dict[str, Any]) -> None:
+        """Write local learning state JSON atomically."""
+        import time as _time
+
+        tmp_path = self.learning_state_file + ".tmp"
+        last_error = None
+        for _ in range(4):
+            try:
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(payload, f)
+                os.replace(tmp_path, self.learning_state_file)
+                return
+            except Exception as e:
+                last_error = e
+                _time.sleep(0.12)
+        if last_error:
+            raise last_error
+
+    def _load_feedback_pattern_scores(self):
+        """Load persisted feedback-derived pattern scores."""
+        try:
+            if not self.enable_self_learning:
+                return
+            self.feedback_pattern_scores = {}
+
+            # Fast path: load from local JSON state.
+            payload = self._read_learning_state()
+            fps = payload.get("feedback_pattern_scores", {}) if isinstance(payload, dict) else {}
+            if isinstance(fps, dict):
+                self.feedback_pattern_scores = fps
+                return
+
+            if not self.persist_learning_to_chroma:
+                return
+
+            results = self.performance_collection.get(ids=["feedback_pattern_scores"])
+            docs = (results or {}).get("documents") or []
+            if docs:
+                payload = json.loads(docs[0])
+                if isinstance(payload, dict):
+                    self.feedback_pattern_scores = payload
+        except Exception as e:
+            print(f"⚠️ Failed to load feedback pattern scores: {str(e)}")
+            self.feedback_pattern_scores = {}
+
+    def _save_feedback_pattern_scores(self):
+        """Persist feedback-derived pattern scores to ChromaDB performance collection."""
+        try:
+            if not self.enable_self_learning:
+                return
+
+            # Persist to JSON state unconditionally.
+            state_payload = self._read_learning_state()
+            state_payload["feedback_pattern_scores"] = self.feedback_pattern_scores
+            state_payload["updated_at"] = time.time()
+            self._write_learning_state(state_payload)
+
+            if not self.persist_learning_to_chroma:
+                return
+
+            payload = json.dumps(self.feedback_pattern_scores)
+            self.performance_collection.upsert(
+                documents=[payload],
+                metadatas=[{"type": "feedback_pattern_scores", "timestamp": str(time.time())}],
+                ids=["feedback_pattern_scores"]
+            )
+        except Exception as e:
+            print(f"⚠️ Failed to save feedback pattern scores: {str(e)}")
+
+    def _extract_feedback_patterns(self, text: str) -> Dict[str, set]:
+        """Extract candidate reusable patterns from a reviewed requirement."""
+        patterns = {"keywords": set(), "phrases": set(), "patterns": set()}
+        if not text:
+            return patterns
+        norm = self._normalize_line(text)
+        words = re.findall(r"\b[a-zA-Z]{4,}\b", norm.lower())
+        common = {
+            "that", "this", "with", "from", "into", "shall", "should", "must",
+            "will", "have", "has", "been", "were", "they", "their", "system", "user"
+        }
+        for w in words:
+            if w not in common:
+                patterns["keywords"].add(w)
+
+        phrases = re.findall(r"\b(?:[a-zA-Z]+\s+){1,3}[a-zA-Z]+\b", norm.lower())
+        for p in phrases:
+            wc = len(p.split())
+            if 2 <= wc <= 4:
+                patterns["phrases"].add(p)
+
+        sent_pattern = re.sub(r"\b[a-zA-Z]+\b", "WORD", norm.lower())
+        sent_pattern = re.sub(r"\d+", "NUM", sent_pattern)
+        sent_pattern = re.sub(r"[^\w\s]", "", sent_pattern).strip()
+        if sent_pattern:
+            patterns["patterns"].add(sent_pattern)
+        return patterns
+
+    def _pattern_weight(self, category: str, pattern_type: str, pattern: str) -> float:
+        """Return learned weight from feedback history for ranking and scoring."""
+        cat_store = self.feedback_pattern_scores.get(category, {})
+        type_store = cat_store.get(pattern_type, {})
+        entry = type_store.get(pattern)
+        if not isinstance(entry, dict):
+            return 0.0
+        score = float(entry.get("score", 0.0))
+        approved = float(entry.get("approved", 0))
+        rejected = float(entry.get("rejected", 0))
+        modified = float(entry.get("modified", 0))
+        # Mild bias toward approved and away from rejected/modification requests.
+        return score + (approved * 0.3) - (rejected * 0.4) - (modified * 0.2)
+
+    def learn_from_feedback(
+        self,
+        feature_text: str,
+        category: str,
+        action: str,
+        title: str = "",
+        comment: str = "",
+        file_id: Optional[int] = None,
+        req_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Update learning weights and patterns from explicit client review feedback."""
+        try:
+            if not self.enable_self_learning:
+                return {"learning_enabled": False, "updated_patterns": 0}
+
+            category_key = self._category_to_key(category)
+            if category_key not in self.learned_patterns:
+                category_key = "features"
+
+            action_norm = (action or "").strip().lower()
+            if action_norm not in ("approve", "reject", "request_modification"):
+                return {"learning_enabled": True, "updated_patterns": 0, "note": "unsupported_action"}
+
+            combined_text = " ".join([
+                (title or "").strip(),
+                (feature_text or "").strip(),
+                (comment or "").strip(),
+            ]).strip()
+            extracted = self._extract_feedback_patterns(combined_text)
+
+            if category_key not in self.feedback_pattern_scores:
+                self.feedback_pattern_scores[category_key] = {
+                    "keywords": {},
+                    "phrases": {},
+                    "patterns": {},
+                }
+
+            action_delta = {
+                "approve": 2.0,
+                "reject": -2.0,
+                "request_modification": -1.0,
+            }[action_norm]
+
+            updated = 0
+            promoted = 0
+            demoted = 0
+
+            for p_type, p_values in extracted.items():
+                p_store = self.feedback_pattern_scores[category_key].setdefault(p_type, {})
+                for p in p_values:
+                    entry = p_store.setdefault(
+                        p,
+                        {"score": 0.0, "approved": 0, "rejected": 0, "modified": 0, "seen": 0},
+                    )
+                    entry["score"] = float(entry.get("score", 0.0)) + action_delta
+                    entry["seen"] = int(entry.get("seen", 0)) + 1
+                    if action_norm == "approve":
+                        entry["approved"] = int(entry.get("approved", 0)) + 1
+                    elif action_norm == "reject":
+                        entry["rejected"] = int(entry.get("rejected", 0)) + 1
+                    else:
+                        entry["modified"] = int(entry.get("modified", 0)) + 1
+                    updated += 1
+
+                    # Promotion: highly approved patterns become reusable extraction priors.
+                    if entry["score"] >= 2.0 and p not in self.learned_patterns[category_key][p_type]:
+                        self.learned_patterns[category_key][p_type].add(p)
+                        promoted += 1
+
+                    # Demotion: strongly negative patterns are removed from priors.
+                    if entry["score"] <= -3.0 and p in self.learned_patterns[category_key][p_type]:
+                        self.learned_patterns[category_key][p_type].discard(p)
+                        demoted += 1
+
+            self.extraction_stats["feedback_events"] = int(self.extraction_stats.get("feedback_events", 0)) + 1
+            action_counts = self.extraction_stats.setdefault("feedback_action_counts", {
+                "approve": 0,
+                "reject": 0,
+                "request_modification": 0,
+            })
+            action_counts[action_norm] = int(action_counts.get(action_norm, 0)) + 1
+
+            self._save_feedback_pattern_scores()
+            self._save_learned_patterns()
+            self._save_performance_metrics()
+
+            return {
+                "learning_enabled": True,
+                "category": category_key,
+                "action": action_norm,
+                "updated_patterns": updated,
+                "promoted_patterns": promoted,
+                "demoted_patterns": demoted,
+                "file_id": file_id,
+                "req_id": req_id,
+            }
+        except Exception as e:
+            print(f"⚠️ learn_from_feedback failed: {str(e)}")
+            return {"learning_enabled": bool(self.enable_self_learning), "updated_patterns": 0, "error": str(e)}
     
     def _learn_from_extraction(self, text: str, extracted_sections: Dict[str, List[str]], filename: str):
         """Learn patterns and improve extraction from successful extractions."""
@@ -496,7 +801,12 @@ class RequirementsExtractionAgent:
                 
                 # Apply learned keywords with context scoring
                 keyword_matches = 0
-                for keyword in list(patterns["keywords"])[:100]:  # Limit to top 100 keywords
+                ranked_keywords = sorted(
+                    list(patterns["keywords"]),
+                    key=lambda kw: self._pattern_weight(category, "keywords", kw),
+                    reverse=True,
+                )[:100]
+                for keyword in ranked_keywords:  # Limit to top 100 weighted keywords
                     if keyword in text_lower:
                         keyword_matches += 1
                         # Find sentences containing this keyword
@@ -509,11 +819,17 @@ class RequirementsExtractionAgent:
                             if keyword in sentence_lower and sentence_lower not in seen_sentences:
                                 seen_sentences.add(sentence_lower)
                                 # Score by keyword relevance
-                                score = 2.0 if keyword in sentence_lower[:50] else 1.0  # Higher score for early appearance
+                                w = self._pattern_weight(category, "keywords", keyword)
+                                score = (2.0 if keyword in sentence_lower[:50] else 1.0) + max(-1.0, min(2.0, w * 0.2))
                                 scored_matches.append((score, sentence))
                 
                 # Apply learned phrases with higher priority
-                for phrase in list(patterns["phrases"])[:50]:  # Limit to top 50 phrases
+                ranked_phrases = sorted(
+                    list(patterns["phrases"]),
+                    key=lambda ph: self._pattern_weight(category, "phrases", ph),
+                    reverse=True,
+                )[:50]
+                for phrase in ranked_phrases:  # Limit to top 50 weighted phrases
                     if phrase in text_lower:
                         sentences = re.split(r'[.!?]+', text)
                         for sentence in sentences:
@@ -524,11 +840,17 @@ class RequirementsExtractionAgent:
                             if phrase in sentence_lower and sentence_lower not in seen_sentences:
                                 seen_sentences.add(sentence_lower)
                                 # Phrases get higher score as they're more specific
-                                score = 3.0
+                                w = self._pattern_weight(category, "phrases", phrase)
+                                score = 3.0 + max(-1.0, min(2.0, w * 0.2))
                                 scored_matches.append((score, sentence))
                 
                 # Apply learned patterns with context
-                for pattern in list(patterns["patterns"])[:30]:  # Limit to top 30 patterns
+                ranked_patterns = sorted(
+                    list(patterns["patterns"]),
+                    key=lambda pt: self._pattern_weight(category, "patterns", pt),
+                    reverse=True,
+                )[:30]
+                for pattern in ranked_patterns:  # Limit to top 30 weighted patterns
                     # Convert pattern back to regex more robustly
                     regex_pattern = pattern.replace('WORD', r'\b[a-zA-Z]+\b').replace('NUM', r'\d+')
                     regex_pattern = re.escape(regex_pattern).replace('WORD', r'\b[a-zA-Z]+\b').replace('NUM', r'\d+')
@@ -548,7 +870,8 @@ class RequirementsExtractionAgent:
                                     sentence_lower = sentence.lower()
                                     if sentence_lower not in seen_sentences:
                                         seen_sentences.add(sentence_lower)
-                                        scored_matches.append((2.5, sentence))
+                                        w = self._pattern_weight(category, "patterns", pattern)
+                                        scored_matches.append((2.5 + max(-1.0, min(2.0, w * 0.2)), sentence))
                     except Exception:
                         continue
                 
@@ -627,21 +950,20 @@ class RequirementsExtractionAgent:
         try:
             if not self.enable_self_learning:
                 return
-                
-            # Clear existing metrics
-            try:
-                self.performance_collection.delete()
-                self.performance_collection = self.chroma_client.get_or_create_collection(
-                    name=self.performance_collection_name
-                )
-            except Exception:
-                pass
+
+            # Persist stats in JSON state for fast local reads.
+            state_payload = self._read_learning_state()
+            state_payload["extraction_stats"] = self.extraction_stats
+            state_payload["updated_at"] = time.time()
+            self._write_learning_state(state_payload)
+
+            if not self.persist_learning_to_chroma:
+                return
             
             # Save current metrics
-            import json
             metrics_json = json.dumps(self.extraction_stats, indent=2)
             
-            self.performance_collection.add(
+            self.performance_collection.upsert(
                 documents=[metrics_json],
                 metadatas=[{"type": "performance_metrics", "timestamp": str(time.time())}],
                 ids=["performance_metrics"]
@@ -669,6 +991,8 @@ class RequirementsExtractionAgent:
                 "learning_iterations": self.extraction_stats["learning_iterations"],
                 "total_documents_processed": self.extraction_stats["total_documents"],
                 "success_rate": self.extraction_stats["successful_extractions"] / max(1, self.extraction_stats["total_documents"]),
+                "feedback_events": self.extraction_stats.get("feedback_events", 0),
+                "feedback_action_counts": self.extraction_stats.get("feedback_action_counts", {}),
                 "method_success_rates": method_success_rates,
                 "category_accuracy": self.extraction_stats["category_accuracy"],
                 "patterns_by_category": {
@@ -679,11 +1003,36 @@ class RequirementsExtractionAgent:
                     }
                     for category, patterns in self.learned_patterns.items()
                 },
+                "top_weighted_patterns": self._top_weighted_patterns(limit=20),
                 "last_learning_session": self.extraction_stats.get("last_learning_session", {})
             }
             
         except Exception as e:
             return {"error": f"Failed to get learning status: {str(e)}"}
+
+    def _top_weighted_patterns(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Return highest-confidence patterns learned from feedback."""
+        rows: List[Dict[str, Any]] = []
+        try:
+            for category, cat_store in (self.feedback_pattern_scores or {}).items():
+                for p_type, p_map in (cat_store or {}).items():
+                    for pattern, entry in (p_map or {}).items():
+                        if not isinstance(entry, dict):
+                            continue
+                        rows.append({
+                            "category": category,
+                            "pattern_type": p_type,
+                            "pattern": pattern,
+                            "score": float(entry.get("score", 0.0)),
+                            "approved": int(entry.get("approved", 0)),
+                            "rejected": int(entry.get("rejected", 0)),
+                            "modified": int(entry.get("modified", 0)),
+                            "seen": int(entry.get("seen", 0)),
+                        })
+            rows.sort(key=lambda r: (r["score"], r["approved"], -r["rejected"]), reverse=True)
+            return rows[:limit]
+        except Exception:
+            return []
     
     def _format_learned_results(self, learned_results: Dict[str, List[str]]) -> str:
         """Format learned results into a readable string."""

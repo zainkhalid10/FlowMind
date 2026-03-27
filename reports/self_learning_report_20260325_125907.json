@@ -1,0 +1,65 @@
+{
+  "generated_at_utc": "2026-03-25T07:59:07.705902+00:00",
+  "n_feedback_split": 50,
+  "db_path": "D:\\fyp_phase2\\FlowMind\\flowmind.db",
+  "baseline_file": "D:\\fyp_phase2\\FlowMind\\reports\\baseline_metrics_20260325_124816.json",
+  "split_timestamp": "2026-03-19 23:23:34.850656",
+  "baseline": {
+    "approval_rate": 0.8929,
+    "precision_proxy": 0.8929,
+    "turnaround_hours": 0.63,
+    "avg_quality_score": 0.0
+  },
+  "window_before_n_feedback": {
+    "decision_count": 50,
+    "action_distribution": {
+      "approve": 41,
+      "reject": 7,
+      "request_modification": 2
+    },
+    "approval_rate": 0.82,
+    "precision_proxy": 0.82,
+    "turnaround": {
+      "samples": 0,
+      "avg_hours": null
+    },
+    "avg_quality_score": 0.0
+  },
+  "window_after_n_feedback": {
+    "decision_count": 90,
+    "action_distribution": {
+      "approve": 84,
+      "reject": 3,
+      "request_modification": 3
+    },
+    "approval_rate": 0.9333333333333333,
+    "precision_proxy": 0.9333333333333333,
+    "turnaround": {
+      "samples": 3,
+      "avg_hours": 0.6260938867926598
+    },
+    "avg_quality_score": 0.0
+  },
+  "current_overall": {
+    "decision_count": 140,
+    "action_distribution": {
+      "approve": 125,
+      "reject": 10,
+      "request_modification": 5
+    },
+    "approval_rate": 0.8928571428571429,
+    "precision_proxy": 0.8928571428571429,
+    "turnaround": {
+      "samples": 3,
+      "avg_hours": 0.6260938867926598
+    },
+    "avg_quality_score": 0.0,
+    "total_feedback_events": 140
+  },
+  "improvement_vs_baseline": {
+    "approval_rate_delta": -4.285714285712228e-05,
+    "precision_proxy_delta": -4.285714285712228e-05,
+    "turnaround_hours_delta": -0.003906113207340245,
+    "avg_quality_score_delta": 0.0
+  }
+}

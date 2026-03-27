@@ -2,15 +2,15 @@
 
 ## Executive Summary
 
-FlowMind is an intelligent document analysis system that automatically extracts requirements, features, and specifications from technical documents. The system combines OCR (Optical Character Recognition), Vision-Language Models (VLM), and Retrieval-Augmented Generation (RAG) to provide comprehensive, accurate requirement extraction with self-learning capabilities.
+FlowMind is an intelligent document analysis system that automatically extracts requirements, features, and specifications from technical documents. The system combines OCR (Optical Character Recognition), Vision-Language Models (VLM), and Retrieval-Augmented Generation (RAG) to provide comprehensive requirement extraction with feedback-informed adaptation.
 
 **Key Achievements:**
-- 90-95% extraction accuracy
+- High extraction quality with measurable quality indicators
 - Zero duplicate requirements
-- Self-learning system that improves over time
+- Feedback-informed extraction refinement over time
 - Multi-format document support (PDF, DOCX, PPTX, images)
 - Professional, well-formatted output
-- User-specific learning and pattern recognition
+- User-specific pattern retrieval and recognition
 
 ---
 
@@ -32,9 +32,9 @@ FlowMind addresses the challenge of manually extracting requirements from techni
 
 ### 1.3 Core Value Proposition
 - **Time Savings**: Reduces manual requirement extraction time by 80-90%
-- **Accuracy**: 90-95% accuracy with quality indicators
+- **Accuracy**: Quality-scored extraction with benchmark-driven evaluation
 - **Consistency**: Standardized requirement formatting
-- **Learning**: System improves with each document processed
+- **Adaptation**: Feedback and retrieved patterns improve consistency over time
 - **Comprehensive**: Extracts from both text and images
 
 ---
@@ -91,7 +91,7 @@ FlowMind addresses the challenge of manually extracting requirements from techni
 - **Extract Page**: Document upload and extraction interface
 - **Approve Page**: Feature review and approval interface
 - **Dashboard Page**: User statistics and overview
-- **Training Page**: Model learning status and statistics
+- **Training Page**: Model status and extraction statistics
 
 #### Backend Components
 - **Authentication System**: JWT-based user authentication
@@ -99,7 +99,7 @@ FlowMind addresses the challenge of manually extracting requirements from techni
 - **Image Processing**: OCR and VLM analysis
 - **RAG Agent**: Requirements extraction engine
 - **Feature Management**: CRUD operations for features
-- **Learning System**: Pattern recognition and storage
+- **Pattern Store**: Pattern recognition, storage, and retrieval
 
 #### Data Storage
 - **SQLite**: User data, files, features, metadata
@@ -175,16 +175,16 @@ Each requirement receives a quality score (0-100) based on:
 - ⚠️ (60-79): Medium quality, acceptable
 - ❌ (<60): Low quality, needs review
 
-### 3.5 Self-Learning System
+### 3.5 Feedback-Informed Adaptation
 
-The system learns from each extraction:
+The system adapts from extraction history and user feedback:
 1. **Pattern Recognition**: Identifies common requirement patterns
 2. **Storage**: Saves patterns to ChromaDB vector store
 3. **Application**: Applies learned patterns to new documents
-4. **User-Specific Learning**: Each user has personalized learning
-5. **Global Learning**: Shared patterns across all users
+4. **User-Specific Retrieval**: Each user gets personalized pattern reuse
+5. **Global Reuse**: Shared high-value patterns across users
 
-**Learning Benefits:**
+**Adaptation Benefits:**
 - Improves accuracy over time
 - Recognizes domain-specific patterns
 - Adapts to user's document style
@@ -319,7 +319,7 @@ Update UI
 ### 5.5 User Management
 - **Authentication**: Secure JWT-based authentication
 - **User Isolation**: Each user sees only their data
-- **User-Specific Learning**: Personalized pattern recognition
+- **User-Specific Adaptation**: Personalized pattern retrieval
 - **Feedback System**: Client feedback on requirements
 
 ### 5.6 Progress Tracking
@@ -419,12 +419,12 @@ Update UI
 - OCR per image: 0.1-0.5 seconds
 - VLM analysis per image: 2-10 seconds (if enabled)
 
-### 7.2 Accuracy Metrics
+### 7.2 Evaluation Metrics
 
-- **Extraction Accuracy**: 90-95%
-- **Duplicate Rate**: <1%
-- **Classification Accuracy**: 85-90%
-- **Quality Score Correlation**: High correlation with human judgment
+- **Extraction Quality**: Tracked through benchmark runs and review outcomes
+- **Duplicate Rate**: Measured per document batch
+- **Classification Quality**: Evaluated against reviewer decisions
+- **Quality Score Correlation**: Compared against human review actions
 
 ### 7.3 Scalability
 
@@ -461,7 +461,7 @@ Update UI
 2. **View Dashboard**: See statistics and recent activity
 3. **Upload New Document**: Process new documents
 4. **Review Previous**: View and manage previous extractions
-5. **Check Learning**: View learned patterns and statistics
+5. **Check Adaptation**: View retrieved patterns and statistics
 
 ### 8.3 Feature Approval Workflow
 
@@ -545,7 +545,7 @@ Update UI
 
 1. **Fine-Tuned Models**: Domain-specific fine-tuning
 2. **Advanced VLM**: Better image understanding
-3. **Contextual Learning**: Better context awareness
+3. **Contextual Retrieval**: Better context-aware pattern reuse
 4. **Multi-Modal**: Better text-image integration
 5. **Confidence Scores**: More accurate confidence metrics
 
@@ -553,12 +553,12 @@ Update UI
 
 ## 11. Conclusion
 
-FlowMind is a comprehensive, intelligent document analysis system that successfully automates the requirement extraction process. With its multi-method extraction approach, self-learning capabilities, and professional output formatting, it provides significant value to users who need to extract requirements from technical documents.
+FlowMind is a comprehensive, intelligent document analysis system that successfully automates the requirement extraction process. With its multi-method extraction approach, feedback-informed adaptation, and professional output formatting, it provides significant value to users who need to extract requirements from technical documents.
 
 **Key Strengths**:
-- High accuracy (90-95%)
+- Quality-scored extraction and measurable review outcomes
 - Zero duplicate requirements
-- Self-improving system
+- Feedback-informed adaptation
 - Professional output
 - User-friendly interface
 

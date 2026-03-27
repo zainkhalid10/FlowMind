@@ -84,6 +84,24 @@ Before pushing:
 - README/docs updated if behavior changed
 - Sensitive secrets are not committed
 
+## Learning Maintenance Operations
+
+Run this before major demos or weekly checkpoints to keep self-learning current:
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+.\run_learning_maintenance.ps1 -NFeedback 50 -BackfillLimit 0
+```
+
+If using scheduled automation on Windows:
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+.\setup_learning_maintenance_task.ps1 -TaskName "FlowMind-LearningMaintenance" -RunTime "02:00"
+```
+
+Artifacts are stored in `reports/` and should be used as evidence in evaluation (baseline snapshots, self-learning reports, run summaries).
+
 ## Security Rules
 
 - Never commit .env with real credentials.

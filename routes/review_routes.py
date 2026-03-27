@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user, get_db
 from database import Feature, ParsedFile, ReviewAssignment, ReviewFeedback, User
+from rag_agent import get_agent
 
 router = APIRouter()
 
@@ -204,6 +205,22 @@ async def submit_review_action(
     db.commit()
     db.refresh(feedback)
 
+    learning_update = None
+    try:
+        owner_user_id = getattr(feature, "user_id", None) or assignment.manager_id
+        agent = get_agent(user_id=owner_user_id)
+        learning_update = agent.learn_from_feedback(
+            feature_text=feature.description or "",
+            category=feature.category or "features",
+            action=action,
+            title=_req_title(feature),
+            comment=feedback.comment or "",
+            file_id=file_id,
+            req_id=payload.req_id,
+        )
+    except Exception as e:
+        print(f"⚠️ Feedback learning update failed for req_id={payload.req_id}: {str(e)}")
+
     return {
         "feedback_id": feedback.id,
         "req_id": payload.req_id,
@@ -211,6 +228,7 @@ async def submit_review_action(
         "review_status": feature.client_review_status,
         "client_comment": feedback.comment or "",
         "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
+        "learning_update": learning_update,
     }
 
 

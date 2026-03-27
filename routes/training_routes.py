@@ -5,12 +5,129 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from database import SessionLocal, User
 from auth import get_current_user, get_db
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 import os
 import asyncio
 import time
+import json
+from pathlib import Path
 
 router = APIRouter()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+REPORTS_DIR = BASE_DIR / "reports"
+
+
+def _decode_user_from_token(token: Optional[str], credentials: Optional[HTTPAuthorizationCredentials], db: Session) -> User:
+    """Authenticate user from query token or Authorization header."""
+    from auth import SECRET_KEY, ALGORITHM
+    from jose import JWTError, jwt
+
+    auth_token = token or (credentials.credentials if credentials else None)
+    if not auth_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        payload = jwt.decode(auth_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            raise credentials_exception
+        user_id = int(user_id_str)
+    except (JWTError, ValueError, TypeError):
+        raise credentials_exception
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or user.is_active == 0:
+        raise credentials_exception
+    return user
+
+
+def _read_json_file(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+@router.get("/api/learning-maintenance-status")
+async def get_learning_maintenance_status(
+    token: Optional[str] = Query(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db),
+):
+    """Return latest automated learning maintenance status for manager dashboards."""
+    _ = _decode_user_from_token(token, credentials, db)
+
+    state_file = REPORTS_DIR / "learning_maintenance_state.json"
+    state = _read_json_file(state_file)
+
+    run_file = state.get("last_run_file")
+    run_data = {}
+    if run_file:
+        run_path = Path(run_file)
+        if not run_path.is_absolute():
+            run_path = BASE_DIR / run_path
+        run_data = _read_json_file(run_path)
+
+    backfill = run_data.get("backfill", {}) if isinstance(run_data, dict) else {}
+    actions = backfill.get("actions", {}) if isinstance(backfill, dict) else {}
+
+    return {
+        "has_state": bool(state),
+        "state_file": str(state_file),
+        "last_run_utc": state.get("last_run_utc"),
+        "last_run_file": state.get("last_run_file"),
+        "last_report_file": state.get("last_report_file"),
+        "last_current_baseline_file": state.get("last_current_baseline_file"),
+        "last_feedback_id": state.get("last_feedback_id"),
+        "processed_feedback_rows": backfill.get("processed_feedback_rows", 0),
+        "promoted_patterns": backfill.get("promoted_patterns", 0),
+        "demoted_patterns": backfill.get("demoted_patterns", 0),
+        "updated_patterns": backfill.get("updated_patterns", 0),
+        "actions": {
+            "approve": actions.get("approve", 0),
+            "reject": actions.get("reject", 0),
+            "request_modification": actions.get("request_modification", 0),
+        },
+        "n_feedback": run_data.get("n_feedback"),
+        "backfill_limit": run_data.get("backfill_limit"),
+    }
+
+
+@router.get("/api/learning-maintenance-report/latest")
+async def get_latest_learning_maintenance_report(
+    token: Optional[str] = Query(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db),
+):
+    """Download latest self-learning report file for authenticated users."""
+    _ = _decode_user_from_token(token, credentials, db)
+    state = _read_json_file(REPORTS_DIR / "learning_maintenance_state.json")
+    report_file = state.get("last_report_file")
+    if not report_file:
+        raise HTTPException(status_code=404, detail="No maintenance report found")
+
+    report_path = Path(report_file)
+    if not report_path.is_absolute():
+        report_path = BASE_DIR / report_path
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Maintenance report file not found")
+
+    return FileResponse(path=str(report_path), media_type="application/json", filename=report_path.name)
 
 
 @router.get("/training", response_class=HTMLResponse)
@@ -348,43 +465,9 @@ async def get_training_status(
 ):
     """Get model training status and learned patterns. Accepts token via Authorization header or query parameter.
     Results are cached for 5 seconds to reduce load."""
-    from auth import SECRET_KEY, ALGORITHM
-    from jose import JWTError, jwt
     import time
-    
-    # Try to get token from query parameter first, then from header
-    auth_token = None
-    if token:
-        auth_token = token
-    elif credentials:
-        auth_token = credentials.credentials
-    
-    if not auth_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
-    try:
-        payload = jwt.decode(auth_token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id_str = payload.get("sub")
-        if user_id_str is None:
-            raise credentials_exception
-        # Convert string back to int (JWT requires sub to be string)
-        user_id = int(user_id_str)
-    except (JWTError, ValueError, TypeError):
-        raise credentials_exception
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None or user.is_active == 0:
-        raise credentials_exception
+    user = _decode_user_from_token(token, credentials, db)
+    user_id = user.id
     
     # Check cache first
     cache_key = f"user_{user_id}"
