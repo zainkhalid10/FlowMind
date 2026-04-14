@@ -2,6 +2,7 @@ import os
 import json
 import re
 import time
+import numpy as np
 from typing import List, Dict, Any, Optional
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
@@ -113,7 +114,9 @@ class RequirementsExtractionAgent:
         # Hybrid pipeline config (override via env)
         self.use_spacy = os.getenv("FLOWMIND_USE_SPACY", "1") == "1"
         self.use_reranker = os.getenv("FLOWMIND_USE_RERANKER", "1") == "1"
-        self.use_llm_finalize = os.getenv("FLOWMIND_USE_LLM_FINALIZE", "0") == "1"
+        self.use_llm_finalize = os.getenv("FLOWMIND_USE_LLM_FINALIZE", "1") == "1"
+        self._debug_validation = os.getenv("FLOWMIND_DEBUG_VALIDATION", "0") == "1"
+        self._debug_extraction = os.getenv("FLOWMIND_DEBUG_EXTRACTION", "0") == "1"
         self.ollama_model = os.getenv("FLOWMIND_OLLAMA_MODEL", "llama3:8b")
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
         
@@ -1101,8 +1104,8 @@ class RequirementsExtractionAgent:
                     elif len(line) >= 4 and line[1] == "." and line[2] == ")":  # "1.) "
                         raw = line[4:].strip()
                         add_item(raw)
-                # Continuation or standalone requirement-like line (e.g. from diagrams)
-                elif current_section and len(line) > 15 and not line.endswith(":"):
+                # Strict requirement-like fallback line (only keep lines that look actionable)
+                elif current_section and self._looks_like_requirement(line):
                     add_item(line)
 
             flush_section()
@@ -1120,6 +1123,141 @@ class RequirementsExtractionAgent:
         except Exception as e:
             print(f"⚠️ Error parsing response to sections: {str(e)}")
             return {}
+
+    def _clean_requirement_text(self, text: str) -> str:
+        """Normalize and clean noisy extracted requirement text."""
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return ""
+
+        # Remove UI markers and quality icons carried from formatted output.
+        cleaned = re.sub(r'^[✅⚠️❌]\s*', '', cleaned)
+        cleaned = re.sub(r'^REQ-\d+\s*[·:-]?\s*', '', cleaned, flags=re.IGNORECASE)
+
+        # Remove obvious parser noise artifacts.
+        cleaned = re.sub(r'\b(?:edit|remove|pass/fail|post-\s*condition|actual result|test objective|precondition)\b', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\+\w+\([^)]*\)', ' ', cleaned)  # strip +method() fragments
+        cleaned = re.sub(r'[<>\\|]{2,}', ' ', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip(' -:;,.')
+
+        return cleaned
+
+    def _looks_like_requirement(self, text: str) -> bool:
+        """Gate extracted lines to keep only requirement-like statements."""
+        candidate = self._clean_requirement_text(text)
+        if not candidate:
+            return False
+        if self._is_llm_instruction_artifact(candidate):
+            return False
+
+        lower = candidate.lower()
+
+        # Length/shape checks.
+        if len(candidate) < 20 or len(candidate) > 260:
+            return False
+
+        # Reject symbol-heavy strings (common in diagram OCR noise).
+        symbol_count = len(re.findall(r'[+\\|><{}\[\]_=]', candidate))
+        if symbol_count > max(6, int(len(candidate) * 0.08)):
+            return False
+
+        # Reject obvious architecture dump lines.
+        noisy_phrases = [
+            'frontend (ui)', 'fastapi server', 'rag agent upload', 'post /upload_agent_doc',
+            'vector store', 'metrics updated', 'test objective', 'actual result'
+        ]
+        if any(phrase in lower for phrase in noisy_phrases):
+            return False
+
+        # Keep if it has modal/action requirement language.
+        has_modal = bool(re.search(r'\b(shall|must|should|will|needs to|is required to|has to)\b', lower))
+        has_action = bool(re.search(r'\b(provide|support|allow|enable|store|process|extract|classify|display|integrate|validate|secure)\b', lower))
+        has_subject = bool(re.search(r'\b(system|application|platform|user|client|dashboard|api|module)\b', lower))
+
+        return (has_modal and (has_action or has_subject)) or (has_action and has_subject)
+
+    def _normalize_requirement_category(self, category_key: str) -> str:
+        """Normalize parsed section keys to stable requirement categories."""
+        key = (category_key or "").strip().lower().replace(" ", "_")
+        if "non" in key and "functional" in key:
+            return "non_functional"
+        if "functional" in key:
+            return "functional"
+        if "user" in key or "story" in key:
+            return "user"
+        if "system" in key:
+            return "system"
+        if "business" in key:
+            return "business"
+        if "feature" in key:
+            return "features"
+        return "other"
+
+    def _infer_priority(self, statement: str) -> str:
+        """Infer a simple priority label from requirement language."""
+        text = (statement or "").lower()
+        if any(token in text for token in ["must", "shall", "critical", "mandatory"]):
+            return "high"
+        if any(token in text for token in ["should", "important", "recommended"]):
+            return "medium"
+        return "low"
+
+    def _infer_confidence(self, statement: str) -> float:
+        """Infer lightweight confidence from requirement quality signals."""
+        text = (statement or "").strip()
+        if not text:
+            return 0.3
+
+        score = 0.5
+        lower = text.lower()
+        if len(text) >= 40:
+            score += 0.1
+        if len(text) >= 80:
+            score += 0.1
+        if any(token in lower for token in ["must", "shall", "should", "will"]):
+            score += 0.1
+        if any(token in lower for token in ["system", "user", "application", "platform"]):
+            score += 0.1
+        return round(min(score, 0.95), 2)
+
+    def _build_structured_requirements(self, response_text: str) -> List[Dict[str, Any]]:
+        """Build strict structured requirement objects from sectioned response text."""
+        text = response_text or ""
+        print(f"BUILD_INPUT: {text[:500]}")
+        print(f"BUILD_INPUT_TOTAL_LEN: {len(text)}")
+        sections = self._parse_response_to_sections(text)
+        structured: List[Dict[str, Any]] = []
+        seen = set()
+
+        for raw_category, items in sections.items():
+            category = self._normalize_requirement_category(raw_category)
+            for item in items:
+                statement = self._clean_requirement_text(item)
+                if not statement:
+                    continue
+
+                if not self._looks_like_requirement(statement):
+                    continue
+
+                norm = statement.lower()
+                if norm in seen:
+                    continue
+                seen.add(norm)
+
+                structured.append(
+                    {
+                        "statement": statement,
+                        "category": category,
+                        "priority": self._infer_priority(statement),
+                        "confidence": self._infer_confidence(statement),
+                        "evidence_text": statement[:240],
+                        "evidence_page": None,
+                        "evidence_image_id": None,
+                        "source_type": "text",
+                    }
+                )
+
+        return structured
         
     # ---------------------- Formatting Helpers ----------------------
     def _normalize_line(self, line: str) -> str:
@@ -1176,6 +1314,28 @@ class RequirementsExtractionAgent:
         
         return s.strip()
 
+    def _strip_image_markers(self, sentence: str) -> str:
+        """Strip image/ocr markers and convert to clean prose before validation."""
+        s = sentence or ""
+        s = re.sub(r'\[IMAGE_SUMMARY[^\]]*\]', ' ', s, flags=re.IGNORECASE)
+        s = re.sub(r'\[IMAGE_REQUIREMENTS[^\]]*\]', ' ', s, flags=re.IGNORECASE)
+        s = re.sub(r'\[IMAGE[^\]]*\]', ' ', s, flags=re.IGNORECASE)
+        s = re.sub(r'\bOCR:\s*', ' ', s, flags=re.IGNORECASE)
+        s = re.sub(r'\s+', ' ', s)
+        return s.strip()
+
+    def _is_image_derived_sentence(self, sentence: str) -> bool:
+        """Detect if a sentence came from image/OCR/VLM context."""
+        if not sentence:
+            return False
+        return bool(
+            re.search(
+                r'\[IMAGE(?:_SUMMARY|_REQUIREMENTS)?[^\]]*\]|\bocr:\b|\bdiagram\b|\bflowchart\b|\bvisual analysis\b',
+                sentence,
+                re.IGNORECASE,
+            )
+        )
+
     def _should_keep_line(self, line: str) -> bool:
         """Enhanced filtering for more accurate requirement extraction."""
         s = (line or "").strip().lower()
@@ -1208,6 +1368,12 @@ class RequirementsExtractionAgent:
         if re.search(r'vlm\s+summarizer', s, re.IGNORECASE):
             return False
         if re.search(r'rag-based\s+requirement', s, re.IGNORECASE):
+            return False
+        if "for text content:" in s and "only extract" in s:
+            return False
+        if "you are a requirements extraction specialist" in s:
+            return False
+        if "never invent requirements" in s:
             return False
         
         # Filter out pure component lists (like "Tesseract, Structured Data, Embeddings")
@@ -1646,15 +1812,23 @@ class RequirementsExtractionAgent:
         return '\n'.join(enhanced_lines)
     
     def _llm_finalize(self, section_text: str) -> str:
-        """Optional LLM polishing via Ollama (local) or OpenRouter; fallback to input."""
+        """Optional LLM polishing via Ollama (local) or OpenRouter; fallback to input.
+        Prompt text is only sent to the LLM HTTP API — never returned verbatim on failure
+        (avoids embedding / parsing instruction lines like 'For text content: only extract...')."""
         if not self.use_llm_finalize:
             return section_text
-        prompt = (
-            "Rewrite the following extracted requirements into concise, non-duplicated bullet points, "
-            "organized strictly under these headings: Functional Requirements, Non-Functional Requirements, "
-            "User Requirements / Stories, System Requirements, Business Requirements, Features. "
-            "Keep only actionable, requirement-like content. Do not invent details.\n\n" + section_text
-        )
+        if (section_text or "").lstrip().startswith("You are a requirements extraction specialist."):
+            prompt = section_text
+        else:
+            prompt = (
+                "Rewrite the following extracted requirements into concise, non-duplicated bullet points, "
+                "organized strictly under these headings: Functional Requirements, Non-Functional Requirements, "
+                "User Requirements / Stories, System Requirements, Business Requirements, Features. "
+                "Keep only actionable, requirement-like content. Do not invent details.\n\n" + section_text
+            )
+        fallback = self._extract_finalize_fallback(section_text) if (
+            "You are a requirements extraction specialist" in (section_text or "")
+        ) else section_text
         # Try Ollama first
         try:
             import requests  # type: ignore
@@ -1666,7 +1840,8 @@ class RequirementsExtractionAgent:
             if resp.ok:
                 data = resp.json()
                 out = data.get("response") or data.get("output") or ""
-                return out.strip() or section_text
+                out_stripped = (out or "").strip()
+                return out_stripped or fallback
         except Exception:
             pass
         # Try OpenRouter if key present
@@ -1686,10 +1861,10 @@ class RequirementsExtractionAgent:
                     data = resp.json()
                     choice = (data.get("choices") or [{}])[0]
                     out = ((choice.get("message") or {}).get("content") or "").strip()
-                    return out or section_text
+                    return out or fallback
             except Exception:
                 pass
-        return section_text
+        return fallback
 
     def _create_tools(self) -> List[Tool]:
         """Create tools for the agent."""
@@ -2060,75 +2235,68 @@ Thought: {agent_scratchpad}""",
         
         return result
 
-    def _is_valid_requirement(self, sentence: str) -> bool:
-        """Filter out non-requirements like dates, project info, metadata."""
-        normalized = sentence.lower().strip()
-        
-        # Minimum length check
-        if len(normalized) < 15:
-            return False
-        
-        # Exclude image metadata and OCR markers
-        if re.search(r'\[image[^\]]*\]', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'\[image_summary[^\]]*\]', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'^ocr:\s*', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'img-[a-z0-9]+', normalized, re.IGNORECASE):
-            return False
-        
-        # Exclude technical metadata patterns
-        if re.search(r'key components:', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'technical details:', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'contains\s+\d+\s+structural\s+lines', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'\d+\s+identifiable\s+(steps|elements|components)', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'image type:', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'characteristics:', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'vlm\s+summarizer', normalized, re.IGNORECASE):
-            return False
-        if re.search(r'rag-based\s+requirement', normalized, re.IGNORECASE):
-            return False
-        
-        # Exclude pure metadata, headers, dates
-        import re
-        exclude_patterns = [
-            r'^\d+\.?\s*$',  # Just numbers
-            r'^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)',  # Starts with month
-            r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',  # Dates
-            r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}',
-            r'timeline.*(jan|feb|mar|apr|may|june|july|aug|sep|oct|nov|dec|\d{4})',
-            r'expected.*\d{4}',  # Expected dates
-            r'delivery.*\d{4}',  # Delivery dates  
-            r'due.*\d{4}',  # Due dates
-            r'demo.*\d{4}',  # Demo dates
-            r'^(page|section|chapter|figure|table|appendix)\s+\d+',  # Document structure
-            r'^(version|revision|date|author|title)',  # Document metadata
-        ]
-        
-        for pattern in exclude_patterns:
-            if re.search(pattern, normalized):
-                return False
-        
-        # Require some requirement-like indicators
+    def _is_llm_instruction_artifact(self, text: str) -> bool:
+        """True if line is from our finalize/extraction prompt, not a real requirement."""
+        s = (text or "").strip().lower()
+        if not s:
+            return True
+        if "you are a requirements extraction specialist" in s:
+            return True
+        if "for text content:" in s and "only extract" in s:
+            return True
+        if "for image content:" in s and "diagram" in s and "modal" in s:
+            return True
+        if re.match(r"^rules?:\s*$", s) or s.startswith("rules:\n"):
+            return True
+        if re.match(r"^-\s*for text content:", s):
+            return True
+        if re.match(r"^-\s*for image content:", s):
+            return True
+        if "never invent requirements" in s:
+            return True
+        if re.match(r"^requirement:\s*\[", s) and "full statement" in s:
+            return True
+        if s.startswith("content:") and len(s) < 80:
+            return True
+        if "none_found" in s.replace(" ", ""):
+            return True
+        return False
+
+    def _extract_finalize_fallback(self, maybe_full_prompt: str) -> str:
+        """If Ollama/OpenRouter failed, never return merged instruction+rules text to the pipeline."""
+        if not maybe_full_prompt:
+            return ""
+        marker = "Content:\n"
+        if marker in maybe_full_prompt and "You are a requirements extraction specialist" in maybe_full_prompt:
+            return maybe_full_prompt.split(marker, 1)[-1].strip()
+        return maybe_full_prompt.strip()
+
+    def _is_valid_requirement(self, sentence: str, source: str = "text") -> bool:
+        """Validate requirement lines; image-derived content skips modal-verb rules."""
+        cleaned = re.sub(r'\[image[^\]]*\]', '', sentence or "", flags=re.IGNORECASE)
+        cleaned = re.sub(r'\[image_summary[^\]]*\]', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\[image_requirements[^\]]*\]', '', cleaned, flags=re.IGNORECASE)
+        cleaned = cleaned.strip()
+        normalized = cleaned.lower()
+
+        if self._is_llm_instruction_artifact(cleaned):
+            result = False
+            print(f"VALID_CHECK [{source}]: {result} | len={len(cleaned)} | text={cleaned[:100]}")
+            return result
+
+        if source == "image":
+            result = len(cleaned) > 20
+            print(f"VALID_CHECK [{source}]: {result} | len={len(cleaned)} | text={cleaned[:100]}")
+            return result
+
         requirement_indicators = [
             'must', 'shall', 'should', 'will', 'can', 'may',
-            'enable', 'allow', 'provide', 'support', 'include',
-            'process', 'handle', 'manage', 'generate', 'validate',
-            'bot', 'system', 'application', 'platform', 'user',
+            'enable', 'allow', 'provide',
         ]
-        
         has_indicator = any(indicator in normalized for indicator in requirement_indicators)
-        if not has_indicator:
-            return False
-        
-        return True
+        result = has_indicator and len(cleaned) > 20
+        print(f"VALID_CHECK [{source}]: {result} | len={len(cleaned)} | text={cleaned[:100]}")
+        return result
 
     def _score_requirement_quality(self, requirement: str) -> float:
         """
@@ -2280,9 +2448,26 @@ Thought: {agent_scratchpad}""",
             # Split into sentences for better analysis
             sentences = re.split(r'(?<=[.!?])\s+', content)
             sentences = [s.strip() for s in sentences if s.strip()]
+            _split_count = len(sentences)
             
-            # STEP 1: Filter out non-requirements early
-            sentences = [s for s in sentences if self._is_valid_requirement(s)]
+            # STEP 1: Filter out non-requirements early with separate relaxed image channel
+            filtered_sentences = []
+            _vc_pass = 0
+            _vc_fail = 0
+            for s in sentences:
+                src = "image" if self._is_image_derived_sentence(s) else "text"
+                cleaned = self._strip_image_markers(s)
+                if self._is_valid_requirement(cleaned, source=src):
+                    _vc_pass += 1
+                    filtered_sentences.append(cleaned)
+                else:
+                    _vc_fail += 1
+            sentences = filtered_sentences
+            if self._debug_validation:
+                print(
+                    f"HEURISTIC _is_valid_requirement: pass={_vc_pass} fail={_vc_fail} "
+                    f"(sentences after split: {_split_count})"
+                )
             
             # Enhanced keyword patterns with better specificity
             patterns = {
@@ -2869,23 +3054,188 @@ Thought: {agent_scratchpad}""",
         except Exception as e:
             return {"status": "error", "message": f"Advanced pattern extraction failed: {str(e)}"}
 
+    def _retrieve_extraction_context(self, where: Optional[Dict[str, Any]] = None) -> str:
+        """Targeted retrieval for extraction, including guaranteed image-summary pass."""
+        if self.vectorstore is None:
+            return ""
+
+        queries = [
+            "system shall functional requirement",
+            "non-functional performance security reliability",
+            "business requirement stakeholder",
+            "system technical architecture constraint",
+        ]
+
+        seen = set()
+        merged_docs = []
+        docs = []  # first batch from vectorstore (for debug only)
+
+        def _push_docs(batch):
+            for d in batch or []:
+                content = (getattr(d, "page_content", "") or "").strip()
+                if not content:
+                    continue
+                key = re.sub(r"\s+", " ", content.lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged_docs.append(content)
+
+        for q in queries:
+            try:
+                batch = self.vectorstore.similarity_search(q, k=20, filter=where)
+            except TypeError:
+                batch = self.vectorstore.similarity_search(q, k=20, where=where)  # type: ignore
+            if not docs and batch:
+                docs = batch
+            _push_docs(batch)
+
+        # Dedicated image-summary retrieval pass to guarantee image-bearing chunks are considered.
+        try:
+            img_docs = self.vectorstore.similarity_search("IMAGE_SUMMARY diagram image OCR workflow", k=20, filter=where)
+        except TypeError:
+            img_docs = self.vectorstore.similarity_search("IMAGE_SUMMARY diagram image OCR workflow", k=20, where=where)  # type: ignore
+        _push_docs(img_docs)
+
+        print(f"RETRIEVE: got {len(docs)} chunks from vectorstore")
+        print(f"RETRIEVE_SAMPLE: {docs[0].page_content[:200] if docs else 'EMPTY'}")
+
+        return "\n".join(merged_docs)
+
+    def _merge_method_responses(self, responses: List[str]) -> str:
+        """Merge multiple sectioned responses by de-duplicating section items."""
+        merged_sections: Dict[str, List[str]] = {
+            "Functional Requirements": [],
+            "Non-Functional Requirements": [],
+            "User Requirements / Stories": [],
+            "System Requirements": [],
+            "Business Requirements": [],
+            "Features": [],
+        }
+        seen = {k: set() for k in merged_sections.keys()}
+        section_target_map = {
+            "functional": "Functional Requirements",
+            "non_functional": "Non-Functional Requirements",
+            "user": "User Requirements / Stories",
+            "system": "System Requirements",
+            "business": "Business Requirements",
+            "features": "Features",
+        }
+
+        for response in responses:
+            parsed = self._parse_response_to_sections(response or "")
+            for section_name, items in parsed.items():
+                target_section = section_name
+                if target_section not in merged_sections:
+                    norm_cat = self._normalize_requirement_category(section_name)
+                    target_section = section_target_map.get(norm_cat)
+                if not target_section or target_section not in merged_sections:
+                    continue
+                for item in items:
+                    clean_item = self._clean_requirement_text(item)
+                    if not clean_item:
+                        continue
+                    key = re.sub(r"\s+", " ", clean_item.lower())
+                    if key in seen[target_section]:
+                        continue
+                    seen[target_section].add(key)
+                    merged_sections[target_section].append(clean_item)
+
+        return self._format_sections(merged_sections)
+
+    def link_image_requirements_to_document_text(
+        self,
+        image_requirements: List[Dict[str, Any]],
+        full_document_chunks: List[str],
+        similarity_threshold: float = 0.75,
+        top_k: int = 2,
+    ) -> List[Dict[str, Any]]:
+        """
+        For each image-derived requirement, find related document chunks elsewhere
+        (cosine similarity) and attach as supporting_context.
+        """
+        if not image_requirements or not full_document_chunks:
+            return image_requirements
+        chunks = [c for c in full_document_chunks if (c or "").strip()]
+        if not chunks or self.embeddings is None:
+            for item in image_requirements:
+                item.setdefault("supporting_context", [])
+            return image_requirements
+        try:
+            chunk_embs = self.embeddings.embed_documents(chunks)
+        except Exception:
+            for item in image_requirements:
+                item.setdefault("supporting_context", [])
+            return image_requirements
+
+        updated: List[Dict[str, Any]] = []
+        for item in image_requirements:
+            stmt = (item.get("statement") or "").strip()
+            if not stmt:
+                ni = dict(item)
+                ni.setdefault("supporting_context", [])
+                updated.append(ni)
+                continue
+            try:
+                qemb = np.array(self.embeddings.embed_query(stmt), dtype=float)
+            except Exception:
+                ni = dict(item)
+                ni.setdefault("supporting_context", [])
+                updated.append(ni)
+                continue
+            sims: List[tuple] = []
+            for i, cem in enumerate(chunk_embs):
+                cvec = np.array(cem, dtype=float)
+                denom = np.linalg.norm(qemb) * np.linalg.norm(cvec) + 1e-9
+                sim = float(np.dot(qemb, cvec) / denom)
+                sims.append((sim, chunks[i]))
+            sims.sort(key=lambda x: -x[0])
+            support: List[str] = []
+            for sim, txt in sims:
+                if sim >= similarity_threshold and txt:
+                    support.append(txt[:1200])
+                if len(support) >= top_k:
+                    break
+            ni = dict(item)
+            ni["supporting_context"] = support
+            updated.append(ni)
+        return updated
+
+    def _llm_finalize_merged(self, section_text: str) -> str:
+        """LLM finalization using strict structured-output prompt."""
+        if not self.use_llm_finalize:
+            return section_text
+        prompt = (
+            "You are a requirements extraction specialist.\n"
+            "Extract ONLY explicit requirements from this content.\n"
+            "For each requirement output:\n"
+            "REQUIREMENT: [full statement]\n"
+            "CATEGORY: [Functional/Non-Functional/Business/System]\n"
+            "PRIORITY: [High/Medium/Low]\n"
+            "SOURCE: [text/image/diagram]\n"
+            "CONFIDENCE: [High/Medium/Low]\n"
+            "Rules:\n"
+            "- For text content: only extract if contains shall/must/will/should\n"
+            "- For image content: extract behaviors implied by diagrams even without modal verbs\n"
+            "- Never invent requirements not evidenced in the content\n"
+            "- If nothing found output: NONE_FOUND\n\n"
+            f"Content:\n{section_text}"
+        )
+        response = self._llm_finalize(prompt)
+        print(f"LLM_FINALIZE_INPUT_LEN: {len(section_text)}")
+        print(f"LLM_FINALIZE_RESPONSE: {(response or '')[:300]}")
+        return response
+
     def extract_requirements(self, query: str = None) -> Dict[str, Any]:
         """Enhanced requirement extraction with self-learning capabilities."""
         try:
             if query is None:
                 query = "Extract all features, requirements, and specifications from the documents. Organize them by type (functional, non-functional, user, system, business) and provide specific examples."
 
-            # Get document text
+            # Get document text via targeted retrieval strategy
             if self.vectorstore is not None:
                 where = {"source": self.last_source} if getattr(self, "last_source", None) else None
-                try:
-                    # Optimize: Use reasonable k value (50 instead of 100) for better performance
-                    # Can be increased if needed, but 50 chunks is usually sufficient
-                    docs = self.vectorstore.similarity_search("", k=50, filter=where)
-                except TypeError:
-                    # older langchain may use `where` instead of `filter`
-                    docs = self.vectorstore.similarity_search("", k=50, where=where)  # type: ignore
-                text = "\n".join([d.page_content for d in docs])
+                text = self._retrieve_extraction_context(where=where)
             else:
                 text = ""
             
@@ -2896,27 +3246,28 @@ Thought: {agent_scratchpad}""",
                 if learned_results:
                     print(f"🧠 Applied learned patterns: found {sum(len(v) for v in learned_results.values())} additional requirements")
             
-            # Try multiple extraction methods - optimized order: fastest first
-            # Heuristic is fastest (pattern matching), then pattern (learned), then semantic (embeddings - slowest)
-            # Skip semantic for very large texts to avoid timeout
+            # Try extraction methods and merge outputs. Semantic is slow on huge texts.
             text_length = len(text) if text else 0
-            skip_semantic = text_length > 100000  # Skip semantic for large documents (>100k chars) to avoid timeout
-            
+            skip_semantic_large = os.getenv("FLOWMIND_SKIP_SEMANTIC_LARGE_TEXT", "0") == "1"
+            skip_semantic = bool(skip_semantic_large and text_length > 100000)
+            if skip_semantic:
+                print(
+                    f"Skipping semantic extraction (text too large: {text_length} chars; "
+                    "set FLOWMIND_SKIP_SEMANTIC_LARGE_TEXT=0 to force semantic)"
+                )
             methods = [
                 ("heuristic", self._heuristic_extract),  # Fastest - pattern matching
                 ("pattern", self._advanced_pattern_extract),  # Medium - learned patterns
             ]
-            
-            # Only add semantic if text is not too large
             if not skip_semantic:
-                methods.append(("semantic", self._semantic_extract))  # Slowest - embedding-based, try last
-            else:
-                print(f"⚠️  Skipping semantic extraction (text too large: {text_length} chars, would be slow)")
-            
+                methods.append(("semantic", self._semantic_extract))  # Slowest - embedding-based
+
             best_result = None
             best_score = 0
             method_used = "none"
             last_error = None
+            successful_method_responses: List[str] = []
+            successful_method_names: List[str] = []
             
             for method_name, method_func in methods:
                 try:
@@ -2924,17 +3275,19 @@ Thought: {agent_scratchpad}""",
                     import time
                     start_time = time.time()
                     result = method_func(text)
+                    print(
+                        f"METHOD RESULT [{method_name}]: status={result.get('status')} | "
+                        f"response_len={len(str(result.get('response', '')))} | "
+                        f"response_preview={str(result.get('response', ''))[:200]}"
+                    )
                     elapsed = time.time() - start_time
                     print(f"  ⏱️  {method_name} completed in {elapsed:.2f}s")
-                    
-                    # Early exit if we get a good result from a fast method
-                    if method_name in ["heuristic", "pattern"] and result.get("status") == "success" and result.get("response"):
-                        response = result.get("response", "")
-                        if len(response.strip()) > 200:  # Good enough result
-                            print(f"  ✅ Got good result from {method_name}, skipping slower methods")
-                            best_result = result
-                            method_used = method_name
-                            break
+                    if self._debug_extraction:
+                        rs = result.get("response", "") if isinstance(result, dict) else ""
+                        print(
+                            f"METHOD: {method_name} — result length: {len(str(rs))} "
+                            f"status={result.get('status') if isinstance(result, dict) else 'n/a'}"
+                        )
                     
                     # Debug: Show what we got
                     print(f"  📊 {method_name} result status: {result.get('status')}")
@@ -2960,6 +3313,8 @@ Thought: {agent_scratchpad}""",
                                 best_score = quality_score
                                 best_result = result
                                 method_used = method_name
+                            successful_method_responses.append(response)
+                            successful_method_names.append(method_name)
                         else:
                             print(f"  ⚠️ {method_name} response too short: {len(response.strip())} chars")
                     else:
@@ -2973,8 +3328,8 @@ Thought: {agent_scratchpad}""",
                     traceback.print_exc()
                     continue
             
-            # Use learned patterns if no other method worked
-            if not best_result and learned_results:
+            # Use learned patterns if no extraction method produced usable output
+            if not successful_method_responses and learned_results:
                 learned_text = self._format_learned_results(learned_results)
                 if len(learned_text.strip()) > 50:
                     best_result = {
@@ -2983,6 +3338,18 @@ Thought: {agent_scratchpad}""",
                         "method": "learned_patterns"
                     }
                     method_used = "learned_patterns"
+                    successful_method_responses.append(learned_text)
+                    successful_method_names.append("learned_patterns")
+
+            # Merge all successful method outputs (instead of first-wins).
+            if successful_method_responses:
+                merged_response = self._merge_method_responses(successful_method_responses)
+                best_result = {
+                    "status": "success",
+                    "response": merged_response,
+                    "method": "+".join(successful_method_names) if successful_method_names else method_used,
+                }
+                method_used = best_result["method"]
             
             # Store result for potential partial return on timeout
             self.last_extraction_result = best_result if best_result else None
@@ -2997,16 +3364,40 @@ Thought: {agent_scratchpad}""",
                 # Enhance the final output for professional wording
                 if best_result.get("response"):
                     print(f"✨ Enhancing extracted requirements for professional wording...")
-                    best_result["response"] = self._enhance_final_output(best_result["response"])
+                    pre_finalize_text = self._enhance_final_output(best_result["response"])
+                    best_result["response"] = pre_finalize_text
+                    finalized_response = self._llm_finalize_merged(pre_finalize_text)
+
+                    # Safety net: if LLM finalize wipes everything, fall back to the pre-finalize merged result.
+                    try:
+                        pre_count = len([l for l in pre_finalize_text.splitlines() if l.strip().startswith("- ")])
+                        post_count = len([l for l in (finalized_response or "").splitlines() if l.strip().startswith("- ")])
+                        parts = (finalized_response or "").split("\n\n")
+                        all_none = all(
+                            ("(none)" in (p or "").lower()) or (p or "").strip() == ""
+                            for p in parts
+                        )
+                        if all_none or post_count < pre_count:
+                            print("LLM_FINALIZE_FALLBACK: returning pre-finalize merged result")
+                            finalized_response = pre_finalize_text
+                    except Exception:
+                        # If debug/fallback logic fails, keep finalized_response.
+                        pass
+
+                    best_result["response"] = finalized_response
                     print(f"✅ Requirements enhanced successfully")
                 
                 # Add learning info to result FIRST (before learning, which might be slow)
                 best_result["extraction_method"] = method_used
                 best_result["learning_enabled"] = self.enable_self_learning
                 best_result["quality_score"] = best_score
+                structured_requirements = self._build_structured_requirements(best_result.get("response", ""))
+                best_result["requirements_json"] = structured_requirements
+                best_result["requirements_json_count"] = len(structured_requirements)
                 
                 print(f"✅ Used {method_used} extraction method")
                 print(f"📊 Result status: {best_result.get('status')}, Response length: {len(str(best_result.get('response', '')))}")
+                print(f"📊 Structured requirements count: {best_result.get('requirements_json_count', 0)}")
                 print(f"📊 About to return best_result from extract_requirements...")
                 
                 # Persist learning before returning so the UI reflects new patterns immediately.

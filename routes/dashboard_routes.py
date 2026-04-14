@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from database import SessionLocal, ParsedFile, User, Team, Feature, IntegrationLog
+from database import SessionLocal, ParsedFile, User, Team, Feature, IntegrationLog, ImageMeta, ReviewAssignment, ReviewFeedback, AgentChatHistory
 from auth import get_current_user, get_db, get_visible_user_ids, can_user_access_project, SECRET_KEY, ALGORITHM
 from jose import JWTError, jwt
 from fastapi.responses import HTMLResponse
@@ -156,6 +156,17 @@ async def manager_feedback_page():
     return HTMLResponse(content="<h1>Manager feedback page not found</h1>", status_code=404)
 
 
+@router.get("/clients", response_class=HTMLResponse)
+@router.get("/clients.html", response_class=HTMLResponse)
+async def clients_page():
+    """Client credentials listing page for managers."""
+    p = os.path.join(STATIC_DIR, "clients.html")
+    if os.path.exists(p):
+        with open(p, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Clients page not found</h1>", status_code=404)
+
+
 def _get_user_from_token(token: Optional[str] = None, credentials: Optional[HTTPAuthorizationCredentials] = None, db: Session = None) -> User:
     """Helper function to get user from token (query param or header)."""
     auth_token = None
@@ -240,6 +251,92 @@ async def get_my_uploads(
         return {"uploads": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching uploads: {str(e)}")
+
+
+@router.get("/api/agent-chat-history")
+async def get_agent_chat_history(
+    token: Optional[str] = Query(None),
+    project_id: Optional[int] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db),
+):
+    """Get persistent AI analysis history for the authenticated user."""
+    current_user = _get_user_from_token(token, credentials, db)
+    if project_id is not None and not can_user_access_project(current_user, project_id, db):
+        raise HTTPException(status_code=403, detail="Not allowed for this project")
+
+    query = db.query(AgentChatHistory).filter(AgentChatHistory.user_id == current_user.id)
+    if project_id is not None:
+        query = query.filter(AgentChatHistory.project_id == project_id)
+
+    rows = query.order_by(AgentChatHistory.created_at.desc()).limit(limit).all()
+    history = []
+    for row in rows:
+        history.append({
+            "id": row.id,
+            "filename": row.filename,
+            "user_message": row.user_message or "",
+            "assistant_message": row.assistant_message or "",
+            "view_id": row.view_id,
+            "file_id": row.file_id,
+            "project_id": row.project_id,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+
+    return {"history": history}
+
+
+@router.delete("/api/files/{file_id}")
+async def delete_file(
+    file_id: int,
+    token: Optional[str] = Query(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db),
+):
+    """Delete an uploaded file and linked extracted artifacts if allowed."""
+    current_user = _get_user_from_token(token, credentials, db)
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    row = db.query(ParsedFile).filter(
+        ParsedFile.id == file_id,
+        ParsedFile.user_id.in_(visible_ids),
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Allow deletion by owner, manager, or team head.
+    if current_user.id != row.user_id and current_user.role not in ("manager", "team_head"):
+        raise HTTPException(status_code=403, detail="Not allowed to delete this file")
+
+    # Remove review lifecycle records for this file so test/duplicate uploads can be cleaned.
+    db.query(ReviewFeedback).filter(ReviewFeedback.file_id == row.id).delete(synchronize_session=False)
+    db.query(ReviewAssignment).filter(ReviewAssignment.file_id == row.id).delete(synchronize_session=False)
+
+    # Clean up linked image files from disk where possible.
+    image_rows = db.query(ImageMeta).filter(ImageMeta.file_id == row.id).all()
+    for img in image_rows:
+        try:
+            if img.image_path and os.path.exists(img.image_path):
+                os.remove(img.image_path)
+        except Exception:
+            pass
+
+    # Clean up extracted full text file if present.
+    try:
+        if row.full_text_path and os.path.exists(row.full_text_path):
+            os.remove(row.full_text_path)
+    except Exception:
+        pass
+
+    db.query(ImageMeta).filter(ImageMeta.file_id == row.id).delete(synchronize_session=False)
+    db.query(Feature).filter(Feature.file_id == row.id).delete(synchronize_session=False)
+    db.delete(row)
+    db.commit()
+
+    return {"status": "success", "deleted_file_id": file_id}
 
 
 @router.get("/files")

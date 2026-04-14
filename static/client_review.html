@@ -123,6 +123,22 @@
       padding: 12px;
     }
 
+    .req-card.selected {
+      box-shadow: 0 0 0 2px rgba(83, 74, 183, 0.18);
+      border-color: rgba(83, 74, 183, 0.45);
+    }
+
+    .req-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .req-select {
+      margin-top: 2px;
+      accent-color: #534AB7;
+    }
+
     .req-card.status-approved { border-left-color: #3B6D11; }
     .req-card.status-rejected { border-left-color: #A32D2D; }
     .req-card.status-modification_requested { border-left-color: #854F0B; }
@@ -166,6 +182,46 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+    }
+
+    .group-heading {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      color: #1a1a1a;
+      font-weight: 600;
+      border-left: 3px solid #534AB7;
+      padding-left: 10px;
+    }
+
+    .group-heading.priority-high { border-left-color: #A32D2D; }
+    .group-heading.priority-medium { border-left-color: #854F0B; }
+    .group-heading.priority-low { border-left-color: #3B6D11; }
+    .group-heading.status-approved { border-left-color: #3B6D11; }
+    .group-heading.status-rejected { border-left-color: #A32D2D; }
+    .group-heading.status-modification_requested { border-left-color: #854F0B; }
+
+    .selection-bar {
+      margin: 10px 0 8px;
+      padding: 10px;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 10px;
+      background: #FCFCFB;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .selection-meta {
+      font-size: 12px;
+      color: #6B6B68;
+    }
+
+    .selection-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     .action-btn {
@@ -457,6 +513,20 @@
       border-color: rgba(255, 255, 255, 0.10) !important;
     }
 
+    html[data-theme="dark"] .req-card.selected {
+      box-shadow: 0 0 0 2px rgba(184, 167, 255, 0.22) !important;
+      border-color: rgba(184, 167, 255, 0.4) !important;
+    }
+
+    html[data-theme="dark"] .selection-bar {
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+
+    html[data-theme="dark"] .selection-meta {
+      color: #A9AEBE !important;
+    }
+
     html[data-theme="dark"] .req-title {
       color: #E9E9EA !important;
     }
@@ -605,16 +675,28 @@
     <div class="fm-logo">Flow<span>Mind</span></div>
     <div class="client-role-pill">Client Reviewer</div>
     <nav class="fm-nav" style="margin-top: 12px;">
-      <a href="#review-requirements" class="fm-nav-item" data-page="client-review"><span class="fm-dot"></span> Review requirements</a>
-      <a href="#my-feedback" class="fm-nav-item" data-page="my-feedback"><span class="fm-dot"></span> My feedback</a>
-      <a href="#documents" class="fm-nav-item" data-page="documents"><span class="fm-dot"></span> Documents</a>
+      <a href="#review-requirements" class="fm-nav-item active" data-page="client-review">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 2.5h7a1 1 0 011 1v10l-3-2H4.5a1 1 0 01-1-1v-8a1 1 0 011-1zM5.5 6h5M5.5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Review requirements</span>
+      </a>
+      <a href="#my-feedback" class="fm-nav-item" data-page="my-feedback">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M14 10a2 2 0 01-2 2H5l-3 2v-9a2 2 0 012-2h8a2 2 0 012 2v5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>My feedback</span>
+      </a>
+      <a href="#documents" class="fm-nav-item" data-page="documents">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 3.5h4l1.5 1.5H13a1 1 0 011 1V12a1 1 0 01-1 1H3a1 1 0 01-1-1v-7a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Documents</span>
+      </a>
     </nav>
     <div class="fm-sidebar-user">
       <div class="fm-avatar" id="userInitials">CR</div>
-      <div>
+      <div class="fm-user-text">
         <div class="fm-user-name" id="userName">Client</div>
         <div class="fm-user-role">External reviewer</div>
       </div>
+      <button type="button" class="fm-sign-out-btn" onclick="logout()" title="Sign out" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
   </aside>
 
@@ -662,6 +744,16 @@
           <option value="category">Category</option>
           <option value="priority">Priority</option>
         </select>
+      </div>
+
+      <div id="selectionBar" class="selection-bar">
+        <div id="selectionMeta" class="selection-meta">0 selected</div>
+        <div class="selection-actions">
+          <button id="selectVisibleBtn" class="fm-btn-outline fm-btn-sm">Select visible</button>
+          <button id="clearSelectionBtn" class="fm-btn-outline fm-btn-sm">Clear</button>
+          <button id="approveSelectedBtn" class="fm-btn-primary fm-btn-sm">Approve selected</button>
+          <button id="rejectSelectedBtn" class="fm-btn-outline fm-btn-sm">Reject selected</button>
+        </div>
       </div>
 
       <div id="filterRow" class="filter-row"></div>
@@ -770,6 +862,8 @@
     let searchQuery = '';
     let groupingMode = 'none';
     let reviewMeta = { filename: '', manager_name: '', due_date: '', submitted: false };
+    const stagedChanges = new Map();
+    const selectedReqIds = new Set();
     const filterOrder = ['all', 'pending', 'approved', 'rejected', 'modification_requested'];
 
     const filterLabel = {
@@ -787,6 +881,43 @@
       if (s === 'modification_requested') return 'modification_requested';
       if (s === 'pending_manager_approval') return 'pending_manager_approval';
       return 'pending';
+    }
+
+    function normalizeCategory(value) {
+      const raw = String(value || 'functional').trim().toLowerCase().replace(/_/g, '-');
+      if (raw === 'nonfunctional' || raw === 'non functional' || raw === 'non-functional' || raw === 'nfr') return 'non-functional';
+      if (raw === 'business') return 'business';
+      if (raw === 'system') return 'system';
+      return 'functional';
+    }
+
+    function displayCategory(value) {
+      const normalized = normalizeCategory(value);
+      if (normalized === 'non-functional') return 'Non-functional';
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    function normalizePriority(value) {
+      const p = String(value || 'Medium').trim().toLowerCase();
+      if (p === 'high' || p === 'critical') return 'High';
+      if (p === 'low') return 'Low';
+      return 'Medium';
+    }
+
+    function cleanTitle(rawTitle, description, reqId) {
+      let t = String(rawTitle || '').trim();
+      const desc = String(description || '').trim();
+      if (!t || /^requirement\s*\d+$/i.test(t)) {
+        t = desc.split(/[\.\n]/)[0].trim();
+      }
+      t = t.replace(/^the\s+system\s+shall\s+/i, '');
+      t = t.replace(/^the\s+application\s+shall\s+/i, '');
+      t = t.replace(/^system\s+shall\s+/i, '');
+      t = t.replace(/^should\s+/i, '');
+      t = t.trim();
+      if (!t) return 'Requirement ' + reqId;
+      if (t.length > 96) return t.slice(0, 93) + '...';
+      return t;
     }
 
     function prettyStatus(status) {
@@ -897,14 +1028,16 @@
 
       target.innerHTML = items.map(req => {
         const status = statusClass(req.review_status);
+        const cleanReqTitle = cleanTitle(req.title, req.description, req.req_id);
         const comment = req.client_comment
           ? '<div class="comment-quote">' + escapeHtml(req.client_comment) + '</div>'
           : '';
         return '<article class="req-card status-' + status + '">'
-          + '<div class="req-title">REQ-' + req.req_id + ' · ' + escapeHtml(req.title || 'Requirement') + '</div>'
+          + '<div class="req-title">REQ-' + req.req_id + ' · ' + escapeHtml(cleanReqTitle) + '</div>'
           + '<div class="req-desc">' + escapeHtml(req.description || '-') + '</div>'
           + '<div class="chip-row">'
-          + '<span class="fm-badge ' + reqPriorityClass(req.priority) + '">' + escapeHtml(req.priority || 'Medium') + '</span>'
+          + '<span class="fm-badge badge-info">' + escapeHtml(displayCategory(req.category)) + '</span>'
+          + '<span class="fm-badge ' + reqPriorityClass(req.priority) + '">' + escapeHtml(normalizePriority(req.priority)) + '</span>'
           + '<span class="status-chip ' + status + '">' + prettyStatus(status) + '</span>'
           + '</div>'
           + comment
@@ -1075,9 +1208,9 @@
             <h2>Requirements with Feedback</h2>
             ${requirements.filter(r => r.client_comment || r.review_status !== 'pending').map(req => `
               <div class="req-item">
-                <div class="req-title">REQ-${req.req_id} · ${escapeHtml(req.title || 'Requirement ' + req.req_id)}</div>
-                <span class="badge badge-info">${escapeHtml(req.category || 'functional')}</span>
-                <span class="badge ${reqPriorityClass(req.priority)}">${escapeHtml(req.priority || 'Medium')}</span>
+                <div class="req-title">REQ-${req.req_id} · ${escapeHtml(cleanTitle(req.title, req.description, req.req_id))}</div>
+                <span class="badge badge-info">${escapeHtml(displayCategory(req.category))}</span>
+                <span class="badge ${reqPriorityClass(req.priority)}">${escapeHtml(normalizePriority(req.priority))}</span>
                 <span class="badge ${statusClass(req.review_status)}">${prettyStatus(statusClass(req.review_status))}</span>
                 <div class="req-desc">${escapeHtml(req.description || '-')}</div>
                 ${req.client_comment ? '<div class="req-comment"><strong>Your feedback:</strong> ' + escapeHtml(req.client_comment) + '</div>' : ''}
@@ -1122,7 +1255,7 @@
         
         statusOrder.forEach(status => {
           if (groupedByStatus[status].length > 0) {
-            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + statusTitles[status] + ' (' + groupedByStatus[status].length + ')</h3>';
+            html += '<h3 class="group-heading status-' + status + '">' + statusTitles[status] + ' (' + groupedByStatus[status].length + ')</h3>';
             html += '<div style="margin-bottom:12px;">' + groupedByStatus[status].map(req => renderRequirementCard(req)).join('') + '</div>';
           }
         });
@@ -1132,15 +1265,15 @@
         categories.forEach(cat => groupedByCategory[cat] = []);
         
         visible.forEach(req => {
-          const cat = (req.category || 'functional').toLowerCase();
+          const cat = normalizeCategory(req.category);
           if (!groupedByCategory[cat]) groupedByCategory[cat] = [];
           groupedByCategory[cat].push(req);
         });
         
         categories.forEach(cat => {
           if (groupedByCategory[cat].length > 0) {
-            const catDisplay = cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + catDisplay + ' (' + groupedByCategory[cat].length + ')</h3>';
+            const catDisplay = displayCategory(cat);
+            html += '<h3 class="group-heading">' + catDisplay + ' (' + groupedByCategory[cat].length + ')</h3>';
             html += '<div style="margin-bottom:12px;">' + groupedByCategory[cat].map(req => renderRequirementCard(req)).join('') + '</div>';
           }
         });
@@ -1151,14 +1284,14 @@
           'Low': []
         };
         visible.forEach(req => {
-          const pri = req.priority || 'Medium';
+          const pri = normalizePriority(req.priority);
           if (groupedByPriority[pri]) groupedByPriority[pri].push(req);
         });
         
         const priorityOrder = ['High', 'Medium', 'Low'];
         priorityOrder.forEach(pri => {
           if (groupedByPriority[pri].length > 0) {
-            html += '<h3 style="margin:16px 0 8px; font-size:13px; color:#1a1a1a; font-weight:600; border-left:3px solid #534AB7; padding-left:10px;">' + pri + ' Priority (' + groupedByPriority[pri].length + ')</h3>';
+            html += '<h3 class="group-heading priority-' + pri.toLowerCase() + '">' + pri + ' Priority (' + groupedByPriority[pri].length + ')</h3>';
             html += '<div style="margin-bottom:12px;">' + groupedByPriority[pri].map(req => renderRequirementCard(req)).join('') + '</div>';
           }
         });
@@ -1174,22 +1307,34 @@
       const status = statusClass(req.review_status);
       const reqId = String(req.req_id);
       const isPending = status === 'pending';
-      const commentBlock = req.client_comment ? '<div class="comment-quote">' + req.client_comment + '</div>' : '';
+      const commentBlock = req.client_comment ? '<div class="comment-quote">' + escapeHtml(req.client_comment) + '</div>' : '';
       const addedBadge = String(req.source || '').toLowerCase() === 'client' ? '<span class="added-by-client">Added by client</span>' : '';
+      const isSelected = selectedReqIds.has(reqId);
+      const staged = stagedChanges.get(reqId);
+      const canUndo = !!staged;
+      const title = cleanTitle(req.title, req.description, reqId);
+      const priority = normalizePriority(req.priority);
+      const category = displayCategory(req.category);
       
       // Show timestamp if there's feedback (not pending)
       const timestamp = (status !== 'pending' && req.feedback_date) 
         ? '<div style="font-size:11px; color:#9ca3af; margin-top:8px; padding-top:6px; border-top:0.5px solid #e5e7eb;">Feedback submitted: ' + new Date(req.feedback_date).toLocaleString() + '</div>'
         : '';
 
-      return '<article class="req-card status-' + status + '" data-req-id="' + reqId + '">'
-        + '<div class="req-title">REQ-' + reqId + ' · ' + (req.title || ('Requirement ' + reqId)) + ' ' + addedBadge + '</div>'
-        + '<div class="req-desc">' + (req.description || '-') + '</div>'
+      return '<article class="req-card status-' + status + (isSelected ? ' selected' : '') + '" data-req-id="' + reqId + '">'
+        + '<div class="req-head">'
+        + '<input type="checkbox" class="req-select" data-select-id="' + reqId + '" ' + (isSelected ? 'checked' : '') + '>'
+        + '<div style="flex:1;">'
+        + '<div class="req-title">REQ-' + reqId + ' · ' + escapeHtml(title) + ' ' + addedBadge + '</div>'
+        + '<div class="req-desc">' + escapeHtml(req.description || '-') + '</div>'
+        + '</div>'
+        + '</div>'
         + commentBlock
         + '<div class="chip-row">'
-        + '<span class="fm-badge badge-info">' + (req.category || 'functional') + '</span>'
-        + '<span class="fm-badge ' + reqPriorityClass(req.priority) + '">' + (req.priority || 'Medium') + '</span>'
+        + '<span class="fm-badge badge-info">' + escapeHtml(category) + '</span>'
+        + '<span class="fm-badge ' + reqPriorityClass(priority) + '">' + escapeHtml(priority) + '</span>'
         + '<span class="status-chip ' + status + '">' + prettyStatus(status) + '</span>'
+        + (canUndo ? '<span class="status-chip pending">Staged</span>' : '')
         + '</div>'
         + (isPending ? '<div class="action-row">'
           + '<button class="action-btn approve" data-action="approve" data-id="' + reqId + '">Approve</button>'
@@ -1197,6 +1342,7 @@
           + '<button class="action-btn modify" data-action="request_modification" data-id="' + reqId + '">Request modification</button>'
           + '<button class="action-btn priority" data-action="set-priority" data-id="' + reqId + '">Set priority</button>'
           + '</div>' : '')
+        + (canUndo ? '<div class="action-row" style="margin-top:8px;"><button class="action-btn" data-action="undo" data-id="' + reqId + '">Undo staged change</button></div>' : '')
         + timestamp
         + '<div id="panel-' + reqId + '" class="inline-panel"></div>'
         + '</article>';
@@ -1215,36 +1361,75 @@
       }
     }
 
-    async function postAction(reqId, action, comment) {
-      const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
-        method: 'POST',
-        body: JSON.stringify({ req_id: Number(reqId), action, comment: comment || '' })
-      });
-      if (!res.ok) throw new Error('Failed to save action');
-      const payload = await res.json();
-
+    function stageAction(reqId, action, comment, options) {
+      const opts = options || {};
       const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
-      if (idx >= 0) {
-        requirements[idx].review_status = payload.review_status || statusClass(action);
-        requirements[idx].client_comment = payload.client_comment || (comment || '');
+      if (idx < 0) return;
+      const req = requirements[idx];
+      stagedChanges.set(String(reqId), {
+        action,
+        comment: comment || '',
+        priority: normalizePriority(req.priority),
+        baseStatus: req._server_review_status,
+        baseComment: req._server_comment,
+        basePriority: req._server_priority,
+      });
+      req.review_status = _action_to_display_status(action);
+      req.client_comment = comment || '';
+      if (!opts.silent) {
+        renderFilterPills();
+        updateProgress();
+        renderRequirements();
+        renderMyFeedback();
+        renderDocumentsInfo();
+        updateSelectionMeta();
+        showToast('Change staged. You can undo before submit.', 'success');
       }
+    }
+
+    function _action_to_display_status(action) {
+      if (action === 'approve') return 'approved';
+      if (action === 'reject') return 'rejected';
+      if (action === 'request_modification') return 'modification_requested';
+      return 'pending';
+    }
+
+    function stagePriority(reqId, priority) {
+      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
+      if (idx < 0) return;
+      const req = requirements[idx];
+      req.priority = normalizePriority(priority);
+
+      const current = stagedChanges.get(String(reqId)) || {
+        action: null,
+        comment: req.client_comment || '',
+        baseStatus: req._server_review_status,
+        baseComment: req._server_comment,
+        basePriority: req._server_priority,
+      };
+      current.priority = req.priority;
+      stagedChanges.set(String(reqId), current);
+
+      renderRequirements();
+      updateSelectionMeta();
+      showToast('Priority staged. You can undo before submit.', 'success');
+    }
+
+    function undoStagedChange(reqId) {
+      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
+      if (idx < 0) return;
+      const req = requirements[idx];
+      req.review_status = req._server_review_status || 'pending';
+      req.client_comment = req._server_comment || '';
+      req.priority = req._server_priority || 'Medium';
+      stagedChanges.delete(String(reqId));
       renderFilterPills();
       updateProgress();
       renderRequirements();
-      showToast('Action saved', 'success');
-    }
-
-    async function setPriority(reqId, priority) {
-      const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/set-priority', {
-        method: 'POST',
-        body: JSON.stringify({ req_id: Number(reqId), priority })
-      });
-      if (!res.ok) throw new Error('Failed to set priority');
-
-      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
-      if (idx >= 0) requirements[idx].priority = priority;
-      renderRequirements();
-      showToast('Priority updated', 'success');
+      renderMyFeedback();
+      renderDocumentsInfo();
+      updateSelectionMeta();
+      showToast('Staged change removed', 'success');
     }
 
     async function approveAllPending() {
@@ -1302,13 +1487,21 @@
     }
 
     function bindRequirementActions() {
+      document.querySelectorAll('[data-select-id]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const reqId = String(chk.dataset.selectId || '');
+          if (!reqId) return;
+          if (chk.checked) selectedReqIds.add(reqId);
+          else selectedReqIds.delete(reqId);
+          updateSelectionMeta();
+          const card = chk.closest('.req-card');
+          if (card) card.classList.toggle('selected', chk.checked);
+        });
+      });
+
       document.querySelectorAll('[data-action="approve"]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await postAction(btn.dataset.id, 'approve', '');
-          } catch (e) {
-            showToast('Something went wrong', 'error');
-          }
+        btn.addEventListener('click', () => {
+          stageAction(btn.dataset.id, 'approve', '');
         });
       });
 
@@ -1324,13 +1517,9 @@
             '</div>'
           );
           const panel = document.getElementById('panel-' + reqId);
-          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
+          panel.querySelector('[data-confirm]').addEventListener('click', () => {
             const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
-            try {
-              await postAction(reqId, 'reject', comment);
-            } catch (e) {
-              showToast('Something went wrong', 'error');
-            }
+            stageAction(reqId, 'reject', comment);
           });
         });
       });
@@ -1347,17 +1536,13 @@
             '</div>'
           );
           const panel = document.getElementById('panel-' + reqId);
-          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
+          panel.querySelector('[data-confirm]').addEventListener('click', () => {
             const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
             if (!comment) {
               showToast('Please describe the required change', 'error');
               return;
             }
-            try {
-              await postAction(reqId, 'request_modification', comment);
-            } catch (e) {
-              showToast('Something went wrong', 'error');
-            }
+            stageAction(reqId, 'request_modification', comment);
           });
         });
       });
@@ -1376,16 +1561,18 @@
           );
           const panel = document.getElementById('panel-' + reqId);
           panel.querySelectorAll('[data-p]').forEach(pBtn => {
-            pBtn.addEventListener('click', async () => {
-              try {
-                await setPriority(reqId, pBtn.dataset.p);
-                panel.classList.remove('open');
-                panel.innerHTML = '';
-              } catch (e) {
-                showToast('Something went wrong', 'error');
-              }
+            pBtn.addEventListener('click', () => {
+              stagePriority(reqId, pBtn.dataset.p);
+              panel.classList.remove('open');
+              panel.innerHTML = '';
             });
           });
+        });
+      });
+
+      document.querySelectorAll('[data-action="undo"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          undoStagedChange(btn.dataset.id);
         });
       });
     }
@@ -1403,7 +1590,21 @@
         if (!res.ok) throw new Error('Failed to load review data');
         const data = await res.json();
 
-        requirements = data.requirements || [];
+        requirements = (data.requirements || []).map(req => {
+          const normalizedPriority = normalizePriority(req.priority);
+          const row = {
+            ...req,
+            category: normalizeCategory(req.category),
+            priority: normalizedPriority,
+            title: cleanTitle(req.title, req.description, req.req_id),
+          };
+          row._server_review_status = statusClass(row.review_status);
+          row._server_comment = row.client_comment || '';
+          row._server_priority = normalizedPriority;
+          return row;
+        });
+        stagedChanges.clear();
+        selectedReqIds.clear();
         reviewMeta = {
           filename: data.filename || ('File ' + fileId),
           manager_name: data.manager_name || 'Manager',
@@ -1419,9 +1620,86 @@
         renderRequirements();
         renderMyFeedback();
         renderDocumentsInfo();
+        updateSelectionMeta();
       } catch (e) {
         showToast('Could not load review data', 'error');
       }
+    }
+
+    function updateSelectionMeta() {
+      const meta = document.getElementById('selectionMeta');
+      if (!meta) return;
+      const stagedCount = stagedChanges.size;
+      meta.textContent = selectedReqIds.size + ' selected · ' + stagedCount + ' staged changes';
+    }
+
+    function selectVisibleRequirements() {
+      getVisibleRequirements().forEach(req => selectedReqIds.add(String(req.req_id)));
+      renderRequirements();
+      updateSelectionMeta();
+    }
+
+    function clearSelection() {
+      selectedReqIds.clear();
+      renderRequirements();
+      updateSelectionMeta();
+    }
+
+    function bulkStageAction(action) {
+      const selected = requirements.filter(req => selectedReqIds.has(String(req.req_id)));
+      if (!selected.length) {
+        showToast('Select at least one requirement first', 'error');
+        return;
+      }
+
+      let changed = 0;
+      selected.forEach(req => {
+        if (statusClass(req.review_status) === 'pending') {
+          stageAction(String(req.req_id), action, '', { silent: true });
+          changed += 1;
+        }
+      });
+
+      if (!changed) {
+        showToast('Selected requirements are already reviewed', 'error');
+      } else {
+        renderFilterPills();
+        updateProgress();
+        renderRequirements();
+        renderMyFeedback();
+        renderDocumentsInfo();
+        updateSelectionMeta();
+        showToast(changed + ' requirements staged', 'success');
+      }
+    }
+
+    async function flushStagedChanges() {
+      const stagedEntries = Array.from(stagedChanges.entries());
+      for (const [reqId, change] of stagedEntries) {
+        if (change.priority && change.priority !== change.basePriority) {
+          const priorityRes = await apiFetch('/review/' + encodeURIComponent(fileId) + '/set-priority', {
+            method: 'POST',
+            body: JSON.stringify({ req_id: Number(reqId), priority: change.priority })
+          });
+          if (!priorityRes.ok) throw new Error('Failed to set priority');
+        }
+
+        if (change.action) {
+          const actionRes = await apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
+            method: 'POST',
+            body: JSON.stringify({ req_id: Number(reqId), action: change.action, comment: change.comment || '' })
+          });
+          if (!actionRes.ok) throw new Error('Failed to save action');
+        }
+      }
+
+      requirements.forEach(req => {
+        req._server_review_status = req.review_status;
+        req._server_comment = req.client_comment || '';
+        req._server_priority = normalizePriority(req.priority);
+      });
+      stagedChanges.clear();
+      updateSelectionMeta();
     }
 
     function setupAddRequirementForm() {
@@ -1471,6 +1749,7 @@
       document.getElementById('cancelSubmitBtn').addEventListener('click', () => modal.classList.remove('show'));
       document.getElementById('confirmSubmitBtn').addEventListener('click', async () => {
         try {
+          await flushStagedChanges();
           const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/submit', { method: 'POST', body: JSON.stringify({}) });
           if (!res.ok) throw new Error();
           modal.classList.remove('show');
@@ -1552,7 +1831,13 @@
       document.getElementById('groupingSelect').addEventListener('change', (e) => {
         groupingMode = e.target.value;
         renderRequirements();
+        updateSelectionMeta();
       });
+
+      document.getElementById('selectVisibleBtn').addEventListener('click', selectVisibleRequirements);
+      document.getElementById('clearSelectionBtn').addEventListener('click', clearSelection);
+      document.getElementById('approveSelectedBtn').addEventListener('click', () => bulkStageAction('approve'));
+      document.getElementById('rejectSelectedBtn').addEventListener('click', () => bulkStageAction('reject'));
 
       setupAddRequirementForm();
       setupSubmitReview();

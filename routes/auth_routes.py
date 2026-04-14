@@ -360,11 +360,13 @@ async def invite_client(
             assignment.manager_id = current_user.id
             assignment.due_date = due_date
             assignment.submitted_at = None
+            assignment.temp_password = temporary_password
         else:
             assignment = ReviewAssignment(
                 file_id=parsed_file.id,
                 manager_id=current_user.id,
                 client_id=client_user.id,
+                temp_password=temporary_password,
                 due_date=due_date,
             )
             db.add(assignment)
@@ -517,14 +519,15 @@ async def get_manager_clients(
     ).order_by(ReviewAssignment.created_at.desc()).all()
     
     clients_data = []
-    seen_clients = set()
+    seen_client_file_pairs = set()
     
     for assignment in assignments:
         client_user = db.query(User).filter(User.id == assignment.client_id).first()
-        if not client_user or client_user.id in seen_clients:
+        pair_key = (assignment.client_id, assignment.file_id)
+        if not client_user or pair_key in seen_client_file_pairs:
             continue
-        
-        seen_clients.add(client_user.id)
+
+        seen_client_file_pairs.add(pair_key)
         
         # Get the file name if available
         filename = "(No specific document)"
@@ -533,10 +536,22 @@ async def get_manager_clients(
             if file_record:
                 filename = file_record.filename
         
+        # Get temp password from review assignment if available
+        temp_password = getattr(assignment, "temp_password", None) or "N/A"
+        invite_link = None
+        if assignment.file_id:
+            invite_token = _build_client_invite_token(client_user.id, assignment.file_id, client_user.email)
+            invite_link = f"{_resolve_app_base_url()}/login.html?invite_token={quote(invite_token)}"
+        else:
+            invite_link = f"{_resolve_app_base_url()}/login.html"
+        
         clients_data.append({
+            "assignment_id": assignment.id,
             "client_id": client_user.id,
             "client_email": client_user.email,
             "client_name": client_user.username,
+            "temp_password": temp_password,
+            "invite_link": invite_link,
             "created_at": client_user.created_at.isoformat() if client_user.created_at else None,
             "file_id": assignment.file_id,
             "filename": filename,

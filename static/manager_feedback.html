@@ -203,6 +203,25 @@
       display: none;
     }
 
+    html[data-theme="dark"] .inline-card {
+      background: #171A22;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    html[data-theme="dark"] .inline-card .fm-label {
+      color: #E9E9EA !important;
+    }
+
+    html[data-theme="dark"] .inline-card .fm-input {
+      color: #E9E9EA !important;
+      background: #1C1F29 !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    html[data-theme="dark"] .inline-card .fm-input::placeholder {
+      color: #A9AEBE !important;
+    }
+
     @media (max-width: 980px) {
       .metrics-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -223,21 +242,48 @@
   <aside class="fm-sidebar">
     <div class="fm-logo">Flow<span>Mind</span></div>
     <nav class="fm-nav">
-      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard"><span class="fm-dot"></span> Dashboard</a>
-      <a href="upload.html" class="fm-nav-item" data-page="upload"><span class="fm-dot"></span> Upload document</a>
-      <a href="requirements.html" class="fm-nav-item" data-page="requirements"><span class="fm-dot"></span> Requirements</a>
-      <a href="analytics.html" class="fm-nav-item" data-page="analytics"><span class="fm-dot"></span> Analytics</a>
-      <a href="export.html" class="fm-nav-item" data-page="export"><span class="fm-dot"></span> Export & integrations</a>
-      <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback"><span class="fm-dot"></span> Client feedback</a>
-      <a href="clients.html" class="fm-nav-item" data-page="clients"><span class="fm-dot"></span> Client credentials</a>
-      <a href="settings.html" class="fm-nav-item" data-page="settings"><span class="fm-dot"></span> Settings</a>
+      <a href="dashboard.html" class="fm-nav-item" data-page="dashboard">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h4v4h-4v-4zM9.5 2.5h4v4h-4v-4zM2.5 9.5h4v4h-4v-4zM9.5 9.5h4v4h-4v-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="upload.html" class="fm-nav-item" data-page="upload">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v7m0 0L5.5 7.5M8 10l2.5-2.5M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Upload document</span>
+      </a>
+      <a href="requirements.html" class="fm-nav-item" data-page="requirements">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 4h9M5 8h9M5 12h9M2 4h.01M2 8h.01M2 12h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Requirements</span>
+      </a>
+      <a href="analytics.html" class="fm-nav-item" data-page="analytics">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 14V9M7 14V5M11 14v-4M15 14V2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Analytics</span>
+      </a>
+      <a href="export.html" class="fm-nav-item" data-page="export">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 11V4m0 0L5.5 6.5M8 4l2.5 2.5M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Export &amp; integrations</span>
+      </a>
+      <a href="manager_feedback.html" class="fm-nav-item active" data-page="feedback">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M14 10a2 2 0 01-2 2H5l-3 2v-9a2 2 0 012-2h8a2 2 0 012 2v5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Client feedback</span>
+      </a>
+      <a href="clients.html" class="fm-nav-item" data-page="clients">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="5.5" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 13v-.5a3 3 0 013-3h1.5M11 6a2 2 0 100-4 2 2 0 000 4zm3 7v-.5a3 3 0 00-3-3h-.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Client credentials</span>
+      </a>
+      <a href="settings.html" class="fm-nav-item" data-page="settings">
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v1.5M8 13.5V15M14 8h-1.5M3.5 8H2M12.3 3.7l-1.06 1.06M4.76 11.24l-1.06 1.06M12.3 12.3l-1.06-1.06M4.76 4.76L3.7 3.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Settings</span>
+      </a>
     </nav>
     <div class="fm-sidebar-user">
       <div class="fm-avatar" id="userInitials">PM</div>
-      <div>
+      <div class="fm-user-text">
         <div class="fm-user-name" id="userName">Loading...</div>
         <div class="fm-user-role">Project Manager</div>
       </div>
+      <button type="button" class="fm-sign-out-btn" onclick="logout()" title="Sign out" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
   </aside>
 
@@ -835,12 +881,27 @@
           return;
         }
 
-        document.getElementById('lmProcessed').textContent = Number(data.processed_feedback_rows || 0);
-        document.getElementById('lmPromoted').textContent = Number(data.promoted_patterns || 0);
-        document.getElementById('lmDemoted').textContent = Number(data.demoted_patterns || 0);
+        const processedDelta = Number(data.processed_feedback_rows || 0);
+        const promotedDelta = Number(data.promoted_patterns || 0);
+        const demotedDelta = Number(data.demoted_patterns || 0);
+
+        // Show cumulative values when latest maintenance run had no new rows.
+        const processedValue = processedDelta > 0
+          ? processedDelta
+          : Number(data.processed_feedback_total || 0);
+        const promotedValue = promotedDelta > 0
+          ? promotedDelta
+          : Number(data.promoted_patterns_total || 0);
+        const demotedValue = demotedDelta > 0
+          ? demotedDelta
+          : Number(data.demoted_patterns_total || 0);
+
+        document.getElementById('lmProcessed').textContent = processedValue;
+        document.getElementById('lmPromoted').textContent = promotedValue;
+        document.getElementById('lmDemoted').textContent = demotedValue;
         document.getElementById('lmLastFeedback').textContent = data.last_feedback_id != null ? String(data.last_feedback_id) : '-';
 
-        const actions = data.actions || {};
+        const actions = data.action_totals || data.actions || {};
         const runTime = data.last_run_utc ? new Date(data.last_run_utc).toLocaleString() : 'Unknown';
         document.getElementById('lmMeta').textContent =
           'Last run: ' + runTime +
@@ -850,7 +911,10 @@
 
         const reportLink = document.getElementById('lmReportLink');
         if (data.last_report_file) {
-          reportLink.href = '/api/learning-maintenance-report/latest';
+          const token = typeof getToken === 'function' ? getToken() : null;
+          reportLink.href = token
+            ? '/api/learning-maintenance-report/latest?token=' + encodeURIComponent(token)
+            : '/api/learning-maintenance-report/latest';
           reportLink.style.display = 'inline-flex';
         } else {
           reportLink.style.display = 'none';

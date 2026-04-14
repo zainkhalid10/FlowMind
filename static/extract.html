@@ -493,6 +493,49 @@
         .output-container code {
             color: #e2e8f0;
         }
+
+        .history-card {
+            grid-column: 1 / -1;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid rgba(96, 165, 250, 0.14);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .history-item-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .history-item-message {
+            color: #dbeafe;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #94a3b8;
+            padding: 18px;
+            border: 1px dashed rgba(148, 163, 184, 0.35);
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -606,6 +649,21 @@
                     <p style="margin-top: 10px; color: #64748b;">Loading learning status...</p>
                 </div>
             </div>
+
+            <div class="card history-card">
+                <div class="card-header" style="margin-bottom: 0;">
+                    <div class="card-icon agent">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <div class="card-title">AI Chat History</div>
+                        <div class="card-subtitle">Saved analyses you can reopen after refresh or restart</div>
+                    </div>
+                </div>
+                <div id="agent-history-list" class="history-list">
+                    <div class="history-empty">Loading history...</div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -683,6 +741,73 @@
                 }
             } catch (error) {
                 console.error('Extract Page: Error loading projects:', error);
+            }
+        }
+
+        function formatHistoryDate(value) {
+            if (!value) return 'Unknown time';
+            const dt = new Date(value);
+            if (Number.isNaN(dt.getTime())) return 'Unknown time';
+            return dt.toLocaleString();
+        }
+
+        function renderAgentHistory(historyItems) {
+            const historyEl = document.getElementById('agent-history-list');
+            if (!historyEl) return;
+
+            if (!Array.isArray(historyItems) || historyItems.length === 0) {
+                historyEl.innerHTML = '<div class="history-empty">No saved AI analyses yet. Run "Analyze with AI" to create history.</div>';
+                return;
+            }
+
+            historyEl.innerHTML = historyItems.map((item) => {
+                const msg = escapeHtml((item.assistant_message || '').slice(0, 700));
+                const file = escapeHtml(item.filename || 'Untitled');
+                const viewLink = item.view_id
+                    ? `<a href="/view_requirements/${item.view_id}" target="_blank" style="color:#60a5fa; text-decoration:none;">Open view</a>`
+                    : '<span style="color:#64748b;">No view link</span>';
+                return `
+                    <div class="history-item">
+                        <div class="history-item-meta">
+                            <span><strong>${file}</strong></span>
+                            <span>${formatHistoryDate(item.created_at)}</span>
+                        </div>
+                        <div style="font-size: 0.8rem; margin-bottom: 8px;">${viewLink}</div>
+                        <div class="history-item-message">${msg}${(item.assistant_message || '').length > 700 ? '...' : ''}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadAgentChatHistory() {
+            const historyEl = document.getElementById('agent-history-list');
+            if (!historyEl) return;
+
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                historyEl.innerHTML = '<div class="history-empty">Login required to load history.</div>';
+                return;
+            }
+
+            const projectId = getSelectedProjectId();
+            const query = projectId ? `?project_id=${projectId}&limit=20` : '?limit=20';
+
+            try {
+                const response = await fetch(`/api/agent-chat-history${query}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`History request failed (${response.status})`);
+                }
+
+                const data = await response.json();
+                renderAgentHistory(data.history || []);
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+                historyEl.innerHTML = '<div class="history-empty">Could not load history right now.</div>';
             }
         }
         
@@ -902,6 +1027,7 @@
         // Only load once per page load to reduce server load
         let learningStatusLoaded = false;
         loadProjects();
+        loadAgentChatHistory();
 
         document.getElementById('projectSelector').addEventListener('change', function() {
             const value = this.value;
@@ -913,6 +1039,7 @@
                 localStorage.removeItem('current_project_id');
                 localStorage.removeItem('current_project_name');
             }
+            loadAgentChatHistory();
         });
 
         setTimeout(() => {
@@ -1363,6 +1490,7 @@
                         output.innerHTML = formatAIResults(data, 'agent');
                         output.classList.add('show');
                         showSuccess('agent-alert', 'AI analysis completed successfully!');
+                        loadAgentChatHistory();
                         // Reload learning status after processing
                         loadLearningStatus();
                     } else if (data && (data.extraction_summary || data.agent_processing)) {
@@ -1376,6 +1504,7 @@
                         output.innerHTML = formatAIResults(data, 'agent');
                         output.classList.add('show');
                         showSuccess('agent-alert', 'Processing completed! Some data may be missing.');
+                        loadAgentChatHistory();
                         loadLearningStatus();
                     } else {
                         console.error('❌ No valid data in response');

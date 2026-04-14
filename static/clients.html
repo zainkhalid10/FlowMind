@@ -317,31 +317,48 @@
     <div class="fm-logo">Flow<span>Mind</span></div>
     <nav class="fm-nav">
       <a href="dashboard.html" class="fm-nav-item" data-page="dashboard">
-        <span class="fm-dot"></span> Dashboard
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h4v4h-4v-4zM9.5 2.5h4v4h-4v-4zM2.5 9.5h4v4h-4v-4zM9.5 9.5h4v4h-4v-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Dashboard</span>
       </a>
       <a href="upload.html" class="fm-nav-item" data-page="upload">
-        <span class="fm-dot"></span> Upload document
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v7m0 0L5.5 7.5M8 10l2.5-2.5M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Upload document</span>
       </a>
       <a href="requirements.html" class="fm-nav-item" data-page="requirements">
-        <span class="fm-dot"></span> Requirements
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 4h9M5 8h9M5 12h9M2 4h.01M2 8h.01M2 12h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Requirements</span>
       </a>
       <a href="analytics.html" class="fm-nav-item" data-page="analytics">
-        <span class="fm-dot"></span> Analytics
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 14V9M7 14V5M11 14v-4M15 14V2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Analytics</span>
       </a>
       <a href="export.html" class="fm-nav-item" data-page="export">
-        <span class="fm-dot"></span> Export & integrations
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 11V4m0 0L5.5 6.5M8 4l2.5 2.5M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Export &amp; integrations</span>
       </a>
       <a href="manager_feedback.html" class="fm-nav-item" data-page="feedback">
-        <span class="fm-dot"></span> Client feedback
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M14 10a2 2 0 01-2 2H5l-3 2v-9a2 2 0 012-2h8a2 2 0 012 2v5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Client feedback</span>
       </a>
       <a href="clients.html" class="fm-nav-item active" data-page="clients">
-        <span class="fm-dot"></span> Client credentials
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="5.5" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 13v-.5a3 3 0 013-3h1.5M11 6a2 2 0 100-4 2 2 0 000 4zm3 7v-.5a3 3 0 00-3-3h-.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Client credentials</span>
       </a>
       <a href="settings.html" class="fm-nav-item" data-page="settings">
-        <span class="fm-dot"></span> Settings
+        <svg class="fm-nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v1.5M8 13.5V15M14 8h-1.5M3.5 8H2M12.3 3.7l-1.06 1.06M4.76 11.24l-1.06 1.06M12.3 12.3l-1.06-1.06M4.76 4.76L3.7 3.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Settings</span>
       </a>
     </nav>
-    <button id="logoutBtn" class="fm-btn-outline" style="width: 100%; margin-top: auto;">Logout</button>
+    <div class="fm-sidebar-user">
+      <div class="fm-avatar" id="userInitials">AM</div>
+      <div class="fm-user-text">
+        <div class="fm-user-name" id="userName">Loading...</div>
+        <div class="fm-user-role">Project Manager</div>
+      </div>
+      <button type="button" id="logoutBtn" class="fm-sign-out-btn" title="Sign out" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
   </aside>
 
   <main class="fm-main">
@@ -413,9 +430,23 @@
         <div class="fm-credential-box">
           <div class="fm-credential-row">
             <span>Password:</span>
-            <button class="fm-copy-btn" data-field="password">Copy</button>
+            <div style="display: flex; gap: 8px;">
+              <button class="fm-copy-btn" data-field="password" style="flex: 1;">Copy</button>
+              <button id="togglePasswordBtn" class="fm-copy-btn" style="flex: 0; padding: 6px 8px; width: auto;" title="Show/Hide password">👁️</button>
+            </div>
           </div>
           <div id="passwordDisplay" class="fm-credential-value"></div>
+        </div>
+
+        <div class="fm-credential-box">
+          <div class="fm-credential-row">
+            <span>Invite link:</span>
+            <div style="display:flex; gap:8px;">
+              <button class="fm-copy-btn" data-field="inviteLink">Copy</button>
+              <button id="openInviteBtn" class="fm-copy-btn" style="width:auto;">Open</button>
+            </div>
+          </div>
+          <div id="inviteDisplay" class="fm-credential-value" style="word-break: break-all;"></div>
         </div>
         
         <div class="fm-modal-note">
@@ -512,18 +543,25 @@
       
       document.getElementById('modalTitle').textContent = `${escapeHtml(client.client_name)}'s Credentials`;
       document.getElementById('emailDisplay').textContent = client.client_email;
-      document.getElementById('passwordDisplay').textContent = '••••••••••'; // Don't show actual password on DOM for security
       
-      // Store actual data in data attributes for copy button
-      document.getElementById('credentialModal').dataset.email = client.client_email;
-      document.getElementById('credentialModal').dataset.password = client.temp_password || 'N/A';
+      // Store actual credentials in data attributes
+      const modal = document.getElementById('credentialModal');
+      modal.dataset.email = client.client_email || '';
+      modal.dataset.password = client.temp_password || 'N/A';
+      modal.dataset.inviteLink = client.invite_link || '';
+      document.getElementById('inviteDisplay').textContent = client.invite_link || 'Invite link not available';
       
-      document.getElementById('credentialModal').classList.add('open');
+      // Start with masked password
+      document.getElementById('passwordDisplay').textContent = '••••••••••';
+      modal.dataset.showPassword = 'false';
+      document.getElementById('togglePasswordBtn').textContent = '👁️';
+      
+      modal.classList.add('open');
     }
 
     // Copy button handlers
     document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('fm-copy-btn')) {
+      if (e.target.classList.contains('fm-copy-btn') && e.target.dataset.field) {
         const field = e.target.dataset.field;
         const modal = document.getElementById('credentialModal');
         const value = modal.dataset[field] || '';
@@ -540,6 +578,39 @@
         }).catch(() => {
           showToast('Failed to copy to clipboard', 'error');
         });
+      }
+
+      if (e.target.id === 'openInviteBtn') {
+        e.preventDefault();
+        const modal = document.getElementById('credentialModal');
+        const link = modal.dataset.inviteLink || '';
+        if (!link) {
+          showToast('Invite link not available for this assignment', 'error');
+          return;
+        }
+        window.open(link, '_blank');
+      }
+      
+      // Toggle password visibility
+      if (e.target.id === 'togglePasswordBtn') {
+        e.preventDefault();
+        const modal = document.getElementById('credentialModal');
+        const isShown = modal.dataset.showPassword === 'true';
+        const newState = !isShown;
+        modal.dataset.showPassword = String(newState);
+        
+        const passwordDisplay = document.getElementById('passwordDisplay');
+        const btn = document.getElementById('togglePasswordBtn');
+        
+        if (newState) {
+          passwordDisplay.textContent = modal.dataset.password;
+          btn.textContent = '🙈';
+          btn.title = 'Hide password';
+        } else {
+          passwordDisplay.textContent = '••••••••••';
+          btn.textContent = '👁️';
+          btn.title = 'Show password';
+        }
       }
     });
 

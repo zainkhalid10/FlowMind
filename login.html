@@ -131,6 +131,37 @@
       transition: border-color 0.15s;
     }
 
+    .login-password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .login-password-wrapper input {
+      width: 100%;
+      padding-right: 36px;
+    }
+
+    .login-password-toggle {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #6B6B68;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+
+    .login-password-toggle:hover {
+      color: #1A1A1A;
+    }
+
     .login-form-group input:focus {
       border-color: #534AB7;
       box-shadow: 0 0 0 2px rgba(83, 74, 183, 0.1);
@@ -280,14 +311,17 @@
 
           <div class="login-form-group">
             <label for="signin-password">Password</label>
-            <input 
-              type="password" 
-              id="signin-password" 
-              name="password" 
-              placeholder="••••••••" 
-              required
-              autocomplete="current-password"
-            >
+            <div class="login-password-wrapper">
+              <input 
+                type="password" 
+                id="signin-password" 
+                name="password" 
+                placeholder="••••••••" 
+                required
+                autocomplete="current-password"
+              >
+              <button type="button" class="login-password-toggle" onclick="togglePasswordVisibility('signin-password')">👁️</button>
+            </div>
           </div>
 
           <div class="login-forgot">
@@ -332,26 +366,32 @@
 
           <div class="login-form-group">
             <label for="signup-password">Password</label>
-            <input 
-              type="password" 
-              id="signup-password" 
-              name="password" 
-              placeholder="••••••••" 
-              required
-              autocomplete="new-password"
-            >
+            <div class="login-password-wrapper">
+              <input 
+                type="password" 
+                id="signup-password" 
+                name="password" 
+                placeholder="••••••••" 
+                required
+                autocomplete="new-password"
+              >
+              <button type="button" class="login-password-toggle" onclick="togglePasswordVisibility('signup-password')">👁️</button>
+            </div>
           </div>
 
           <div class="login-form-group">
             <label for="signup-password-confirm">Confirm password</label>
-            <input 
-              type="password" 
-              id="signup-password-confirm" 
-              name="password_confirm" 
-              placeholder="••••••••" 
-              required
-              autocomplete="new-password"
-            >
+            <div class="login-password-wrapper">
+              <input 
+                type="password" 
+                id="signup-password-confirm" 
+                name="password_confirm" 
+                placeholder="••••••••" 
+                required
+                autocomplete="new-password"
+              >
+              <button type="button" class="login-password-toggle" onclick="togglePasswordVisibility('signup-password-confirm')">👁️</button>
+            </div>
           </div>
 
           <button type="submit" class="login-submit" id="signup-btn">Create account</button>
@@ -368,6 +408,19 @@
       ? String(window.location.origin).replace(/\/$/, '')
       : 'http://localhost:8000';
     let forcedClientMode = false;
+
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      const button = input.parentElement.querySelector('.login-password-toggle');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        button.textContent = '👁️';
+      }
+    }
 
     async function initializeInviteMode() {
       const params = new URLSearchParams(window.location.search || '');

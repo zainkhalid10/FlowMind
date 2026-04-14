@@ -181,6 +181,7 @@ class ReviewAssignment(Base):
     file_id = Column(Integer, ForeignKey("parsed_files.id"), nullable=False, index=True)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     client_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    temp_password = Column(String(255), nullable=True)
     due_date = Column(DateTime, nullable=True)
     submitted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -239,6 +240,25 @@ class IntegrationLog(Base):
     user = relationship("User", backref="integration_logs")
 
 
+# -------------------- AI Agent Chat History --------------------
+class AgentChatHistory(Base):
+    __tablename__ = "agent_chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, index=True)
+    file_id = Column(Integer, ForeignKey("parsed_files.id"), nullable=True, index=True)
+    filename = Column(String(255), nullable=True)
+    user_message = Column(Text, nullable=True)
+    assistant_message = Column(Text, nullable=False)
+    view_id = Column(String(255), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="agent_chat_history")
+    project = relationship("Project", backref="agent_chat_history")
+    file = relationship("ParsedFile", backref="agent_chat_history")
+
+
 # -------------------- Initialize Database --------------------
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -250,6 +270,8 @@ def init_db():
     _migrate_integration_tables()
     _migrate_project_tables()
     _migrate_review_tables()
+    _migrate_review_assignment_password_column()
+    _migrate_agent_chat_history_table()
     seed_teams_if_empty()
 
 
@@ -430,3 +452,33 @@ def _migrate_review_tables():
         needed.append(ReviewFeedback.__table__)
     if needed:
         Base.metadata.create_all(bind=engine, tables=needed)
+
+
+def _migrate_review_assignment_password_column():
+    """Add temp_password column to review_assignments if missing."""
+    from sqlalchemy import inspect, text
+
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "review_assignments" not in insp.get_table_names():
+            return
+
+        cols = [c["name"] for c in insp.get_columns("review_assignments")]
+        if "temp_password" not in cols:
+            conn.execute(text("ALTER TABLE review_assignments ADD COLUMN temp_password VARCHAR(255)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration review assignment password note: {e}")
+    finally:
+        conn.close()
+
+
+def _migrate_agent_chat_history_table():
+    """Create agent_chat_history table if it does not exist."""
+    from sqlalchemy import inspect
+
+    insp = inspect(engine)
+    tables = insp.get_table_names()
+    if "agent_chat_history" not in tables:
+        Base.metadata.create_all(bind=engine, tables=[AgentChatHistory.__table__])

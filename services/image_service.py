@@ -9,7 +9,8 @@ import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 import cv2
 import numpy as np
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any, Union
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import io
 
@@ -35,6 +36,18 @@ def _get_env_bool(key: str, default: bool = False) -> bool:
     """Get boolean from environment variable."""
     val = os.getenv(key, "").lower()
     return val in ("1", "true", "yes", "on")
+
+
+def _is_vlm_pass_enabled() -> bool:
+    """
+    Centralized VLM-pass toggle for image processing.
+    Uses FLOWMIND_IMAGE_REQ_VLM_PASS and prints runtime value for debugging.
+    """
+    vlm_pass = os.getenv("FLOWMIND_IMAGE_REQ_VLM_PASS", "1")
+    print(f"VLM_PASS_ENV_VALUE: {vlm_pass}")
+    vlm_enabled = vlm_pass.strip() == "1"
+    print(f"VLM_ENABLED: {vlm_enabled}")
+    return vlm_enabled
 
 
 # ============================================================================
@@ -160,6 +173,42 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
         
         # Analyze text content
         text_lower = ocr_text.lower()
+
+        horizontal_lines = 0
+        vertical_lines = 0
+        if lines is not None:
+            for ln in lines:
+                x1, y1, x2, y2 = ln[0]
+                dx = abs(x2 - x1)
+                dy = abs(y2 - y1)
+                if dx > dy * 2:
+                    horizontal_lines += 1
+                elif dy > dx * 2:
+                    vertical_lines += 1
+
+        quadrilateral_count = 0
+        rectangle_count = 0
+        diamond_count = 0
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area < 250:
+                continue
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter <= 0:
+                continue
+            approx = cv2.approxPolyDP(contour, 0.04 * perimeter, True)
+            if len(approx) == 4:
+                quadrilateral_count += 1
+                rect = cv2.minAreaRect(contour)
+                rw, rh = rect[1]
+                if rw <= 1 or rh <= 1:
+                    continue
+                aspect = max(rw, rh) / max(1.0, min(rw, rh))
+                angle = abs(rect[2])
+                if 0.75 <= aspect <= 1.35 and 20 <= angle <= 70:
+                    diamond_count += 1
+                else:
+                    rectangle_count += 1
         
         # Scoring logic
         if line_count > 20:
@@ -182,6 +231,22 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
             type_scores['chart'] += 35
             characteristics.append('chart_keywords')
         
+        # Check for flowchart BEFORE checking table.
+        # If image has both rectangles and diamonds, this strongly indicates flowchart.
+        if diamond_count > 0:
+            type_scores['flowchart'] += 45
+            characteristics.append('diamond_decisions')
+        if diamond_count > 0 and rectangle_count > 0:
+            type_scores['flowchart'] += 35
+            characteristics.append('mixed_rectangles_and_diamonds')
+        elif diamond_count >= 2:
+            type_scores['flowchart'] += 20
+
+        has_grid_pattern = horizontal_lines >= 6 and vertical_lines >= 6
+        if has_grid_pattern:
+            type_scores['table'] += 35
+            characteristics.append('grid_lines')
+
         table_keywords = ['table', 'row', 'column', '|']
         if any(kw in text_lower for kw in table_keywords) or ocr_text.count('|') > 5:
             type_scores['table'] += 40
@@ -217,7 +282,12 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
                 'line_count': line_count,
                 'edge_density': float(edge_density),
                 'contour_count': len(contours),
-                'text_length': len(ocr_text)
+                'text_length': len(ocr_text),
+                'horizontal_lines': horizontal_lines,
+                'vertical_lines': vertical_lines,
+                'rectangle_count': rectangle_count,
+                'diamond_count': diamond_count,
+                'quadrilateral_count': quadrilateral_count,
             }
         }
     except Exception as e:
@@ -294,8 +364,8 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
     Supports FLOWMIND_VLM_MODELS (comma-separated) for hybrid Qwen2.5-VL and LLaVA-13B.
     Returns comprehensive interpretation.
     """
-    if not _get_env_bool("FLOWMIND_USE_VLM", False):
-        print("   ⚠️  VLM disabled in .env (FLOWMIND_USE_VLM=false)")
+    if not _is_vlm_pass_enabled():
+        print("   ⚠️  VLM disabled via FLOWMIND_IMAGE_REQ_VLM_PASS")
         return {
             'interpretation': '',
             'requirements': [],
@@ -338,9 +408,8 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
     print(f"   🤖 Using VLM models: {', '.join(available)}")
     
     vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
-    vlm_enabled = os.getenv("FLOWMIND_USE_VLM", "true").lower() == "true"
-    if not vlm_enabled:
-        print(f"   ⚠️  VLM is disabled (FLOWMIND_USE_VLM=false), skipping VLM analysis")
+    if not _is_vlm_pass_enabled():
+        print("   ⚠️  VLM is disabled (FLOWMIND_IMAGE_REQ_VLM_PASS!=1), skipping VLM analysis")
         return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
     
     try:
@@ -392,7 +461,7 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             
     except requests.exceptions.Timeout:
         print(f"   ⏱️  VLM request timed out after {vlm_timeout}s")
-        print(f"   💡 Set FLOWMIND_USE_VLM=false or FLOWMIND_VLM_TIMEOUT=120 in .env")
+        print(f"   💡 Set FLOWMIND_IMAGE_REQ_VLM_PASS=0 or FLOWMIND_VLM_TIMEOUT=120 in .env")
     except Exception as e:
         print(f"   ❌ VLM analysis exception: {type(e).__name__}: {str(e)}")
         import traceback
@@ -412,14 +481,23 @@ OCR extracted text: "{ocr_text[:300] if ocr_text else 'No text detected'}"
 """
     
     type_specific_prompts = {
-        'flowchart': """This is a flowchart/process diagram. Analyze and extract:
-1. PROCESS STEPS: List each step/node in the flowchart in order
-2. DECISION POINTS: Identify decision branches and conditions
-3. START/END POINTS: Note the beginning and end states
-4. REQUIREMENTS: Extract any functional requirements implied by the flow
-5. BUSINESS LOGIC: Describe the business rules shown
+        'flowchart': f"""This is a flowchart diagram. Analyze the complete flow:
+1. What is the starting condition?
+2. What are ALL decision points and their yes/no outcomes?
+3. What loops exist and what triggers them?
+4. What are the termination conditions?
+5. What happens on failure paths?
 
-Format your response clearly with these sections.""",
+Extract each path as a SHALL requirement.
+Pay special attention to: numeric limits (3 attempts), error handling paths, blocking conditions.
+
+Also use this surrounding document text as additional context for understanding what this diagram represents:
+{(context or '')[:1000]}
+
+Format output as:
+REQUIREMENT: [The system shall ...]
+EVIDENCE: [diagram element + supporting text]
+""",
 
         'diagram': """This is a system diagram. Analyze and extract:
 1. COMPONENTS: List all system components/modules shown
@@ -561,7 +639,7 @@ def comprehensive_image_interpretation(image_path: str, context: str = "") -> Di
     # Step 3: VLM analysis (if enabled)
     vlm_result = {'interpretation': '', 'requirements': [], 'components': [], 'relationships': []}
     
-    if _get_env_bool("FLOWMIND_USE_VLM", False):
+    if _is_vlm_pass_enabled():
         print(f"   🤖 Starting VLM analysis...")
         vlm_result = enhanced_vlm_analyze(image_path, ocr_text, image_type, context)
         if vlm_result.get('interpretation'):
@@ -768,6 +846,446 @@ def calculate_interpretation_quality(ocr_text: str, vlm_result: Dict, type_info:
         score += min(len(vlm_result['relationships']) * 2, 5)
     
     return min(score, 100)
+
+
+def should_run_vlm_requirements_pass(image: Union[Image.Image, str, None], ocr_text: str) -> bool:
+    """Skip icons, banners, and text-heavy tables; run VLM on likely diagrams."""
+    try:
+        if isinstance(image, str):
+            if not image or not os.path.exists(image):
+                return False
+            image = Image.open(image)
+        if image is None:
+            return False
+        w, h = image.size
+        if w < 100 or h < 100:
+            return False
+        if w > h * 4:
+            return False
+        if len((ocr_text or "").strip()) > 300:
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def detect_scenario(before_text: str, after_text: str, ocr_text: str) -> str:
+    has_local_text = (
+        len((before_text or "").strip()) > 30
+        or len((after_text or "").strip()) > 30
+    )
+    has_ocr_text = len((ocr_text or "").strip()) > 20
+    if not has_local_text and not has_ocr_text:
+        return "diagram_only"
+    if has_local_text:
+        return "diagram_with_local_text"
+    return "diagram_with_context"
+
+
+def split_page_text_around_image(
+    page_text: str, image_index_on_page: int, total_images_on_page: int
+) -> tuple:
+    """Approximate text immediately before / after an image on a page."""
+    pt = page_text or ""
+    if not pt.strip():
+        return "", ""
+    n = max(1, total_images_on_page)
+    idx = max(1, min(image_index_on_page, n))
+    L = len(pt)
+    slot = L / n
+    boundary = int((idx - 0.5) * slot)
+    before = pt[max(0, boundary - 500):boundary]
+    after = pt[boundary:min(L, boundary + 500)]
+    return before[-500:], after[:500]
+
+
+def get_image_context(
+    before_text: str,
+    after_text: str,
+    ocr_text: str,
+    image_index: int,
+    page_number: int,
+) -> Dict[str, Any]:
+    surrounding_text = f"{(before_text or '')[-500:]}\n{(after_text or '')[:500]}".strip()
+    return {
+        "before_text": (before_text or "")[-500:],
+        "after_text": (after_text or "")[:500],
+        "surrounding_document_text": surrounding_text[:1000],
+        "image_index": image_index,
+        "page_number": page_number,
+        "scenario": detect_scenario(before_text, after_text, ocr_text),
+    }
+
+
+def classify_diagram_type(image_path: str, ocr_text: str) -> str:
+    """
+    Classify diagram type for prompt selection.
+    Priority: flowchart > table > architecture > state > generic diagram.
+    """
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            text_lower = (ocr_text or "").lower()
+            if "state" in text_lower and "transition" in text_lower:
+                return "state_diagram"
+            if any(k in text_lower for k in ("table", "row", "column")):
+                return "table"
+            if any(k in text_lower for k in ("start", "decision", "end", "yes", "no")):
+                return "flowchart"
+            return "diagram"
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=40, maxLineGap=12)
+
+        rectangle_count = 0
+        diamond_count = 0
+        circle_count = 0
+        horizontal_lines = 0
+        vertical_lines = 0
+
+        if lines is not None:
+            for ln in lines:
+                x1, y1, x2, y2 = ln[0]
+                dx = abs(x2 - x1)
+                dy = abs(y2 - y1)
+                if dx > dy * 2:
+                    horizontal_lines += 1
+                elif dy > dx * 2:
+                    vertical_lines += 1
+
+        for c in contours:
+            area = cv2.contourArea(c)
+            if area < 250:
+                continue
+            peri = cv2.arcLength(c, True)
+            if peri <= 0:
+                continue
+            approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+            if len(approx) == 4:
+                rect = cv2.minAreaRect(c)
+                rw, rh = rect[1]
+                if rw > 1 and rh > 1:
+                    ratio = max(rw, rh) / max(1.0, min(rw, rh))
+                    angle = abs(rect[2])
+                    if 0.75 <= ratio <= 1.35 and 20 <= angle <= 70:
+                        diamond_count += 1
+                    else:
+                        rectangle_count += 1
+            elif len(approx) > 6:
+                circle_count += 1
+
+        text_lower = (ocr_text or "").lower()
+        has_grid = horizontal_lines >= 6 and vertical_lines >= 6
+        has_flow_words = any(k in text_lower for k in ("start", "decision", "end", "yes", "no", "loop"))
+
+        # Check for flowchart BEFORE checking for table.
+        if (diamond_count > 0 and rectangle_count > 0) or diamond_count >= 2 or has_flow_words:
+            return "flowchart"
+        if has_grid and diamond_count == 0:
+            return "table"
+        if circle_count >= 3 and any(k in text_lower for k in ("state", "transition", "event")):
+            return "state_diagram"
+        if any(k in text_lower for k in ("api", "service", "database", "gateway", "module", "component")):
+            return "architecture_diagram"
+        return "diagram"
+    except Exception:
+        return "diagram"
+
+
+def _build_type_specific_diagram_prompt(diagram_type: str, surrounding_document_text: str) -> str:
+    surrounding = (surrounding_document_text or "").strip()[:1000]
+    if diagram_type == "flowchart":
+        return f"""This is a flowchart diagram. Analyze the complete flow:
+1. What is the starting condition?
+2. What are ALL decision points and their yes/no outcomes?
+3. What loops exist and what triggers them?
+4. What are the termination conditions?
+5. What happens on failure paths?
+
+Extract each path as a SHALL requirement.
+Pay special attention to: numeric limits (3 attempts),
+error handling paths, blocking conditions.
+
+Also use this surrounding document text as additional
+context for understanding what this diagram represents:
+{surrounding}
+"""
+    if diagram_type == "table":
+        return f"""This is a table diagram. Extract explicit constraints, limits, and mapping rules.
+Convert each enforceable row/column rule into SHALL requirements.
+
+Surrounding document text:
+{surrounding}
+"""
+    if diagram_type == "architecture_diagram":
+        return f"""This is an architecture/flow diagram. Identify components, integrations, boundaries, and data flow.
+Extract integration, interface, and reliability SHALL requirements.
+
+Surrounding document text:
+{surrounding}
+"""
+    if diagram_type == "state_diagram":
+        return f"""This is a state diagram. Identify states, transitions, triggers, guards, and invalid transitions.
+Extract each transition and guard as SHALL requirements.
+
+Surrounding document text:
+{surrounding}
+"""
+    return f"""This is a technical diagram. Extract functional and system SHALL requirements strictly grounded in diagram evidence.
+
+Surrounding document text:
+{surrounding}
+"""
+
+
+def _build_scenario_vlm_prompt(
+    scenario: str,
+    before_text: str,
+    after_text: str,
+    ocr_text: str,
+    diagram_type: str = "diagram",
+    surrounding_document_text: str = "",
+) -> str:
+    type_prompt = _build_type_specific_diagram_prompt(diagram_type, surrounding_document_text)
+    if scenario == "diagram_only":
+        return f"""You are a requirements analyst examining a technical diagram
+from a Software Requirements Specification document.
+This diagram has no surrounding text — you must derive
+everything from the visual content alone.
+
+Analyze this diagram carefully and extract ALL implied
+system requirements. Look for:
+- Flows between components (implies system must support that flow)
+- Decision points (implies system must handle those conditions)
+- Actors and their interactions (implies functional requirements)
+- Data stores (implies storage requirements)
+- System boundaries (implies integration requirements)
+
+For each requirement you find output EXACTLY:
+REQUIREMENT: [The system shall ...]
+CATEGORY: [Functional / Non-Functional / Business / System]
+PRIORITY: [High / Medium / Low]
+EVIDENCE: [what in the diagram supports this]
+
+Only extract what is directly shown.
+If no requirements found output: NO_REQUIREMENTS_FOUND
+
+{type_prompt}"""
+
+    if scenario == "diagram_with_local_text":
+        return f"""You are a requirements analyst examining a technical diagram
+from a Software Requirements Specification document.
+
+The diagram has accompanying text. Use BOTH the diagram
+and the text together to extract requirements.
+Text before diagram: {before_text[:1200]}
+Text after diagram: {after_text[:1200]}
+
+Extract ALL requirements implied by the diagram AND
+confirmed or elaborated by the surrounding text.
+Where the text explains what the diagram shows, use that
+explanation to make requirements more precise.
+
+For each requirement output EXACTLY:
+REQUIREMENT: [The system shall ...]
+CATEGORY: [Functional / Non-Functional / Business / System]
+PRIORITY: [High / Medium / Low]
+SOURCE: [diagram / text / both]
+EVIDENCE: [specific element from diagram or text]
+
+Only extract what is evidenced. No invention.
+If nothing found output: NO_REQUIREMENTS_FOUND
+
+{type_prompt}"""
+
+    # diagram_with_context
+    ocr_snip = (ocr_text or "")[:1200]
+    return f"""You are a requirements analyst examining a technical diagram
+from a Software Requirements Specification document.
+
+OCR extracted this text from or near the image:
+{ocr_snip}
+
+Use the OCR text as additional context alongside the
+visual diagram to extract requirements.
+The text may be labels, captions, or annotations
+within the diagram itself.
+
+For each requirement output EXACTLY:
+REQUIREMENT: [The system shall ...]
+CATEGORY: [Functional / Non-Functional / Business / System]
+PRIORITY: [High / Medium / Low]
+SOURCE: [diagram / ocr_text / both]
+EVIDENCE: [specific element supporting this]
+
+Only extract what is evidenced. No invention.
+If nothing found output: NO_REQUIREMENTS_FOUND
+
+{type_prompt}"""
+
+
+def _parse_vlm_requirement_blocks(merged: str) -> List[str]:
+    """Extract requirement blocks from VLM output (REQUIREMENT: lines)."""
+    if not merged or "NO_REQUIREMENTS_FOUND" in merged.upper():
+        return []
+    blocks: List[str] = []
+    current: List[str] = []
+    for line in merged.splitlines():
+        line = line.rstrip()
+        if re.match(r"(?i)^REQUIREMENT:\s*", line):
+            if current:
+                blocks.append("\n".join(current).strip())
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        blocks.append("\n".join(current).strip())
+    if not blocks:
+        for line in merged.splitlines():
+            m = re.match(r"(?i)^REQUIREMENT:\s*(.+)$", line.strip())
+            if m and m.group(1).strip():
+                blocks.append(line.strip())
+    out: List[str] = []
+    seen = set()
+    for b in blocks:
+        b = sanitize_unicode_text(b.strip())
+        if len(b) < 12:
+            continue
+        key = re.sub(r"\s+", " ", b.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(b)
+    return out[:25]
+
+
+def extract_diagram_requirements_vlm(
+    image_path: str,
+    scenario: str,
+    before_text: str = "",
+    after_text: str = "",
+    ocr_text: str = "",
+) -> List[str]:
+    """Scenario-aware VLM pass for diagram requirements."""
+    if not _is_vlm_pass_enabled():
+        return []
+    if not image_path or not os.path.exists(image_path):
+        return []
+    ollama_status = check_ollama_status()
+    if not ollama_status.get("running"):
+        return []
+    vlm_models_str = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
+    if vlm_models_str:
+        models = [m.strip() for m in vlm_models_str.split(",") if m.strip()]
+    else:
+        models = [os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")]
+    ollama_models = ollama_status.get("models", [])
+    available = [m for m in models if m in ollama_models]
+    if not available:
+        return []
+
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
+        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+        surrounding_document_text = f"{(before_text or '')[-500:]}\n{(after_text or '')[:500]}".strip()
+        diagram_type = classify_diagram_type(image_path, ocr_text)
+        print(f"DIAGRAM_TYPE_CLASSIFIED: {diagram_type}")
+        prompt = _build_scenario_vlm_prompt(
+            scenario,
+            before_text,
+            after_text,
+            ocr_text,
+            diagram_type=diagram_type,
+            surrounding_document_text=surrounding_document_text,
+        )
+        responses: List[str] = []
+        for model in available:
+            out = _try_vlm_model(model, b64, prompt, ollama_models, vlm_timeout)
+            if out:
+                responses.append(out)
+                break
+        if not responses:
+            return []
+        merged = "\n".join(responses)
+        return _parse_vlm_requirement_blocks(merged)
+    except Exception as e:
+        print(f"extract_diagram_requirements_vlm failed: {e}")
+        return []
+
+
+def extract_testable_requirements_from_image(image_path: str, context: str = "") -> List[str]:
+    """
+    Backward-compatible wrapper: single-image pass using diagram_with_context
+    when OCR/context exists, else diagram_only.
+    """
+    ocr_result = advanced_ocr_extract(image_path) if image_path and os.path.exists(image_path) else {}
+    ocr_text = (ocr_result or {}).get("text", "") or ""
+    scenario = "diagram_with_context" if len(ocr_text.strip()) > 20 else "diagram_only"
+    return extract_diagram_requirements_vlm(
+        image_path,
+        scenario,
+        before_text=context[:500] if context else "",
+        after_text="",
+        ocr_text=ocr_text,
+    )
+
+
+def run_parallel_diagram_vlm_jobs(
+    jobs: List[Dict[str, Any]],
+    max_workers: int = 3,
+) -> List[Dict[str, Any]]:
+    """
+    Run per-image VLM extraction concurrently (max_workers typically 3 for Ollama stability).
+    Each job: image_path, image_id, page_num, ocr_text, context (dict from get_image_context).
+    """
+    if not jobs:
+        return []
+
+    def _one(job: Dict[str, Any]) -> Dict[str, Any]:
+        image_path = job.get("image_path", "")
+        image_id = job.get("image_id", "")
+        page_num = job.get("page_num", 0)
+        ocr_text = job.get("ocr_text", "") or ""
+        ctx = job.get("context") or {}
+        scenario = ctx.get("scenario", "diagram_with_context")
+        try:
+            pil = Image.open(image_path) if image_path and os.path.exists(image_path) else None
+        except Exception:
+            pil = None
+        if not should_run_vlm_requirements_pass(pil or image_path, ocr_text):
+            return {
+                "image_id": image_id,
+                "page_num": page_num,
+                "requirements": [],
+                "skipped": True,
+            }
+        reqs = extract_diagram_requirements_vlm(
+            image_path,
+            scenario,
+            before_text=ctx.get("before_text", ""),
+            after_text=ctx.get("after_text", ""),
+            ocr_text=ocr_text,
+        )
+        return {
+            "image_id": image_id,
+            "page_num": page_num,
+            "requirements": reqs,
+            "skipped": False,
+        }
+
+    max_workers = max(1, min(int(max_workers), 3, len(jobs)))
+    results: List[Dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_one, j): j for j in jobs}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                print(f"Image VLM job failed: {e}")
+    return results
 
 
 # ============================================================================

@@ -63,6 +63,40 @@ def _read_json_file(path: Path) -> dict:
         return {}
 
 
+def _count_scored_patterns(feedback_pattern_scores: dict) -> tuple[int, int]:
+    """Count positively and negatively scored learned patterns across all groups."""
+    promoted = 0
+    demoted = 0
+
+    if not isinstance(feedback_pattern_scores, dict):
+        return promoted, demoted
+
+    for group_data in feedback_pattern_scores.values():
+        if not isinstance(group_data, dict):
+            continue
+
+        for bucket_name in ("keywords", "phrases", "patterns"):
+            bucket = group_data.get(bucket_name, {})
+            if not isinstance(bucket, dict):
+                continue
+
+            for stats in bucket.values():
+                if not isinstance(stats, dict):
+                    continue
+
+                try:
+                    score = float(stats.get("score", 0.0))
+                except (TypeError, ValueError):
+                    continue
+
+                if score > 0:
+                    promoted += 1
+                elif score < 0:
+                    demoted += 1
+
+    return promoted, demoted
+
+
 @router.get("/api/learning-maintenance-status")
 async def get_learning_maintenance_status(
     token: Optional[str] = Query(None),
@@ -70,7 +104,7 @@ async def get_learning_maintenance_status(
     db: Session = Depends(get_db),
 ):
     """Return latest automated learning maintenance status for manager dashboards."""
-    _ = _decode_user_from_token(token, credentials, db)
+    current_user = _decode_user_from_token(token, credentials, db)
 
     state_file = REPORTS_DIR / "learning_maintenance_state.json"
     state = _read_json_file(state_file)
@@ -85,6 +119,13 @@ async def get_learning_maintenance_status(
 
     backfill = run_data.get("backfill", {}) if isinstance(run_data, dict) else {}
     actions = backfill.get("actions", {}) if isinstance(backfill, dict) else {}
+
+    # Cumulative learning stats come from per-user learning state.
+    learning_state_path = REPORTS_DIR / f"learning_state_user_{current_user.id}.json"
+    learning_state = _read_json_file(learning_state_path)
+    extraction_stats = learning_state.get("extraction_stats", {}) if isinstance(learning_state, dict) else {}
+    action_totals = extraction_stats.get("feedback_action_counts", {}) if isinstance(extraction_stats, dict) else {}
+    promoted_total, demoted_total = _count_scored_patterns(learning_state.get("feedback_pattern_scores", {}))
 
     return {
         "has_state": bool(state),
@@ -102,6 +143,14 @@ async def get_learning_maintenance_status(
             "approve": actions.get("approve", 0),
             "reject": actions.get("reject", 0),
             "request_modification": actions.get("request_modification", 0),
+        },
+        "processed_feedback_total": extraction_stats.get("feedback_events", 0),
+        "promoted_patterns_total": promoted_total,
+        "demoted_patterns_total": demoted_total,
+        "action_totals": {
+            "approve": action_totals.get("approve", 0),
+            "reject": action_totals.get("reject", 0),
+            "request_modification": action_totals.get("request_modification", 0),
         },
         "n_feedback": run_data.get("n_feedback"),
         "backfill_limit": run_data.get("backfill_limit"),

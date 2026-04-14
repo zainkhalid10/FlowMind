@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel, EmailStr
 import pytesseract
-from database import SessionLocal, ParsedFile, ImageMeta, User, Feature, Team, init_db
+from database import SessionLocal, ParsedFile, ImageMeta, User, Feature, Team, AgentChatHistory, init_db
 from rag_agent import get_agent
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -31,7 +31,16 @@ import asyncio
 import warnings
 import logging
 import re
+import sys
 from dotenv import load_dotenv
+
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 # Suppress harmless warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pypdf")
@@ -398,6 +407,39 @@ def _vlm_summarize(image_path: str, context: str) -> str:
             image_type = "workflow"
         return enhanced_vlm_summarize(image_path, context, image_type)
 
+def _advanced_ocr_text(image_path: str = "", pil_image: Optional[Image.Image] = None) -> str:
+    """Use advanced OCR first, with safe fallback to pytesseract."""
+    try:
+        from services.image_service import advanced_ocr_extract
+        target_path = image_path
+        temp_path = None
+        if (not target_path) and pil_image is not None:
+            temp_path = os.path.join(UPLOAD_DIR, f"tmp_ocr_{uuid.uuid4().hex}.png")
+            pil_image.save(temp_path, format="PNG")
+            target_path = temp_path
+        if target_path and os.path.exists(target_path):
+            result = advanced_ocr_extract(target_path)
+            text = sanitize_unicode((result or {}).get("text", "") or "")
+        else:
+            text = sanitize_unicode(pytesseract.image_to_string(pil_image) if pil_image is not None else "")
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+        return text
+    except Exception:
+        try:
+            return sanitize_unicode(pytesseract.image_to_string(pil_image) if pil_image is not None else "")
+        except Exception:
+            return ""
+
+def _extract_image_requirements(image_path: str, context: str = "") -> list:
+    """Dedicated per-image VLM requirement pass (legacy single-call wrapper)."""
+    try:
+        from services.image_service import extract_testable_requirements_from_image
+        return extract_testable_requirements_from_image(image_path, context)
+    except Exception:
+        return []
+
+
 # ==============================================================
 # MAIN ANALYZE FUNCTION
 # ==============================================================
@@ -510,9 +552,7 @@ async def _analyze_document_internal(
                         try:
                             im = Image.open(BytesIO(data))
                             im.save(out_path, format="PNG")
-                            ocr_text_raw = pytesseract.image_to_string(im)
-                            # Sanitize OCR text to remove invalid Unicode characters
-                            ocr_text = sanitize_unicode(ocr_text_raw)
+                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
                         except Exception:
                             # If PIL cannot decode, just dump bytes and skip OCR
                             with open(out_path, "wb") as fimg:
@@ -522,7 +562,7 @@ async def _analyze_document_internal(
                         detected_images += 1
                         # Compute a simple position for context: end of that page's text
                         pos = page_end_offsets.get(page_num, len(text_output))
-                        context_before = text_output[max(0, pos - 300):pos]
+                        context_before = text_output[max(0, pos - 500):pos]
                         image_positions.append({
                             "image_id": image_id,
                             "page": page_num,
@@ -580,14 +620,12 @@ async def _analyze_document_internal(
                                 imf.write(blob)
                             try:
                                 img = Image.open(out_path)
-                                ocr_text_raw = pytesseract.image_to_string(img)
-                                # Sanitize OCR text to remove invalid Unicode characters
-                                ocr_text = sanitize_unicode(ocr_text_raw)
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                             except Exception:
                                 ocr_text = ""
                             image_metadata.append((image_id, out_path, page_num, ocr_text))
                             pos = len(text_output)
-                            context_before = text_output[max(0, pos - 300):pos]
+                            context_before = text_output[max(0, pos - 500):pos]
                             image_positions.append({
                                 "image_id": image_id,
                                 "page": page_num,
@@ -626,9 +664,7 @@ async def _analyze_document_internal(
                     # OCR
                     try:
                         img = Image.open(out_path)
-                        ocr_text_raw = pytesseract.image_to_string(img)
-                        # Sanitize OCR text to remove invalid Unicode characters
-                        ocr_text = sanitize_unicode(ocr_text_raw)
+                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                     except Exception:
                         ocr_text = ""
                     image_metadata.append((image_id, out_path, page_num, ocr_text))
@@ -662,14 +698,12 @@ async def _analyze_document_internal(
                                     imf.write(shape.image.blob)
                                 try:
                                     img = Image.open(out_path)
-                                    ocr_text_raw = pytesseract.image_to_string(img)
-                                    # Sanitize OCR text to remove invalid Unicode characters
-                                    ocr_text = sanitize_unicode(ocr_text_raw)
+                                    ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                                 except Exception:
                                     ocr_text = ""
                                 image_metadata.append((image_id, out_path, 1, ocr_text))
                                 pos = len(text_output)
-                                context_before = text_output[max(0, pos - 300):pos]
+                                context_before = text_output[max(0, pos - 500):pos]
                                 image_positions.append({
                                     "image_id": image_id,
                                     "page": 1,
@@ -705,14 +739,12 @@ async def _analyze_document_internal(
                             imf.write(shape.image.blob)
                             try:
                                 img = Image.open(out_path)
-                                ocr_text_raw = pytesseract.image_to_string(img)
-                                # Sanitize OCR text to remove invalid Unicode characters
-                                ocr_text = sanitize_unicode(ocr_text_raw)
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                             except Exception:
                                 ocr_text = ""
                             image_metadata.append((image_id, out_path, slide_idx, ocr_text))
                         pos = len(text_output)
-                        context_before = text_output[max(0, pos - 300):pos]
+                        context_before = text_output[max(0, pos - 500):pos]
                         image_positions.append({
                             "image_id": image_id,
                             "page": slide_idx,
@@ -735,9 +767,7 @@ async def _analyze_document_internal(
         img = Image.open(filepath)
         if tracker:
             tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=1, current_image=1)
-        text_output_raw = pytesseract.image_to_string(img)
-        # Sanitize OCR text to remove invalid Unicode characters
-        text_output = sanitize_unicode(text_output_raw)
+        text_output = _advanced_ocr_text(image_path=filepath, pil_image=img)
         image_id = gen_image_id(file.filename, 1, 1)
         image_metadata.append((image_id, filepath, 1, text_output))
         if text_output.strip():
@@ -3720,7 +3750,7 @@ async def _analyze_with_agent_internal(
 ):
     """Internal function for AI agent analysis - ensures response is always returned.
     Optionally merges Basic Extraction data (text + image summaries) for improved results."""
-    print(f"🚀 _analyze_with_agent_internal called for file: {file.filename}, user_id: {user_id}")
+    print(f"_analyze_with_agent_internal called for file: {file.filename}, user_id: {user_id}")
     if basic_extraction_data:
         print(f"📋 Basic Extraction data provided: {len(basic_extraction_data.get('extracted_text', ''))} chars, {len(basic_extraction_data.get('image_summaries', []))} image summaries")
     """Internal function: Extract text from document and process with RAG agent for requirements extraction."""
@@ -3760,6 +3790,8 @@ async def _analyze_with_agent_internal(
         image_count = 0
         detected_images = 0  # Initialize counter for detected images
         image_metadata = []  # (image_id, image_path, page_number, ocr_text)
+        image_requirements_structured = []
+        diagram_jobs_pending: list = []
 
         def gen_image_id(fname: str, page_num: int, idx: int) -> str:
             base = f"{fname}|{page_num}|{idx}"
@@ -3773,6 +3805,7 @@ async def _analyze_with_agent_internal(
             total_pages = len(reader.pages)
             chunk_size = 10
             page_end_offsets = {}
+            page_text_by_page: dict = {}
 
             print(f"📘 Document has {total_pages} pages. Starting text extraction...")
             
@@ -3788,6 +3821,7 @@ async def _analyze_with_agent_internal(
                 for page_index in range(start, end):
                     page = reader.pages[page_index]
                     page_text = page.extract_text() or ""
+                    page_text_by_page[page_index + 1] = page_text
                     text_output += page_text + "\n"
                     page_end_offsets[page_index + 1] = len(text_output)
 
@@ -3800,9 +3834,18 @@ async def _analyze_with_agent_internal(
                 print(f"✅ Finished pages {start + 1}–{end} of {total_pages}.")
             print(f"✅ Completed all {total_pages} pages. Extracted {len(text_output):,} characters.")
 
+            images_per_page: dict = {}
+            for pn, pg in enumerate(reader.pages, start=1):
+                try:
+                    imgs0 = getattr(pg, "images", []) or []
+                except Exception:
+                    imgs0 = []
+                images_per_page[pn] = len(imgs0)
+
             # Extract images using pypdf Page.images if available
             try:
                 from io import BytesIO
+                from services.image_service import split_page_text_around_image, get_image_context
                 for page_num, page in enumerate(reader.pages, start=1):
                     try:
                         imgs = getattr(page, "images", []) or []
@@ -3819,9 +3862,7 @@ async def _analyze_with_agent_internal(
                             try:
                                 im = Image.open(BytesIO(data))
                                 im.save(out_path, format="PNG")
-                                ocr_text_raw = pytesseract.image_to_string(im)
-                                # Sanitize OCR text to remove invalid Unicode characters
-                                ocr_text = sanitize_unicode(ocr_text_raw)
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
                             except Exception:
                                 with open(out_path, "wb") as fimg:
                                     fimg.write(data)
@@ -3829,7 +3870,18 @@ async def _analyze_with_agent_internal(
                             image_metadata.append((image_id, out_path, page_num, ocr_text))
                             detected_images += 1
                             pos = page_end_offsets.get(page_num, len(text_output))
-                            context_before = text_output[max(0, pos - 300):pos]
+                            context_before = text_output[max(0, pos - 500):pos]
+                            pt = page_text_by_page.get(page_num, "")
+                            nimg = max(1, images_per_page.get(page_num, 1))
+                            bef, aft = split_page_text_around_image(pt, img_idx, nimg)
+                            ctx = get_image_context(bef, aft, ocr_text or "", img_idx, page_num)
+                            diagram_jobs_pending.append({
+                                "image_path": out_path,
+                                "image_id": image_id,
+                                "page_num": page_num,
+                                "ocr_text": ocr_text or "",
+                                "context": ctx,
+                            })
                             
                             # Update progress for OCR
                             if tracker:
@@ -3874,12 +3926,20 @@ async def _analyze_with_agent_internal(
                                     imf.write(blob)
                                     try:
                                         img = Image.open(out_path)
-                                        ocr_text_raw = pytesseract.image_to_string(img)
-                                        # Sanitize OCR text to remove invalid Unicode characters
-                                        ocr_text = sanitize_unicode(ocr_text_raw)
+                                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                                     except Exception:
                                         ocr_text = ""
                                     image_metadata.append((image_id, out_path, page_num, ocr_text))
+                                    from services.image_service import get_image_context
+                                    prior = text_output[max(0, len(text_output) - 500):]
+                                    ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, page_num)
+                                    diagram_jobs_pending.append({
+                                        "image_path": out_path,
+                                        "image_id": image_id,
+                                        "page_num": page_num,
+                                        "ocr_text": ocr_text or "",
+                                        "context": ctx,
+                                    })
                                     if ocr_text.strip():
                                         text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
                             except Exception:
@@ -3907,12 +3967,20 @@ async def _analyze_with_agent_internal(
                             imf.write(blob)
                         try:
                             img = Image.open(out_path)
-                            ocr_text_raw = pytesseract.image_to_string(img)
-                            # Sanitize OCR text to remove invalid Unicode characters
-                            ocr_text = sanitize_unicode(ocr_text_raw)
+                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                         except Exception:
                             ocr_text = ""
                         image_metadata.append((image_id, out_path, page_num, ocr_text))
+                        from services.image_service import get_image_context
+                        prior = text_output[max(0, len(text_output) - 500):]
+                        ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, page_num)
+                        diagram_jobs_pending.append({
+                            "image_path": out_path,
+                            "image_id": image_id,
+                            "page_num": page_num,
+                            "ocr_text": ocr_text or "",
+                            "context": ctx,
+                        })
                         if ocr_text.strip():
                             text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
                     except Exception:
@@ -3941,12 +4009,20 @@ async def _analyze_with_agent_internal(
                                         imf.write(shape.image.blob)
                                     try:
                                         img = Image.open(out_path)
-                                        ocr_text_raw = pytesseract.image_to_string(img)
-                                        # Sanitize OCR text to remove invalid Unicode characters
-                                        ocr_text = sanitize_unicode(ocr_text_raw)
+                                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                                     except Exception:
                                         ocr_text = ""
                                     image_metadata.append((image_id, out_path, 1, ocr_text))
+                                    from services.image_service import get_image_context
+                                    prior = text_output[max(0, len(text_output) - 500):]
+                                    ctx = get_image_context(prior[-500:], "", ocr_text or "", image_count, 1)
+                                    diagram_jobs_pending.append({
+                                        "image_path": out_path,
+                                        "image_id": image_id,
+                                        "page_num": 1,
+                                        "ocr_text": ocr_text or "",
+                                        "context": ctx,
+                                    })
                                     if ocr_text.strip():
                                         text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
                                 except Exception:
@@ -3970,12 +4046,20 @@ async def _analyze_with_agent_internal(
                                 imf.write(shape.image.blob)
                             try:
                                 img = Image.open(out_path)
-                                ocr_text_raw = pytesseract.image_to_string(img)
-                                # Sanitize OCR text to remove invalid Unicode characters
-                                ocr_text = sanitize_unicode(ocr_text_raw)
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
                             except Exception:
                                 ocr_text = ""
                             image_metadata.append((image_id, out_path, slide_idx, ocr_text))
+                            from services.image_service import get_image_context
+                            prior = text_output[max(0, len(text_output) - 500):]
+                            ctx = get_image_context(prior[-500:], "", ocr_text or "", image_count, slide_idx)
+                            diagram_jobs_pending.append({
+                                "image_path": out_path,
+                                "image_id": image_id,
+                                "page_num": slide_idx,
+                                "ocr_text": ocr_text or "",
+                                "context": ctx,
+                            })
                             if ocr_text.strip():
                                 text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
                         except Exception:
@@ -3988,11 +4072,19 @@ async def _analyze_with_agent_internal(
             img = Image.open(filepath)
             if tracker:
                 tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=1, current_image=1)
-            text_output_raw = pytesseract.image_to_string(img)
-            # Sanitize OCR text to remove invalid Unicode characters
-            text_output = sanitize_unicode(text_output_raw)
+            text_output = _advanced_ocr_text(image_path=filepath, pil_image=img)
             image_id = gen_image_id(file.filename, 1, 1)
             image_metadata.append((image_id, filepath, 1, text_output))
+            from services.image_service import get_image_context
+            ocr_here = text_output or ""
+            ctx = get_image_context("", "", ocr_here, 1, 1)
+            diagram_jobs_pending.append({
+                "image_path": filepath,
+                "image_id": image_id,
+                "page_num": 1,
+                "ocr_text": ocr_here,
+                "context": ctx,
+            })
             if tracker:
                 tracker.set_stage(ProcessingStage.IMAGE_SUMMARIZATION, total_images=1, current_image=1)
             if text_output.strip():
@@ -4173,6 +4265,61 @@ IMPORTANT:
                                 existing_image_ids.add(img_id)
                                 print(f"   ✅ Added image {img_id} from Basic Extraction to metadata")
 
+        # Per-image diagram VLM requirements (smart filter + parallel workers; see image_service).
+        vlm_pass = os.getenv("FLOWMIND_IMAGE_REQ_VLM_PASS", "1")
+        print(f"VLM_PASS_ENV_VALUE: {vlm_pass}")
+        req_vlm_enabled = vlm_pass == "1"
+        print(f"VLM_ENABLED: {req_vlm_enabled}")
+        if req_vlm_enabled and diagram_jobs_pending:
+            try:
+                from services.image_service import run_parallel_diagram_vlm_jobs
+                max_w = int(os.getenv("FLOWMIND_VLM_MAX_WORKERS", "3"))
+                max_w = max(1, min(max_w, 3))
+                print(
+                    f"Diagram VLM: {len(diagram_jobs_pending)} candidate image(s), "
+                    f"max_workers={max_w}"
+                )
+                vlm_results = run_parallel_diagram_vlm_jobs(
+                    diagram_jobs_pending,
+                    max_workers=max_w,
+                )
+                for res in vlm_results:
+                    if res.get("skipped"):
+                        continue
+                    image_id = res.get("image_id", "")
+                    page_num = res.get("page_num", 0)
+                    reqs = res.get("requirements") or []
+                    if not reqs:
+                        continue
+                    text_output += f"\n[IMAGE_REQUIREMENTS {image_id}]\n" + "\n".join(
+                        f"- {sanitize_unicode(r)}" for r in reqs
+                    ) + "\n"
+                    scen = next(
+                        (
+                            j.get("context", {}).get("scenario")
+                            for j in diagram_jobs_pending
+                            if j.get("image_id") == image_id
+                        ),
+                        None,
+                    )
+                    for req in reqs:
+                        stmt = sanitize_unicode(req)
+                        if not stmt:
+                            continue
+                        image_requirements_structured.append({
+                            "statement": stmt,
+                            "category": "functional",
+                            "priority": "medium",
+                            "confidence": 0.75,
+                            "evidence_text": stmt[:240],
+                            "evidence_page": page_num,
+                            "evidence_image_id": image_id,
+                            "source_type": "image",
+                            "scenario": scen,
+                        })
+            except Exception as img_req_err:
+                print(f"Image requirements VLM batch failed: {img_req_err}")
+
         # Save full text file
         sanitized_text = sanitize_unicode(text_output or "")
         text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
@@ -4231,6 +4378,58 @@ IMPORTANT:
                 status_code=400,
                 detail="No text content extracted from document"
             )
+
+        # Visual-understanding fallback: if embedded image extraction found nothing,
+        # OCR a few rendered PDF pages and feed that context to the agent.
+        try:
+            if int(image_count or 0) == 0 and str(file.filename or '').lower().endswith('.pdf'):
+                try:
+                    import fitz  # PyMuPDF
+                except Exception:
+                    fitz = None
+
+                if fitz is not None:
+                    pdf_path = os.path.join(UPLOAD_DIR, file.filename)
+                    if os.path.exists(pdf_path):
+                        doc = None
+                        fallback_ocr_blocks = []
+                        try:
+                            doc = fitz.open(pdf_path)
+                            max_pages = min(len(doc), 8)
+                            for i in range(max_pages):
+                                try:
+                                    page = doc[i]
+                                    pix = page.get_pixmap(
+                                        matrix=fitz.Matrix(1.8, 1.8),
+                                        colorspace=fitz.csRGB,
+                                        alpha=False,
+                                        annots=False,
+                                    )
+                                    tmp_img_path = os.path.join(UPLOAD_DIR, f"{file.filename}_CTX-{i+1}.png")
+                                    pix.save(tmp_img_path)
+                                    with Image.open(tmp_img_path) as page_img:
+                                        ocr_text = _advanced_ocr_text(image_path=tmp_img_path, pil_image=page_img).strip()
+                                    if len(ocr_text) >= 25:
+                                        fallback_ocr_blocks.append(f"[PAGE {i+1}] {ocr_text[:1200]}")
+                                except Exception:
+                                    continue
+                        finally:
+                            if doc is not None:
+                                doc.close()
+
+                        if fallback_ocr_blocks:
+                            fallback_context = "\n\n[VISUAL_PAGE_OCR_FALLBACK]\n" + "\n".join(fallback_ocr_blocks)
+                            text_output += fallback_context
+                            print(f"📸 Added visual OCR fallback context from {len(fallback_ocr_blocks)} PDF page(s) for AI extraction")
+
+                            # Make this context also available for feature merge stage later.
+                            if isinstance(basic_extraction_data, dict):
+                                basic_extraction_data.setdefault('image_summaries', [])
+                                basic_extraction_data['image_summaries'].extend([
+                                    {'summary': block, 'interpretation': block} for block in fallback_ocr_blocks
+                                ])
+        except Exception as fallback_err:
+            print(f"⚠️ Visual OCR fallback skipped: {fallback_err}")
         
         try:
             agent_result = await run_in_thread(
@@ -4457,6 +4656,21 @@ complete context from both basic extraction and AI analysis.
                     ocr_text=ocr_text
                 )
                 db.add(img_meta)
+
+            # Persist AI response so users can see previous chat-style results after refresh/restart.
+            assistant_message = str(requirements_result.get("response") or "").strip()
+            if assistant_message:
+                history_row = AgentChatHistory(
+                    user_id=user_id,
+                    project_id=project_id,
+                    file_id=record.id,
+                    filename=file.filename,
+                    user_message=f"Analyze this document: {file.filename}",
+                    assistant_message=assistant_message,
+                    view_id=view_id,
+                )
+                db.add(history_row)
+
             db.commit()
             
             print(f"✅ Database record saved: view_id={view_id}, file_id={record.id}")
@@ -4516,7 +4730,38 @@ complete context from both basic extraction and AI analysis.
         features_count = 0
         try:
             extracted_response = requirements_result.get("response", "")
-            if extracted_response and record and hasattr(record, 'id') and record.id:
+            structured_requirements = requirements_result.get("requirements_json")
+            if not isinstance(structured_requirements, list):
+                structured_requirements = []
+            if image_requirements_structured:
+                existing_keys = {
+                    (str(item.get("statement", "")).strip().lower(), str(item.get("evidence_image_id", "")).strip())
+                    for item in structured_requirements
+                }
+                for item in image_requirements_structured:
+                    key = (str(item.get("statement", "")).strip().lower(), str(item.get("evidence_image_id", "")).strip())
+                    if key not in existing_keys:
+                        structured_requirements.append(item)
+                        existing_keys.add(key)
+                requirements_result["requirements_json"] = structured_requirements
+                requirements_result["requirements_json_count"] = len(structured_requirements)
+            try:
+                img_only = [x for x in structured_requirements if x.get("evidence_image_id")]
+                if img_only and agent:
+                    full_doc = sanitized_text or ""
+                    chunks = agent.text_splitter.split_text(full_doc)
+                    linked = agent.link_image_requirements_to_document_text(img_only, chunks)
+                    lk = {(d.get("evidence_image_id"), d.get("statement")): d for d in linked}
+                    for i, it in enumerate(structured_requirements):
+                        key = (it.get("evidence_image_id"), it.get("statement"))
+                        if key in lk:
+                            structured_requirements[i] = lk[key]
+                    requirements_result["requirements_json"] = structured_requirements
+                    requirements_result["requirements_json_count"] = len(structured_requirements)
+            except Exception as le:
+                print(f"Image-text linking failed: {le}")
+            has_structured_requirements = isinstance(structured_requirements, list) and len(structured_requirements) > 0
+            if (extracted_response or has_structured_requirements) and record and hasattr(record, 'id') and record.id:
                 # Create a new database session for feature parsing (thread-safe)
                 try:
                     # Use a new session to avoid thread-safety issues
@@ -4528,6 +4773,7 @@ complete context from both basic extraction and AI analysis.
                             record.id, 
                             db_features,
                             image_summaries=image_summaries_for_features,
+                            structured_requirements=structured_requirements,
                             project_id=project_id,
                         )
                         print(f"📋 Saved {features_count} features for user approval (merged from text + images)")
