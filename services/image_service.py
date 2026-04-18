@@ -481,32 +481,21 @@ OCR extracted text: "{ocr_text[:300] if ocr_text else 'No text detected'}"
 """
     
     type_specific_prompts = {
-        'flowchart': f"""This is a flowchart diagram. Analyze the complete flow:
-1. What is the starting condition?
-2. What are ALL decision points and their yes/no outcomes?
-3. What loops exist and what triggers them?
-4. What are the termination conditions?
-5. What happens on failure paths?
-
-Extract each path as a SHALL requirement.
-Pay special attention to: numeric limits (3 attempts), error handling paths, blocking conditions.
-
-Also use this surrounding document text as additional context for understanding what this diagram represents:
+        'flowchart': f"""{_diagram_understanding_preamble()}
+This is a flowchart from a requirements document. Complete Step 1 using the image and this context:
 {(context or '')[:1000]}
 
-Format output as:
-REQUIREMENT: [The system shall ...]
-EVIDENCE: [diagram element + supporting text]
+For Step 2, list each major path or branch as a SHALL-style requirement where possible, with evidence
+(decision diamond text, arrow labels). Pay special attention to: numeric limits (e.g. retries),
+error handling paths, blocking conditions.
 """,
 
-        'diagram': """This is a system diagram. Analyze and extract:
-1. COMPONENTS: List all system components/modules shown
-2. CONNECTIONS: Describe how components are connected
-3. DATA FLOWS: Identify data flowing between components
-4. ARCHITECTURE: Describe the overall architecture pattern
-5. TECHNICAL REQUIREMENTS: Extract any technical constraints or requirements
+        'diagram': f"""{_diagram_understanding_preamble()}
+This is a system / architecture diagram. Complete Step 1 using the image.
 
-Be specific about component names and relationships.""",
+For Step 2, be specific about component names, interfaces, data flows, trust boundaries, and constraints
+implied by how parts are connected. Where possible, phrase as SHALL requirements with evidence (box labels, arrows).
+""",
 
         'chart': """This is a data chart/graph. Analyze and extract:
 1. CHART TYPE: Identify the type (bar, line, pie, etc.)
@@ -755,10 +744,19 @@ def merge_interpretations(ocr_text: str, ocr_confidence: float, vlm_result: Dict
         for i, step in enumerate(ocr_analysis['process_steps'][:15], 1):
             sections.append(f"{i}. {step}")
     
-    # VLM interpretation (if available)
+    # VLM interpretation (if available) — tag diagrams for RAG / extraction
     if vlm_result.get('interpretation'):
-        sections.append(f"\n**Visual Analysis**:")
-        sections.append(vlm_result['interpretation'])
+        interp = (vlm_result.get('interpretation') or "").strip()
+        if image_type in ('diagram', 'flowchart'):
+            sections.append("\n[DIAGRAM_UNDERSTANDING]")
+            sections.append(
+                "Narrative understanding of the figure (use when drafting or validating requirements):"
+            )
+            sections.append(interp)
+            sections.append("[/DIAGRAM_UNDERSTANDING]")
+        else:
+            sections.append(f"\n**Visual Analysis**:")
+            sections.append(interp)
     
     # Requirements (from both OCR and VLM)
     all_requirements = list(set(ocr_analysis.get('requirements', []) + vlm_result.get('requirements', [])))
@@ -994,46 +992,107 @@ def classify_diagram_type(image_path: str, ocr_text: str) -> str:
         return "diagram"
 
 
+def _diagram_understanding_preamble() -> str:
+    """Instructions the VLM must follow before listing formal REQUIREMENT lines."""
+    return """STEP 1 — UNDERSTANDING (write this FIRST, before any "REQUIREMENT:" lines):
+You must explain what the diagram means, not only list bullets.
+
+### 1. PLAIN_LANGUAGE_EXPLANATION
+Write 4–8 sentences as if briefing a product analyst who cannot see the image: what process or structure is shown,
+who or what participates, and what outcome or control the diagram is meant to convey.
+
+### 2. STRUCTURED_UNDERSTANDING
+Use bullet sub-headings (fill from the visual; write "unknown" only if truly not visible):
+- Primary purpose:
+- Main sequence or control flow (ordered steps):
+- Actors / swimlanes / subsystems / stores:
+- Decisions, guards, or branches:
+- Data or control exchanged between parts:
+- Error paths, loops, or alternate flows (if any):
+
+### 3. IMPLIED_BEHAVIORS_FOR_IMPLEMENTATION
+List 3–10 short bullets: concrete behaviors an engineer would need to implement so the system matches the diagram
+(still plain language; modal verbs optional).
+
+STEP 2 — FORMAL REQUIREMENTS (after Step 1 is complete):
+"""
+
+
+def _extract_understanding_from_diagram_vlm(merged: str) -> str:
+    """Pull narrative understanding from a diagram VLM response for RAG / downstream extraction."""
+    if not merged or not str(merged).strip():
+        return ""
+    text = str(merged).strip()
+    m = re.search(
+        r"(?ims)STEP\s*1[^\n]*\n(.*)(?=^\s*STEP\s*2|^\s*REQUIREMENT:\s*)",
+        text,
+    )
+    if m:
+        block = m.group(1).strip()
+        if len(block) >= 10:
+            return block[:12000]
+    m = re.search(
+        r"(?ims)(###\s*1\.?\s*PLAIN[^\n]*\n.*?)(?=^\s*###\s*REQUIREMENT|^\s*REQUIREMENT:\s*|^\s*STEP\s*2)",
+        text,
+    )
+    if m:
+        block = m.group(1).strip()
+        if len(block) >= 10:
+            return block[:12000]
+    m2 = re.search(r"(?im)^REQUIREMENT:\s*", text)
+    if m2 and m2.start() >= 12:
+        prefix = text[: m2.start()].strip()
+        # Drop duplicate Step-1 header line if present (keep narrative only).
+        lines = prefix.splitlines()
+        if lines and re.match(r"(?i)^STEP\s*1\b", lines[0].strip()):
+            prefix = "\n".join(lines[1:]).strip()
+        if len(prefix) >= 10:
+            return prefix[:12000]
+    if len(text) > 200 and "NO_REQUIREMENTS_FOUND" not in text.upper():
+        return text[:4000]
+    return ""
+
+
 def _build_type_specific_diagram_prompt(diagram_type: str, surrounding_document_text: str) -> str:
     surrounding = (surrounding_document_text or "").strip()[:1000]
+    preamble = _diagram_understanding_preamble()
     if diagram_type == "flowchart":
-        return f"""This is a flowchart diagram. Analyze the complete flow:
-1. What is the starting condition?
-2. What are ALL decision points and their yes/no outcomes?
-3. What loops exist and what triggers them?
-4. What are the termination conditions?
-5. What happens on failure paths?
+        return f"""{preamble}
+This is a flowchart diagram. For Step 2, analyze the complete flow and extract SHALL-style requirements:
+1. Starting condition(s)
+2. ALL decision points and yes/no outcomes
+3. Loops and what triggers them
+4. Termination conditions
+5. Failure / exception paths
+Pay special attention to: numeric limits (e.g. retry counts), blocking conditions, error handling.
 
-Extract each path as a SHALL requirement.
-Pay special attention to: numeric limits (3 attempts),
-error handling paths, blocking conditions.
-
-Also use this surrounding document text as additional
-context for understanding what this diagram represents:
+Use this surrounding document text for context:
 {surrounding}
 """
     if diagram_type == "table":
-        return f"""This is a table diagram. Extract explicit constraints, limits, and mapping rules.
-Convert each enforceable row/column rule into SHALL requirements.
+        return f"""{preamble}
+This is a table diagram. For Step 2, extract explicit constraints, limits, and mapping rules as SHALL requirements.
 
 Surrounding document text:
 {surrounding}
 """
     if diagram_type == "architecture_diagram":
-        return f"""This is an architecture/flow diagram. Identify components, integrations, boundaries, and data flow.
-Extract integration, interface, and reliability SHALL requirements.
+        return f"""{preamble}
+This is an architecture / component diagram. For Step 2, extract integration, interface, boundary, and
+reliability SHALL requirements grounded in what is drawn.
 
 Surrounding document text:
 {surrounding}
 """
     if diagram_type == "state_diagram":
-        return f"""This is a state diagram. Identify states, transitions, triggers, guards, and invalid transitions.
-Extract each transition and guard as SHALL requirements.
+        return f"""{preamble}
+This is a state diagram. For Step 2, extract transitions, triggers, guards, and invalid transitions as SHALL requirements.
 
 Surrounding document text:
 {surrounding}
 """
-    return f"""This is a technical diagram. Extract functional and system SHALL requirements strictly grounded in diagram evidence.
+    return f"""{preamble}
+This is a technical diagram. For Step 2, extract functional and system SHALL requirements strictly grounded in diagram evidence.
 
 Surrounding document text:
 {surrounding}
@@ -1049,56 +1108,51 @@ def _build_scenario_vlm_prompt(
     surrounding_document_text: str = "",
 ) -> str:
     type_prompt = _build_type_specific_diagram_prompt(diagram_type, surrounding_document_text)
+    req_base = """After Step 1 is complete, for EACH formal requirement output EXACTLY:
+REQUIREMENT: [The system shall ...]
+CATEGORY: [Functional / Non-Functional / Business / System]
+PRIORITY: [High / Medium / Low]
+EVIDENCE: [specific visual element, label, or arrow supporting this]
+
+Only extract what is directly evidenced. No invention.
+If no formal requirements can be grounded after Step 1, still complete Step 1, then output: NO_REQUIREMENTS_FOUND
+(and do not fabricate REQUIREMENT lines).
+"""
+    req_with_src_dt = req_base.replace(
+        "EVIDENCE:",
+        "SOURCE: [diagram / text / both]\nEVIDENCE:",
+        1,
+    )
+    req_with_src_ocr = req_base.replace(
+        "EVIDENCE:",
+        "SOURCE: [diagram / ocr_text / both]\nEVIDENCE:",
+        1,
+    )
     if scenario == "diagram_only":
         return f"""You are a requirements analyst examining a technical diagram
 from a Software Requirements Specification document.
 This diagram has no surrounding text — you must derive
 everything from the visual content alone.
 
-Analyze this diagram carefully and extract ALL implied
-system requirements. Look for:
-- Flows between components (implies system must support that flow)
-- Decision points (implies system must handle those conditions)
-- Actors and their interactions (implies functional requirements)
-- Data stores (implies storage requirements)
-- System boundaries (implies integration requirements)
+{type_prompt}
 
-For each requirement you find output EXACTLY:
-REQUIREMENT: [The system shall ...]
-CATEGORY: [Functional / Non-Functional / Business / System]
-PRIORITY: [High / Medium / Low]
-EVIDENCE: [what in the diagram supports this]
+In Step 1, look for: flows between components, decision points, actors, data stores, system boundaries,
+and what they imply for system behavior (explain before you formalize).
 
-Only extract what is directly shown.
-If no requirements found output: NO_REQUIREMENTS_FOUND
-
-{type_prompt}"""
+{req_base}"""
 
     if scenario == "diagram_with_local_text":
         return f"""You are a requirements analyst examining a technical diagram
 from a Software Requirements Specification document.
 
 The diagram has accompanying text. Use BOTH the diagram
-and the text together to extract requirements.
+and the text together. Ground Step 1 in the visual; use text to disambiguate labels and intent.
 Text before diagram: {before_text[:1200]}
 Text after diagram: {after_text[:1200]}
 
-Extract ALL requirements implied by the diagram AND
-confirmed or elaborated by the surrounding text.
-Where the text explains what the diagram shows, use that
-explanation to make requirements more precise.
+{type_prompt}
 
-For each requirement output EXACTLY:
-REQUIREMENT: [The system shall ...]
-CATEGORY: [Functional / Non-Functional / Business / System]
-PRIORITY: [High / Medium / Low]
-SOURCE: [diagram / text / both]
-EVIDENCE: [specific element from diagram or text]
-
-Only extract what is evidenced. No invention.
-If nothing found output: NO_REQUIREMENTS_FOUND
-
-{type_prompt}"""
+{req_with_src_dt}"""
 
     # diagram_with_context
     ocr_snip = (ocr_text or "")[:1200]
@@ -1108,27 +1162,16 @@ from a Software Requirements Specification document.
 OCR extracted this text from or near the image:
 {ocr_snip}
 
-Use the OCR text as additional context alongside the
-visual diagram to extract requirements.
-The text may be labels, captions, or annotations
-within the diagram itself.
+Use the OCR text as labels/caption context alongside the visual diagram.
 
-For each requirement output EXACTLY:
-REQUIREMENT: [The system shall ...]
-CATEGORY: [Functional / Non-Functional / Business / System]
-PRIORITY: [High / Medium / Low]
-SOURCE: [diagram / ocr_text / both]
-EVIDENCE: [specific element supporting this]
+{type_prompt}
 
-Only extract what is evidenced. No invention.
-If nothing found output: NO_REQUIREMENTS_FOUND
-
-{type_prompt}"""
+{req_with_src_ocr}"""
 
 
 def _parse_vlm_requirement_blocks(merged: str) -> List[str]:
     """Extract requirement blocks from VLM output (REQUIREMENT: lines)."""
-    if not merged or "NO_REQUIREMENTS_FOUND" in merged.upper():
+    if not merged:
         return []
     blocks: List[str] = []
     current: List[str] = []
@@ -1167,15 +1210,19 @@ def extract_diagram_requirements_vlm(
     before_text: str = "",
     after_text: str = "",
     ocr_text: str = "",
-) -> List[str]:
-    """Scenario-aware VLM pass for diagram requirements."""
+) -> Dict[str, Any]:
+    """
+    Scenario-aware VLM pass: narrative diagram understanding plus formal REQUIREMENT blocks.
+    Returns {"requirements": [...], "understanding": "..."}.
+    """
+    empty = {"requirements": [], "understanding": ""}
     if not _is_vlm_pass_enabled():
-        return []
+        return empty
     if not image_path or not os.path.exists(image_path):
-        return []
+        return empty
     ollama_status = check_ollama_status()
     if not ollama_status.get("running"):
-        return []
+        return empty
     vlm_models_str = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
     if vlm_models_str:
         models = [m.strip() for m in vlm_models_str.split(",") if m.strip()]
@@ -1184,7 +1231,7 @@ def extract_diagram_requirements_vlm(
     ollama_models = ollama_status.get("models", [])
     available = [m for m in models if m in ollama_models]
     if not available:
-        return []
+        return empty
 
     try:
         with open(image_path, "rb") as f:
@@ -1208,12 +1255,16 @@ def extract_diagram_requirements_vlm(
                 responses.append(out)
                 break
         if not responses:
-            return []
+            return empty
         merged = "\n".join(responses)
-        return _parse_vlm_requirement_blocks(merged)
+        understanding = _extract_understanding_from_diagram_vlm(merged)
+        reqs = _parse_vlm_requirement_blocks(merged)
+        if not reqs and "NO_REQUIREMENTS_FOUND" in merged.upper():
+            reqs = []
+        return {"requirements": reqs, "understanding": understanding.strip()}
     except Exception as e:
         print(f"extract_diagram_requirements_vlm failed: {e}")
-        return []
+        return empty
 
 
 def extract_testable_requirements_from_image(image_path: str, context: str = "") -> List[str]:
@@ -1224,13 +1275,16 @@ def extract_testable_requirements_from_image(image_path: str, context: str = "")
     ocr_result = advanced_ocr_extract(image_path) if image_path and os.path.exists(image_path) else {}
     ocr_text = (ocr_result or {}).get("text", "") or ""
     scenario = "diagram_with_context" if len(ocr_text.strip()) > 20 else "diagram_only"
-    return extract_diagram_requirements_vlm(
+    pack = extract_diagram_requirements_vlm(
         image_path,
         scenario,
         before_text=context[:500] if context else "",
         after_text="",
         ocr_text=ocr_text,
     )
+    if isinstance(pack, dict):
+        return list(pack.get("requirements") or [])
+    return []
 
 
 def run_parallel_diagram_vlm_jobs(
@@ -1262,17 +1316,20 @@ def run_parallel_diagram_vlm_jobs(
                 "requirements": [],
                 "skipped": True,
             }
-        reqs = extract_diagram_requirements_vlm(
+        pack = extract_diagram_requirements_vlm(
             image_path,
             scenario,
             before_text=ctx.get("before_text", ""),
             after_text=ctx.get("after_text", ""),
             ocr_text=ocr_text,
         )
+        reqs = list((pack or {}).get("requirements") or [])
+        understanding = str((pack or {}).get("understanding") or "").strip()
         return {
             "image_id": image_id,
             "page_num": page_num,
             "requirements": reqs,
+            "understanding": understanding,
             "skipped": False,
         }
 

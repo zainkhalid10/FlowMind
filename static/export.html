@@ -262,11 +262,13 @@
 
     async function fetchConfigStatus() {
       try {
-        const res = await apiFetch('/config');
+        const res = await apiFetch('/api/integration/config');
         if (!res.ok) throw new Error();
         const cfg = await res.json();
-        const jiraOk = !!(cfg.jira_url && cfg.jira_email && cfg.jira_project_key);
-        const trelloOk = !!(cfg.trello_key && cfg.trello_board_id);
+        const jiraCfg = cfg.jira || {};
+        const trelloCfg = cfg.trello || {};
+        const jiraOk = !!((jiraCfg.jira_url || jiraCfg.url) && (jiraCfg.jira_email || jiraCfg.email) && (jiraCfg.jira_project_key || jiraCfg.project_key) && (jiraCfg.jira_token || jiraCfg.api_token));
+        const trelloOk = !!((trelloCfg.trello_key || trelloCfg.api_key) && (trelloCfg.trello_token || trelloCfg.token) && (trelloCfg.trello_board_id || trelloCfg.list_id));
 
         const jiraBadge = document.getElementById('jiraConnected');
         jiraBadge.className = 'fm-badge ' + (jiraOk ? 'badge-success' : 'badge-neutral');
@@ -325,11 +327,18 @@
           method: 'POST',
           body: JSON.stringify({ types: selectedTypes })
         });
-        if (!res.ok) throw new Error();
-        showToast('Export completed', 'success');
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(payload.detail || payload.message || 'Export failed');
+        const successCount = Array.isArray(payload.results) ? payload.results.filter(r => r.success).length : 0;
+        const totalCount = Array.isArray(payload.results) ? payload.results.length : 0;
+        if (!totalCount) {
+          showToast(payload.message || 'No approved requirements were available for export', 'error');
+        } else {
+          showToast('Export completed (' + successCount + '/' + totalCount + ')', successCount ? 'success' : 'error');
+        }
         loadHistory();
       } catch (e) {
-        showToast('Something went wrong', 'error');
+        showToast((e && e.message) ? e.message : 'Something went wrong', 'error');
       }
     }
 
@@ -341,7 +350,10 @@
       }
       try {
         const res = await apiFetch('/export/' + kind + '/' + encodeURIComponent(fileId));
-        if (!res.ok) throw new Error();
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.detail || 'Download failed');
+        }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -352,7 +364,7 @@
         a.remove();
         URL.revokeObjectURL(url);
       } catch (e) {
-        showToast('Something went wrong', 'error');
+        showToast((e && e.message) ? e.message : 'Something went wrong', 'error');
       }
     }
 

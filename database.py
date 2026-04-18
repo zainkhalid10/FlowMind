@@ -160,6 +160,8 @@ class Feature(Base):
     priority = Column(String(20), default="Medium")  # High | Medium | Low
     source = Column(String(40), default="system")  # system | client | client_approved
     client_review_status = Column(String(40), default="pending")  # pending | approved | rejected | modification_requested | pending_manager_approval
+    suggested_revision = Column(Text, nullable=True)  # AI-generated rewrite when client requests modification
+    manager_attention = Column(Integer, default=0)  # 1 when manager should review/resolve auto suggestion
     status = Column(String(20), default="pending")  # pending, approved, denied
     quality_score = Column(Integer, default=0)
     feedback = Column(Text, nullable=True)  # Client feedback on the requirement
@@ -216,7 +218,7 @@ class IntegrationConfig(Base):
     __tablename__ = "integration_config"
 
     id = Column(Integer, primary_key=True, index=True)
-    platform = Column(String(20), nullable=False, unique=True)  # trello | jira
+    platform = Column(String(20), nullable=False)  # trello | jira
     key_name = Column(String(64), nullable=False)  # e.g. api_key, token, list_id
     value = Column(Text, nullable=True)  # encrypted or plain - restrict access to manager
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -266,8 +268,10 @@ def init_db():
     _migrate_user_oauth_columns()
     _migrate_add_assigned_to()
     _migrate_feature_review_columns()
+    _migrate_feature_revision_columns()
     _migrate_project_columns()
     _migrate_integration_tables()
+    _migrate_integration_config_schema()
     _migrate_project_tables()
     _migrate_review_tables()
     _migrate_review_assignment_password_column()
@@ -372,6 +376,58 @@ def _migrate_integration_tables():
         Base.metadata.create_all(bind=engine, tables=[IntegrationConfig.__table__, IntegrationLog.__table__])
 
 
+def _migrate_integration_config_schema():
+    """Ensure integration_config supports multiple keys per platform."""
+    from sqlalchemy import inspect, text
+
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "integration_config" not in insp.get_table_names():
+            return
+
+        table_sql_row = conn.execute(
+            text("SELECT sql FROM sqlite_master WHERE type='table' AND name='integration_config'")
+        ).fetchone()
+        table_sql = (table_sql_row[0] if table_sql_row else "") or ""
+        normalized_sql = table_sql.upper().replace(" ", "")
+        has_bad_unique = "UNIQUE(PLATFORM)" in normalized_sql
+        has_good_unique = "UNIQUE(PLATFORM,KEY_NAME)" in normalized_sql
+        if not has_bad_unique or has_good_unique:
+            return
+
+        conn.execute(text("ALTER TABLE integration_config RENAME TO integration_config_old"))
+        conn.execute(
+            text(
+                """
+                CREATE TABLE integration_config (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    platform VARCHAR(20) NOT NULL,
+                    key_name VARCHAR(64) NOT NULL,
+                    value TEXT,
+                    updated_at DATETIME,
+                    UNIQUE (platform, key_name)
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO integration_config (id, platform, key_name, value, updated_at)
+                SELECT id, platform, key_name, value, updated_at
+                FROM integration_config_old
+                """
+            )
+        )
+        conn.execute(text("DROP TABLE integration_config_old"))
+        conn.commit()
+    except Exception as e:
+        print(f"Migration integration config schema note: {e}")
+    finally:
+        conn.close()
+
+
 def _migrate_project_columns():
     """Add project_id columns to parsed_files/features if missing."""
     from sqlalchemy import inspect, text
@@ -436,6 +492,27 @@ def _migrate_feature_review_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration feature review columns note: {e}")
+    finally:
+        conn.close()
+
+
+def _migrate_feature_revision_columns():
+    """Add suggested revision and manager attention flags to features if missing."""
+    from sqlalchemy import inspect, text
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "features" not in insp.get_table_names():
+            return
+        cols = [c["name"] for c in insp.get_columns("features")]
+        if "suggested_revision" not in cols:
+            conn.execute(text("ALTER TABLE features ADD COLUMN suggested_revision TEXT"))
+            conn.commit()
+        if "manager_attention" not in cols:
+            conn.execute(text("ALTER TABLE features ADD COLUMN manager_attention INTEGER DEFAULT 0"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration feature revision columns note: {e}")
     finally:
         conn.close()
 

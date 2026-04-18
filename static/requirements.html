@@ -241,6 +241,14 @@
       margin-bottom: 5px;
     }
 
+    .req-title, .requirement-title, .fm-req-title {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+      word-wrap: break-word;
+      line-height: 1.5;
+    }
+
     .req-desc {
       color: var(--fm-text-muted);
       font-size: 12px;
@@ -670,9 +678,6 @@
         title = cleanDescFirstLine || ('Requirement ' + fallbackNumber);
       }
 
-      if (title.length > 96) {
-        title = title.slice(0, 93) + '...';
-      }
       return title;
     }
 
@@ -701,12 +706,11 @@
 
     function mapFeatureToRequirement(feature) {
       const id = feature.id;
-      const description = String(feature.description || '').trim();
+      const description = String(feature.description || feature.text || feature.content || '').trim();
       const firstLine = description.split(/\n+/)[0] || '';
-      const titleSeed = firstLine.length > 96 ? (firstLine.slice(0, 93) + '...') : firstLine;
-      const quality = Number(feature.quality_score || 0);
+      const titleSeed = firstLine;
       const featurePriority = String(feature.priority || '').trim();
-      const priority = featurePriority || (quality >= 80 ? 'Low' : (quality >= 50 ? 'Medium' : 'High'));
+      const priority = featurePriority || 'Medium';
 
       return {
         req_id: String(id),
@@ -725,12 +729,15 @@
 
     function parseRequirementsPayload(payload) {
       if (Array.isArray(payload)) {
+        payload.forEach(req => console.log('REQ OBJECT:', req));
         return payload;
       }
       if (payload && Array.isArray(payload.requirements)) {
+        payload.requirements.forEach(req => console.log('REQ OBJECT:', req));
         return payload.requirements;
       }
       if (payload && Array.isArray(payload.features)) {
+        payload.features.forEach(req => console.log('REQ OBJECT:', req));
         return payload.features.map(mapFeatureToRequirement);
       }
       return [];
@@ -922,6 +929,7 @@
         const t = normalizeType(item.category);
         const displayNo = item.local_no || item.req_id || '1';
         const readableTitle = buildReadableTitle(item, displayNo);
+        const reqDescription = String(item.description || item.text || item.content || '-');
         const editId = 'edit-' + String(item.req_id).replace(/[^a-zA-Z0-9_-]/g, '_');
         const removeId = 'remove-' + String(item.req_id).replace(/[^a-zA-Z0-9_-]/g, '_');
         const titleInputId = 'title-' + editId;
@@ -930,7 +938,7 @@
           '<div class="req-color" style="background:' + (typeColor[t] || '#534AB7') + ';"></div>' +
           '<div class="req-content">' +
             '<div class="req-title">REQ-' + displayNo + ' · ' + readableTitle + '</div>' +
-            '<div class="req-desc">' + (item.description || '-') + '</div>' +
+            '<div class="req-desc">' + reqDescription + '</div>' +
             '<div class="req-footer">' +
               '<span class="fm-badge badge-info">' + typeLabels[t] + '</span>' +
               '<span class="fm-badge ' + priorityClass(item.priority) + '">' + (item.priority || 'Medium') + '</span>' +
@@ -939,7 +947,7 @@
             '</div>' +
             '<div class="req-edit-wrap" id="wrap-' + editId + '">' +
               '<input id="' + titleInputId + '" class="fm-input" value="' + String(item.title || '').replace(/"/g, '&quot;') + '">' +
-              '<textarea id="' + descInputId + '" class="fm-input" rows="3">' + (item.description || '') + '</textarea>' +
+              '<textarea id="' + descInputId + '" class="fm-input" rows="3">' + reqDescription + '</textarea>' +
               '<div class="req-edit-actions">' +
                 '<button class="fm-btn-primary fm-btn-sm" data-action="save" data-req="' + item.req_id + '">Save</button>' +
                 '<button class="fm-btn-outline fm-btn-sm" data-action="cancel" data-target="wrap-' + editId + '">Cancel</button>' +

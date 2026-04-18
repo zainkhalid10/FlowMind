@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import Response, JSONResponse, HTMLResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, IntegrationConfig, IntegrationLog, User, Feature
@@ -17,6 +17,12 @@ from services.integration_service import (
     export_as_csv,
     push_to_trello,
     push_to_jira,
+)
+from services.export_service import (
+    push_all_approved_to_jira,
+    push_all_approved_to_trello,
+    push_single_to_jira,
+    push_single_to_trello,
 )
 
 router = APIRouter()
@@ -57,6 +63,136 @@ def _log_integration(db: Session, user_id: Optional[int], platform: str, source:
     except Exception as e:
         db.rollback()
         print(f"Integration log write failed: {e}")
+
+
+def _feature_to_export_row(feature: Feature) -> Dict[str, str]:
+    category = (feature.category or "functional").replace("_", "-")
+    title = (feature.title or "").strip()
+    description = (feature.description or "").strip()
+    if not title:
+        first_line = description.split("\n")[0].strip()
+        title = first_line or f"Requirement {feature.id}"
+    priority = (feature.priority or "Medium").strip().capitalize()
+    return {
+        "req_id": str(feature.id),
+        "category": category,
+        "title": title,
+        "description": description,
+        "priority": priority,
+    }
+
+
+def _load_export_features(db: Session, file_id: int, visible_ids: List[int]) -> List[Feature]:
+    return db.query(Feature).filter(
+        Feature.file_id == file_id,
+        Feature.user_id.in_(visible_ids),
+    ).order_by(Feature.created_at.asc()).all()
+
+
+def _safe_filename_seed(value: str, fallback: str) -> str:
+    text = (value or "").strip() or fallback
+    clean = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in text)
+    clean = clean.strip("_")
+    return clean[:80] or fallback
+
+
+@router.get("/export/csv/{file_id}")
+async def export_file_requirements_csv(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+
+    features = _load_export_features(db, file_id, visible_ids)
+    if not features:
+        raise HTTPException(status_code=404, detail="No requirements found for this file")
+
+    rows = [_feature_to_export_row(f) for f in features]
+    filename_seed = _safe_filename_seed(rows[0].get("title", ""), f"file_{file_id}")
+    requirements = [{"category": row["category"], "description": row["description"]} for row in rows]
+    csv_str = export_as_csv(requirements)
+    _log_integration(
+        db,
+        current_user.id,
+        "download",
+        "file",
+        str(file_id),
+        len(requirements),
+        len(requirements),
+        "CSV exported from export tab",
+        requirements,
+    )
+    return Response(
+        content=csv_str,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename_seed}_requirements.csv"'},
+    )
+
+
+@router.get("/export/json/{file_id}")
+async def export_file_requirements_json(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+
+    features = _load_export_features(db, file_id, visible_ids)
+    if not features:
+        raise HTTPException(status_code=404, detail="No requirements found for this file")
+
+    rows = [_feature_to_export_row(f) for f in features]
+    filename_seed = _safe_filename_seed(rows[0].get("title", ""), f"file_{file_id}")
+    payload = {
+        "file_id": file_id,
+        "count": len(rows),
+        "requirements": rows,
+    }
+    _log_integration(
+        db,
+        current_user.id,
+        "download",
+        "file",
+        str(file_id),
+        len(rows),
+        len(rows),
+        "JSON exported from export tab",
+        rows,
+    )
+    return Response(
+        content=json.dumps(payload, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename_seed}_requirements.json"'},
+    )
+
+
+@router.get("/export/history")
+async def export_history(
+    limit: int = Query(20, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = db.query(IntegrationLog).order_by(IntegrationLog.created_at.desc()).limit(limit).all()
+    out = []
+    for row in rows:
+        out.append(
+            {
+                "id": row.id,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "document": row.source_id or "-",
+                "platform": row.platform,
+                "format": row.platform,
+                "count": row.items_count or 0,
+                "status": "done" if (row.success_count or 0) > 0 else "failed",
+                "message": row.message or "",
+            }
+        )
+    return {"history": out}
 
 
 @router.get("/api/export/{view_id}/json")
@@ -148,6 +284,10 @@ class JiraPushRequest(BaseModel):
     email: Optional[str] = None
     api_token: Optional[str] = None
     issue_type: Optional[str] = "Task"
+
+
+class SingleExportRequest(BaseModel):
+    req_id: int
 
 
 @router.post("/api/integration/jira/{view_id}")
@@ -343,3 +483,65 @@ async def push_approved_to_jira(
         db, current_user.id, "jira", "approved", None, len(requirements), success_count, message, results
     )
     return JSONResponse({"success": success, "message": message, "results": results})
+
+
+@router.post("/export/jira/single")
+async def export_single_requirement_to_jira(
+    body: SingleExportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+
+    result = push_single_to_jira(db, body.req_id, visible_ids)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Jira export failed"))
+    return {"success": True, "result": result}
+
+
+@router.post("/export/trello/single")
+async def export_single_requirement_to_trello(
+    body: SingleExportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+
+    result = push_single_to_trello(db, body.req_id, visible_ids)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Trello export failed"))
+    return {"success": True, "result": result}
+
+
+@router.post("/export/jira/{file_id}")
+async def export_approved_file_to_jira(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+    result = push_all_approved_to_jira(db, file_id, visible_ids)
+    if not result.get("success") and not result.get("results"):
+        raise HTTPException(status_code=400, detail=result.get("message", "No approved requirements exported"))
+    return result
+
+
+@router.post("/export/trello/{file_id}")
+async def export_approved_file_to_trello(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        raise HTTPException(status_code=403, detail="No visible requirements")
+    result = push_all_approved_to_trello(db, file_id, visible_ids)
+    if not result.get("success") and not result.get("results"):
+        raise HTTPException(status_code=400, detail=result.get("message", "No approved requirements exported"))
+    return result

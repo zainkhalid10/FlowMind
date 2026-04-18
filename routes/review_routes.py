@@ -1,14 +1,18 @@
 """Client review workflow routes."""
+import asyncio
+import os
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
+import requests
 from sqlalchemy.orm import Session
 
 from auth import get_current_user, get_db
-from database import Feature, ParsedFile, ReviewAssignment, ReviewFeedback, User
+from database import Feature, ParsedFile, ReviewAssignment, ReviewFeedback, SessionLocal, User
 from rag_agent import get_agent
+from services.export_service import auto_export_after_approval, remove_from_pending_export_queue
 
 router = APIRouter()
 
@@ -49,6 +53,13 @@ class ManagerCreateRequirementRequest(BaseModel):
     source: str = "client_approved"
 
 
+class RequirementUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
+
+
 class InviteClientRequest(BaseModel):
     email: EmailStr
     name: Optional[str] = None
@@ -82,9 +93,231 @@ def _req_title(feature: Feature) -> str:
     if not desc:
         return f"Requirement {feature.id}"
     first_line = desc.split("\n")[0].strip()
-    if len(first_line) > 96:
-        return first_line[:93] + "..."
-    return first_line or f"Requirement {feature.id}"
+    candidate = first_line.split(".")[0].strip()
+    candidate = candidate.replace("The system shall", "").replace("The system must", "").strip()
+    candidate = candidate.replace("The application shall", "").replace("The application must", "").strip()
+    candidate = candidate.replace("System shall", "").replace("System must", "").strip()
+    if not candidate:
+        candidate = first_line
+    if len(candidate) > 120:
+        candidate = candidate[:117].rstrip() + "..."
+    return candidate or f"Requirement {feature.id}"
+
+
+def _normalize_feature_category(category: str) -> str:
+    raw = (category or "").strip().lower().replace("_", "-")
+    if raw in ("functional", "non-functional", "business", "system"):
+        return raw
+    return "functional"
+
+
+def _priority_label(priority: str) -> str:
+    raw = (priority or "").strip().lower()
+    if raw == "high":
+        return "High"
+    if raw == "low":
+        return "Low"
+    return "Medium"
+
+
+def _extract_revision_pair(manager_note: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    note = (manager_note or "").strip()
+    if not note:
+        return None, None
+    before_marker = "AUTO_REVISION_BEFORE::"
+    after_marker = "AUTO_REVISION_AFTER::"
+    if before_marker not in note or after_marker not in note:
+        return None, None
+    try:
+        before_part = note.split(before_marker, 1)[1].split(after_marker, 1)[0].strip()
+        after_part = note.split(after_marker, 1)[1].strip()
+        return (before_part or None), (after_part or None)
+    except Exception:
+        return None, None
+
+
+def _rewrite_requirement_with_feedback(feature: Feature, feedback_comment: str) -> str:
+    prompt = f"""
+Original requirement: {feature.description or ""}
+Client requested change: {feedback_comment or ""}
+Rewrite this requirement incorporating the client feedback.
+Keep SHALL/MUST language. Output only the rewritten requirement.
+""".strip()
+
+    try:
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": os.getenv("FLOWMIND_OLLAMA_MODEL", "llama3:8b"), "prompt": prompt, "stream": False},
+            timeout=8,
+        )
+        if resp.ok:
+            text = (resp.json().get("response") or "").strip()
+            if text:
+                return text
+    except Exception:
+        pass
+
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if openrouter_key:
+        try:
+            resp = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {openrouter_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": os.getenv("FLOWMIND_OPENROUTER_MODEL", "meta-llama/llama-3.1-70b-instruct"),
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                timeout=10,
+            )
+            if resp.ok:
+                text = (((resp.json().get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
+                if text:
+                    return text
+        except Exception:
+            pass
+
+    # Deterministic fallback: always incorporate the client comment.
+    base = (feature.description or "").strip()
+    if not base:
+        base = (feature.title or "").strip() or f"Requirement {feature.id}"
+    comment = (feedback_comment or "").strip()
+    if " shall " in base.lower() or " must " in base.lower():
+        if comment:
+            return f"{base.rstrip('.')} The system SHALL incorporate this client-requested change: {comment}."
+        return base
+    if comment:
+        return f"The system SHALL {base[0].lower() + base[1:] if base else 'be updated'} It SHALL incorporate this client-requested change: {comment}."
+    return f"The system SHALL {base[0].lower() + base[1:] if base else 'be updated'}."
+
+
+def process_feedback_automatically(feedback_id: int) -> dict:
+    """Process feedback immediately and return the updated requirement snapshot."""
+    db = SessionLocal()
+    try:
+        db_feedback = db.query(ReviewFeedback).filter(ReviewFeedback.id == feedback_id).first()
+        if not db_feedback:
+            return {"processed": False, "reason": "feedback_not_found"}
+        feature = db.query(Feature).filter(Feature.id == db_feedback.req_id).first()
+        if not feature:
+            return {"processed": False, "reason": "requirement_not_found"}
+
+        action = (db_feedback.action or "").strip().lower()
+        owner_user_id = getattr(feature, "user_id", None) or db_feedback.client_id
+        agent = get_agent(user_id=owner_user_id)
+        auto_note = None
+
+        if action == "approve":
+            feature.client_review_status = "approved"
+            feature.status = "approved"
+            feature.manager_attention = 0
+            feature.suggested_revision = None
+            agent.learn_from_feedback(
+                feature_text=feature.description or "",
+                category=feature.category or "features",
+                action="approve",
+                title=_req_title(feature),
+                comment=(db_feedback.comment or "").strip(),
+                file_id=feature.file_id,
+                req_id=feature.id,
+            )
+            # Reinforce positive example with a stronger second pass.
+            agent.learn_from_feedback(
+                feature_text=feature.description or "",
+                category=feature.category or "features",
+                action="approve",
+                title=_req_title(feature),
+                comment="positive_learning_boost",
+                file_id=feature.file_id,
+                req_id=feature.id,
+            )
+            auto_export_after_approval(db, feature)
+            db_feedback.resolved = 1
+            db_feedback.manager_note = "Auto-resolved by system after client approval"
+            db_feedback.resolved_at = datetime.utcnow()
+            auto_note = "Auto-approved and exported where integrations are connected"
+            print("Auto-exported to Jira/Trello after client approval")
+
+        elif action == "reject":
+            feature.client_review_status = "rejected"
+            feature.status = "denied"
+            feature.manager_attention = 0
+            db_feedback.resolved = 1
+            db_feedback.manager_note = "Auto-resolved by system after client rejection"
+            db_feedback.resolved_at = datetime.utcnow()
+            remove_from_pending_export_queue(feature.id)
+            agent.learn_from_feedback(
+                feature_text=feature.description or "",
+                category=feature.category or "features",
+                action="reject",
+                title=_req_title(feature),
+                comment=(db_feedback.comment or "").strip(),
+                file_id=feature.file_id,
+                req_id=feature.id,
+            )
+            auto_note = "Auto-rejected and removed from export queue"
+            print("Requirement rejected and removed from export queue")
+
+        elif action == "request_modification":
+            feature.client_review_status = "pending"
+            feature.status = "pending"
+            # Keep manager attention on modifications so the manager sees
+            # exactly which requirements were iteratively changed.
+            feature.manager_attention = 1
+            previous_description = (feature.description or "").strip()
+            rewritten = _rewrite_requirement_with_feedback(feature, db_feedback.comment or "")
+            feature.suggested_revision = rewritten
+            if rewritten:
+                feature.description = rewritten
+                feature.title = None
+                feature.title = _req_title(feature)
+            db_feedback.resolved = 1
+            db_feedback.manager_note = (
+                "Auto-resolved by system with AI revision and sent back to client\n"
+                f"AUTO_REVISION_BEFORE::{previous_description}\n"
+                f"AUTO_REVISION_AFTER::{feature.description or ''}"
+            )
+            db_feedback.resolved_at = datetime.utcnow()
+            agent.learn_from_feedback(
+                feature_text=feature.description or "",
+                category=feature.category or "features",
+                action="request_modification",
+                title=_req_title(feature),
+                comment=(db_feedback.comment or "").strip(),
+                file_id=feature.file_id,
+                req_id=feature.id,
+            )
+            auto_note = "Requirement auto-rewritten from client comment and re-queued for client review"
+            print(f"Auto-revised requirement {feature.id} and queued for client re-review")
+
+        feature.updated_at = datetime.utcnow()
+        db.commit()
+        return {
+            "processed": True,
+            "feedback_id": db_feedback.id,
+            "action": action,
+            "auto_note": auto_note,
+            "requirement": {
+                "req_id": feature.id,
+                "title": _req_title(feature),
+                "description": feature.description or "",
+                "suggested_revision": getattr(feature, "suggested_revision", None),
+                "category": (feature.category or "functional").lower(),
+                "priority": feature.priority or "Medium",
+                "review_status": feature.client_review_status or "pending",
+                "manager_attention": bool(getattr(feature, "manager_attention", 0)),
+                "feedback_resolved": bool(getattr(db_feedback, "resolved", 0)),
+                "feedback_comment": db_feedback.comment or "",
+            },
+        }
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ process_feedback_automatically failed for feedback_id={feedback_id}: {e}")
+        return {"processed": False, "reason": "processing_error", "error": str(e)}
+    finally:
+        db.close()
 
 
 def _latest_assignment_for_manager(db: Session, file_id: int, manager_id: int) -> Optional[ReviewAssignment]:
@@ -102,6 +335,18 @@ def _latest_assignment_for_manager(db: Session, file_id: int, manager_id: int) -
         return (has_submitted, submitted, created)
 
     return max(assignments, key=_sort_key)
+
+
+def _manager_can_access_feature(db: Session, manager_id: int, feature: Feature) -> bool:
+    if not feature:
+        return False
+    if feature.user_id == manager_id:
+        return True
+    assignment = db.query(ReviewAssignment).filter(
+        ReviewAssignment.file_id == feature.file_id,
+        ReviewAssignment.manager_id == manager_id,
+    ).first()
+    return assignment is not None
 
 
 @router.get("/review/{file_id}")
@@ -133,7 +378,7 @@ async def get_review_requirements(
 
         review_status = getattr(f, "client_review_status", None) or "pending"
         client_comment = (latest_feedback.comment if latest_feedback else "") or ""
-        if latest_feedback:
+        if latest_feedback and not bool(getattr(latest_feedback, "resolved", 0)):
             review_status = _action_to_status(latest_feedback.action)
 
         rows.append({
@@ -145,6 +390,8 @@ async def get_review_requirements(
             "review_status": review_status,
             "client_comment": client_comment,
             "source": getattr(f, "source", None) or "system",
+            "suggested_revision": getattr(f, "suggested_revision", None),
+            "auto_resolved": bool(getattr(latest_feedback, "resolved", 0)) if latest_feedback else False,
             "feedback_date": latest_feedback.created_at.isoformat() if latest_feedback else None,
         })
 
@@ -204,22 +451,8 @@ async def submit_review_action(
 
     db.commit()
     db.refresh(feedback)
-
-    learning_update = None
-    try:
-        owner_user_id = getattr(feature, "user_id", None) or assignment.manager_id
-        agent = get_agent(user_id=owner_user_id)
-        learning_update = agent.learn_from_feedback(
-            feature_text=feature.description or "",
-            category=feature.category or "features",
-            action=action,
-            title=_req_title(feature),
-            comment=feedback.comment or "",
-            file_id=file_id,
-            req_id=payload.req_id,
-        )
-    except Exception as e:
-        print(f"⚠️ Feedback learning update failed for req_id={payload.req_id}: {str(e)}")
+    auto_result = process_feedback_automatically(feedback.id)
+    db.refresh(feature)
 
     return {
         "feedback_id": feedback.id,
@@ -228,7 +461,8 @@ async def submit_review_action(
         "review_status": feature.client_review_status,
         "client_comment": feedback.comment or "",
         "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
-        "learning_update": learning_update,
+        "learning_update": {"status": "processed"},
+        "auto_processing": auto_result,
     }
 
 
@@ -285,13 +519,14 @@ async def add_client_requirement(
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
 
-    category = (payload.category or "functional").strip().lower()
-    if category not in ("functional", "non-functional", "business", "system"):
-        raise HTTPException(status_code=400, detail="Invalid category")
+    description = (payload.description or "").strip() or title
+    agent = get_agent(user_id=assignment.manager_id or current_user.id)
+    # Do not hard-block client-added requirements on strict NLP validation.
+    # Keep intake smooth for demos/review workflows and classify anyway.
+    is_valid = agent._is_valid_requirement(description, source="text")
 
-    priority = (payload.priority or "Medium").strip().capitalize()
-    if priority not in ("High", "Medium", "Low"):
-        raise HTTPException(status_code=400, detail="priority must be High, Medium, or Low")
+    auto_category = _normalize_feature_category(agent._classify_requirement_improved(description))
+    auto_priority = _priority_label(agent._infer_priority(description))
 
     parsed_file = db.query(ParsedFile).filter(ParsedFile.id == file_id).first()
     if not parsed_file:
@@ -301,15 +536,20 @@ async def add_client_requirement(
         user_id=current_user.id,
         project_id=getattr(parsed_file, "project_id", None),
         file_id=file_id,
-        category=category,
+        category=auto_category,
         title=title,
-        description=(payload.description or "").strip() or title,
-        priority=priority,
+        description=description,
+        priority=auto_priority,
         source="client",
         client_review_status="pending_manager_approval",
+        manager_attention=1,
         status="pending",
         quality_score=0,
-        feedback=None,
+        feedback=(
+            "Client added requirement pending manager review"
+            if is_valid
+            else "Client added requirement captured (validation soft-failed); pending manager review"
+        ),
     )
     db.add(feature)
     db.commit()
@@ -323,6 +563,7 @@ async def add_client_requirement(
         "priority": feature.priority,
         "review_status": feature.client_review_status,
         "source": feature.source,
+        "manager_attention": bool(getattr(feature, "manager_attention", 0)),
     }
 
 
@@ -382,16 +623,6 @@ async def review_summary_for_manager(
 
         if latest_feedback:
             status_value = _action_to_status(latest_feedback.action)
-            if latest_feedback.comment:
-                client_comments.append({
-                    "feedback_id": latest_feedback.id,
-                    "req_id": feature.id,
-                    "title": _req_title(feature),
-                    "action": latest_feedback.action,
-                    "comment": latest_feedback.comment,
-                    "resolved": bool(latest_feedback.resolved),
-                    "created_at": latest_feedback.created_at.isoformat() if latest_feedback.created_at else None,
-                })
         else:
             status_value = "pending"
 
@@ -403,6 +634,28 @@ async def review_summary_for_manager(
             modification_requested += 1
         else:
             pending += 1
+
+    # Build an explicit event feed of all client actions (not only latest per requirement)
+    # so manager can always see which specific requirements were modified/approved/rejected.
+    all_feedback_rows = db.query(ReviewFeedback).filter(
+        ReviewFeedback.file_id == file_id,
+        ReviewFeedback.client_id == assignment.client_id,
+    ).order_by(ReviewFeedback.created_at.desc()).all()
+
+    req_title_map = {f.id: _req_title(f) for f in features}
+    for fb in all_feedback_rows:
+        before_text, after_text = _extract_revision_pair(fb.manager_note)
+        client_comments.append({
+            "feedback_id": fb.id,
+            "req_id": fb.req_id,
+            "title": req_title_map.get(fb.req_id, f"Requirement {fb.req_id}"),
+            "action": fb.action,
+            "comment": fb.comment,
+            "resolved": bool(fb.resolved),
+            "created_at": fb.created_at.isoformat() if fb.created_at else None,
+            "before_text": before_text,
+            "after_text": after_text,
+        })
 
     return {
         "file_id": file_id,
@@ -472,6 +725,7 @@ async def get_manager_feedback_lists(
     rejected = []
     approved = []
     client_added = []
+    auto_handled = []
 
     for feature in features:
         latest_feedback = db.query(ReviewFeedback).filter(
@@ -484,17 +738,34 @@ async def get_manager_feedback_lists(
             "req_id": feature.id,
             "title": _req_title(feature),
             "description": feature.description or "",
+            "suggested_revision": getattr(feature, "suggested_revision", None),
             "category": (feature.category or "functional").lower(),
             "priority": feature.priority or "Medium",
             "source": feature.source or "system",
             "review_status": "pending",
+            "manager_attention": bool(getattr(feature, "manager_attention", 0)),
             "feedback_id": latest_feedback.id if latest_feedback else None,
             "comment": latest_feedback.comment if latest_feedback else "",
             "resolved": bool(latest_feedback.resolved) if latest_feedback else False,
+            "resolved_at": latest_feedback.resolved_at.isoformat() if (latest_feedback and latest_feedback.resolved_at) else None,
+            "manager_note": latest_feedback.manager_note if latest_feedback else "",
         }
 
         if latest_feedback:
             item["review_status"] = _action_to_status(latest_feedback.action)
+            before_text, after_text = _extract_revision_pair(latest_feedback.manager_note)
+            item["before_text"] = before_text
+            item["after_text"] = after_text
+
+        # Fully auto-handled feedback should move to audit-style tab.
+        if (
+            latest_feedback
+            and bool(latest_feedback.resolved)
+            and item["review_status"] == "rejected"
+            and not bool(getattr(feature, "manager_attention", 0))
+        ):
+            auto_handled.append(item)
+            continue
 
         if item["source"] == "client":
             client_added.append(item)
@@ -511,6 +782,7 @@ async def get_manager_feedback_lists(
         "rejected": rejected,
         "client_added": client_added,
         "approved": approved,
+        "auto_handled": auto_handled,
     }
 
 
@@ -669,3 +941,146 @@ async def manager_add_requirement(
         "priority": created.priority,
         "source": created.source,
     }
+
+
+@router.put("/requirements/{req_id}")
+async def manager_update_requirement(
+    req_id: int,
+    payload: RequirementUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Manager edits requirement fields from feedback tabs."""
+    _ensure_manager(current_user)
+
+    feature = db.query(Feature).filter(Feature.id == req_id).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    if not _manager_can_access_feature(db, current_user.id, feature):
+        raise HTTPException(status_code=403, detail="Not allowed to edit this requirement")
+
+    if payload.title is not None:
+        title = (payload.title or "").strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="title cannot be empty")
+        feature.title = title
+
+    if payload.description is not None:
+        description = (payload.description or "").strip()
+        if not description:
+            raise HTTPException(status_code=400, detail="description cannot be empty")
+        feature.description = description
+
+    if payload.category is not None:
+        category = _normalize_feature_category(payload.category)
+        feature.category = category
+
+    if payload.priority is not None:
+        priority = _priority_label(payload.priority)
+        feature.priority = priority
+
+    feature.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(feature)
+
+    return {
+        "req_id": feature.id,
+        "title": _req_title(feature),
+        "description": feature.description or "",
+        "category": feature.category or "functional",
+        "priority": feature.priority or "Medium",
+    }
+
+
+@router.post("/requirements/{req_id}/keep")
+async def manager_keep_requirement(
+    req_id: int,
+    feedback_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Manager keeps a previously rejected/flagged requirement."""
+    _ensure_manager(current_user)
+
+    feature = db.query(Feature).filter(Feature.id == req_id).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    if not _manager_can_access_feature(db, current_user.id, feature):
+        raise HTTPException(status_code=403, detail="Not allowed to update this requirement")
+
+    feature.client_review_status = "approved"
+    feature.status = "approved"
+    feature.source = "client_approved" if (feature.source or "").lower() == "client" else feature.source
+    feature.manager_attention = 0
+    feature.updated_at = datetime.utcnow()
+
+    if feedback_id:
+        feedback = db.query(ReviewFeedback).filter(ReviewFeedback.id == feedback_id).first()
+        if feedback:
+            feedback.resolved = 1
+            feedback.manager_note = "Manager kept requirement"
+            feedback.resolved_at = datetime.utcnow()
+
+    db.commit()
+    return {"success": True, "req_id": req_id, "status": "approved"}
+
+
+@router.post("/requirements/{req_id}/accept-client")
+async def manager_accept_client_requirement(
+    req_id: int,
+    feedback_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Manager accepts a client-added requirement without duplicating it."""
+    _ensure_manager(current_user)
+
+    feature = db.query(Feature).filter(Feature.id == req_id).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    if not _manager_can_access_feature(db, current_user.id, feature):
+        raise HTTPException(status_code=403, detail="Not allowed to update this requirement")
+
+    feature.source = "client_approved"
+    feature.client_review_status = "approved"
+    feature.status = "approved"
+    feature.manager_attention = 0
+    feature.updated_at = datetime.utcnow()
+
+    if feedback_id:
+        feedback = db.query(ReviewFeedback).filter(ReviewFeedback.id == feedback_id).first()
+        if feedback:
+            feedback.resolved = 1
+            feedback.manager_note = "Client-added requirement accepted by manager"
+            feedback.resolved_at = datetime.utcnow()
+
+    db.commit()
+    return {"success": True, "req_id": req_id, "source": "client_approved"}
+
+
+@router.delete("/requirements/{req_id}")
+async def manager_delete_requirement(
+    req_id: int,
+    feedback_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Manager removes a requirement from project scope."""
+    _ensure_manager(current_user)
+
+    feature = db.query(Feature).filter(Feature.id == req_id).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    if not _manager_can_access_feature(db, current_user.id, feature):
+        raise HTTPException(status_code=403, detail="Not allowed to delete this requirement")
+
+    if feedback_id:
+        feedback = db.query(ReviewFeedback).filter(ReviewFeedback.id == feedback_id).first()
+        if feedback:
+            feedback.resolved = 1
+            feedback.manager_note = "Requirement removed by manager"
+            feedback.resolved_at = datetime.utcnow()
+    db.query(ReviewFeedback).filter(ReviewFeedback.req_id == req_id).delete(synchronize_session=False)
+    db.delete(feature)
+    db.commit()
+    return {"success": True, "req_id": req_id, "deleted": True}

@@ -337,6 +337,10 @@
       </div>
       <div class="reviewed-text" id="reviewedText">0% reviewed</div>
       <div id="submissionBanner" class="status-banner pending">Awaiting client review</div>
+      <div id="decisionFeed" style="margin-top:10px; display:none;">
+        <div style="font-size:12px; font-weight:600; color:#1a1a1a; margin-bottom:6px;">Latest client decisions</div>
+        <div id="decisionFeedList" style="display:grid; gap:6px;"></div>
+      </div>
     </section>
 
     <section class="feedback-tabs" id="tabs"></section>
@@ -442,14 +446,15 @@
 
     let fileId = new URLSearchParams(window.location.search).get('file_id');
     let summary = null;
-    let detail = { modification_requests: [], rejected: [], client_added: [], approved: [] };
+    let detail = { modification_requests: [], rejected: [], client_added: [], approved: [], auto_handled: [] };
     let activeTab = 'modification_requests';
 
     const tabConfig = [
       { key: 'modification_requests', label: 'Modification requests' },
       { key: 'rejected', label: 'Rejected requirements' },
       { key: 'client_added', label: 'Client-added requirements' },
-      { key: 'approved', label: 'Approved' }
+      { key: 'approved', label: 'Approved' },
+      { key: 'auto_handled', label: 'Auto-handled' }
     ];
 
     function renderTabs() {
@@ -492,35 +497,88 @@
         banner.className = 'status-banner pending';
         banner.textContent = 'Awaiting client review';
       }
+
+      const feedWrap = document.getElementById('decisionFeed');
+      const feedList = document.getElementById('decisionFeedList');
+      const comments = Array.isArray(summary.client_comments) ? summary.client_comments : [];
+      if (!comments.length) {
+        feedWrap.style.display = 'none';
+        feedList.innerHTML = '';
+      } else {
+        const latest = comments
+          .slice()
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+          .slice(0, 10);
+        feedList.innerHTML = latest.map(item => {
+          const action = String(item.action || '').toLowerCase();
+          const actionLabel = action === 'request_modification'
+            ? 'Requested modification'
+            : (action.charAt(0).toUpperCase() + action.slice(1));
+          const stamp = item.created_at ? new Date(item.created_at).toLocaleString() : '';
+          const beforeBlock = item.before_text
+            ? '<div class="quote-amber" style="margin-top:6px;"><strong>Before:</strong> ' + item.before_text + '</div>'
+            : '';
+          const afterBlock = item.after_text
+            ? '<div class="quote-amber" style="margin-top:6px;"><strong>After:</strong> ' + item.after_text + '</div>'
+            : '';
+          const commentBlock = item.comment
+            ? '<div class="quote-amber" style="margin-top:6px;"><strong>Client note:</strong> ' + item.comment + '</div>'
+            : '<div class="quote-amber" style="margin-top:6px;"><strong>Client note:</strong> (none)</div>';
+          return '<div style="border:0.5px solid rgba(0,0,0,0.1); border-radius:8px; background:#FCFCFB; padding:8px;">'
+            + '<div style="font-size:12px; color:#1a1a1a;"><strong>REQ-' + item.req_id + '</strong> · ' + actionLabel + '</div>'
+            + '<div style="font-size:11px; color:#6B6B68;">' + (item.title || 'Requirement') + (stamp ? (' · ' + stamp) : '') + '</div>'
+            + commentBlock
+            + beforeBlock
+            + afterBlock
+            + '</div>';
+        }).join('');
+        feedWrap.style.display = 'block';
+      }
     }
 
     function cardHtml(item) {
       const comment = item.comment ? '<div class="quote-amber">Client says: ' + item.comment + '</div>' : '';
-      const resolved = item.resolved ? '<span class="resolved-badge">Resolved</span>' : '';
+      const resolved = item.resolved ? '<span class="resolved-badge">Auto-resolved</span>' : '';
       const added = item.source === 'client' ? '<span class="client-added-badge">Added by client</span>' : '';
 
       let actions = '';
       if (activeTab === 'modification_requests') {
-        actions = '<div class="card-actions">'
-          + '<button class="fm-btn-outline fm-btn-sm" data-action="resolve" data-feedback="' + (item.feedback_id || '') + '">Mark as resolved</button>'
-          + '<button class="fm-btn-outline fm-btn-sm" data-action="edit">Edit requirement</button>'
-          + '</div>';
+        if (item.resolved) {
+          actions = '<div class="card-actions">'
+            + '<button class="fm-btn-outline fm-btn-sm" data-action="override" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Override</button>'
+            + '</div>';
+        } else {
+          actions = '<div class="card-actions">'
+            + '<button class="fm-btn-outline fm-btn-sm" data-action="resolve" data-feedback="' + (item.feedback_id || '') + '">Mark as resolved</button>'
+            + '<button class="fm-btn-outline fm-btn-sm" data-action="edit" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Edit requirement</button>'
+            + '</div>';
+        }
       } else if (activeTab === 'rejected') {
         actions = '<div class="card-actions">'
-          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="remove">Remove from project</button>'
-          + '<button class="fm-btn-outline fm-btn-sm" data-action="keep">Keep anyway</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="remove" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Remove from project</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" data-action="keep" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Keep anyway</button>'
           + '</div>';
       } else if (activeTab === 'client_added') {
         actions = '<div class="card-actions">'
-          + '<button class="fm-btn-outline fm-btn-sm" style="color:#3B6D11; border-color:#3B6D11;" data-action="accept" data-req="' + item.req_id + '">Accept & add</button>'
-          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="decline" data-req="' + item.req_id + '">Decline</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#3B6D11; border-color:#3B6D11;" data-action="accept" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Accept & add</button>'
+          + '<button class="fm-btn-outline fm-btn-sm" style="color:#A32D2D; border-color:#A32D2D;" data-action="decline" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Decline</button>'
           + '</div>';
+      } else if (activeTab === 'auto_handled') {
+        const resolvedAt = item.resolved_at ? new Date(item.resolved_at).toLocaleString() : '';
+        const managerNote = item.manager_note ? ('<div class="quote-amber">System note: ' + item.manager_note + '</div>') : '';
+        actions = '<div class="card-actions">'
+          + '<button class="fm-btn-outline fm-btn-sm" data-action="override" data-req="' + item.req_id + '" data-feedback="' + (item.feedback_id || '') + '">Override</button>'
+          + '</div>'
+          + (resolvedAt ? '<div style="font-size:11px; color:#6B6B68; margin-top:6px;">Auto-handled at: ' + resolvedAt + '</div>' : '')
+          + managerNote;
       }
 
       return '<article class="feedback-card" data-req-id="' + item.req_id + '">'
         + '<div class="feedback-title">REQ-' + item.req_id + ' · ' + (item.title || 'Requirement') + added + resolved + '</div>'
         + '<div class="feedback-desc">' + (item.description || '-') + '</div>'
         + comment
+        + (item.before_text ? ('<div class="quote-amber"><strong>Before:</strong> ' + item.before_text + '</div>') : '')
+        + (item.after_text ? ('<div class="quote-amber"><strong>After:</strong> ' + item.after_text + '</div>') : '')
         + actions
         + '</article>';
     }
@@ -547,19 +605,11 @@
       document.querySelectorAll('[data-action="accept"]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const reqId = btn.dataset.req;
-          const item = (detail.client_added || []).find(row => String(row.req_id) === String(reqId));
-          if (!item) return;
+          const feedbackId = btn.dataset.feedback || '';
           try {
-            const res = await apiFetch('/requirements', {
-              method: 'POST',
-              body: JSON.stringify({
-                file_id: Number(fileId),
-                title: item.title,
-                description: item.description,
-                category: item.category,
-                priority: item.priority,
-                source: 'client_approved'
-              })
+            const suffix = feedbackId ? ('?feedback_id=' + encodeURIComponent(feedbackId)) : '';
+            const res = await apiFetch('/requirements/' + encodeURIComponent(reqId) + '/accept-client' + suffix, {
+              method: 'POST'
             });
             if (!res.ok) throw new Error();
             showToast('Requirement accepted', 'success');
@@ -571,17 +621,143 @@
       });
 
       document.querySelectorAll('[data-action="decline"]').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const reqId = btn.dataset.req;
-          detail.client_added = (detail.client_added || []).filter(item => String(item.req_id) !== String(reqId));
-          renderTabs();
-          renderFeedbackList();
-          showToast('Declined locally for demo', 'success');
+          const feedbackId = btn.dataset.feedback || '';
+          try {
+            const suffix = feedbackId ? ('?feedback_id=' + encodeURIComponent(feedbackId)) : '';
+            const res = await apiFetch('/requirements/' + encodeURIComponent(reqId) + suffix, {
+              method: 'DELETE'
+            });
+            if (!res.ok) throw new Error();
+            showToast('Client-added requirement declined', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
         });
       });
 
-      document.querySelectorAll('[data-action="remove"], [data-action="keep"], [data-action="edit"]').forEach(btn => {
-        btn.addEventListener('click', () => showToast('Action captured for demo', 'success'));
+      document.querySelectorAll('[data-action="remove"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reqId = btn.dataset.req;
+          const feedbackId = btn.dataset.feedback || '';
+          try {
+            const suffix = feedbackId ? ('?feedback_id=' + encodeURIComponent(feedbackId)) : '';
+            const res = await apiFetch('/requirements/' + encodeURIComponent(reqId) + suffix, {
+              method: 'DELETE'
+            });
+            if (!res.ok) throw new Error();
+            showToast('Requirement removed from project', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="keep"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reqId = btn.dataset.req;
+          const feedbackId = btn.dataset.feedback || '';
+          try {
+            const suffix = feedbackId ? ('?feedback_id=' + encodeURIComponent(feedbackId)) : '';
+            const res = await apiFetch('/requirements/' + encodeURIComponent(reqId) + '/keep' + suffix, {
+              method: 'POST'
+            });
+            if (!res.ok) throw new Error();
+            showToast('Requirement kept and approved', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reqId = btn.dataset.req;
+          const feedbackId = btn.dataset.feedback || '';
+          const item = (detail.modification_requests || []).find(row => String(row.req_id) === String(reqId));
+          if (!item) return;
+
+          const newTitle = window.prompt('Edit requirement title:', item.title || '');
+          if (newTitle === null) return;
+          const newDesc = window.prompt('Edit requirement description:', item.description || '');
+          if (newDesc === null) return;
+          const newPriority = window.prompt('Priority (High/Medium/Low):', item.priority || 'Medium');
+          if (newPriority === null) return;
+          const newCategory = window.prompt('Category (functional/non-functional/business/system):', item.category || 'functional');
+          if (newCategory === null) return;
+
+          try {
+            const updateRes = await apiFetch('/requirements/' + encodeURIComponent(reqId), {
+              method: 'PUT',
+              body: JSON.stringify({
+                title: String(newTitle || '').trim(),
+                description: String(newDesc || '').trim(),
+                priority: String(newPriority || '').trim(),
+                category: String(newCategory || '').trim()
+              })
+            });
+            if (!updateRes.ok) throw new Error();
+
+            if (feedbackId) {
+              await apiFetch('/review/feedback/' + encodeURIComponent(feedbackId) + '/resolve', {
+                method: 'PUT',
+                body: JSON.stringify({ resolved: true, manager_note: 'Requirement updated by manager' })
+              });
+            }
+
+            showToast('Requirement updated', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="override"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reqId = btn.dataset.req;
+          const feedbackId = btn.dataset.feedback || '';
+          const item = (detail.auto_handled || []).find(row => String(row.req_id) === String(reqId));
+          if (!item) return;
+
+          const newTitle = window.prompt('Override title:', item.title || '');
+          if (newTitle === null) return;
+          const newDesc = window.prompt('Override description:', item.description || '');
+          if (newDesc === null) return;
+          const newPriority = window.prompt('Priority (High/Medium/Low):', item.priority || 'Medium');
+          if (newPriority === null) return;
+          const newCategory = window.prompt('Category (functional/non-functional/business/system):', item.category || 'functional');
+          if (newCategory === null) return;
+
+          try {
+            const updateRes = await apiFetch('/requirements/' + encodeURIComponent(reqId), {
+              method: 'PUT',
+              body: JSON.stringify({
+                title: String(newTitle || '').trim(),
+                description: String(newDesc || '').trim(),
+                priority: String(newPriority || '').trim(),
+                category: String(newCategory || '').trim()
+              })
+            });
+            if (!updateRes.ok) throw new Error();
+
+            if (feedbackId) {
+              await apiFetch('/review/feedback/' + encodeURIComponent(feedbackId) + '/resolve', {
+                method: 'PUT',
+                body: JSON.stringify({ resolved: true, manager_note: 'Overridden by manager after auto-handling' })
+              });
+            }
+
+            showToast('Override saved', 'success');
+            await refreshData();
+          } catch (e) {
+            showToast('Something went wrong', 'error');
+          }
+        });
       });
     }
 
@@ -647,7 +823,7 @@
       } catch (e) {
         showToast('No review assignment yet for this file', 'error');
         summary = { total: 0, approved: 0, rejected: 0, modification_requested: 0, pending: 0, submitted: false };
-        detail = { modification_requests: [], rejected: [], client_added: [], approved: [] };
+        detail = { modification_requests: [], rejected: [], client_added: [], approved: [], auto_handled: [] };
         renderSummary();
         renderTabs();
         renderFeedbackList();

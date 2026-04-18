@@ -862,7 +862,6 @@
     let searchQuery = '';
     let groupingMode = 'none';
     let reviewMeta = { filename: '', manager_name: '', due_date: '', submitted: false };
-    const stagedChanges = new Map();
     const selectedReqIds = new Set();
     const filterOrder = ['all', 'pending', 'approved', 'rejected', 'modification_requested'];
 
@@ -907,22 +906,20 @@
     function cleanTitle(rawTitle, description, reqId) {
       let t = String(rawTitle || '').trim();
       const desc = String(description || '').trim();
+      t = t.replace(/^[^a-zA-Z0-9]+/, '').replace(/\s+/g, ' ').trim();
       if (!t || /^requirement\s*\d+$/i.test(t)) {
-        t = desc.split(/[\.\n]/)[0].trim();
+        t = desc.split(/\n/)[0].trim();
       }
-      t = t.replace(/^the\s+system\s+shall\s+/i, '');
-      t = t.replace(/^the\s+application\s+shall\s+/i, '');
-      t = t.replace(/^system\s+shall\s+/i, '');
-      t = t.replace(/^should\s+/i, '');
-      t = t.trim();
+      t = t.replace(/^[^a-zA-Z0-9]+/, '').replace(/\s+/g, ' ').trim();
       if (!t) return 'Requirement ' + reqId;
-      if (t.length > 96) return t.slice(0, 93) + '...';
+      if (t.length > 96) return t.slice(0, 93).trim() + '...';
       return t;
     }
 
     function prettyStatus(status) {
       const s = String(status || 'pending').toLowerCase();
       if (s === 'modification_requested') return 'Modification Requested';
+      if (s === 'pending') return 'Updated for Review';
       if (s === 'pending_manager_approval') return 'Pending Manager Approval';
       return s.charAt(0).toUpperCase() + s.slice(1);
     }
@@ -1307,11 +1304,14 @@
       const status = statusClass(req.review_status);
       const reqId = String(req.req_id);
       const isPending = status === 'pending';
-      const commentBlock = req.client_comment ? '<div class="comment-quote">' + escapeHtml(req.client_comment) + '</div>' : '';
+      const latestRequestBlock = req.client_comment
+        ? '<div class="comment-quote"><strong>Latest change request:</strong> ' + escapeHtml(req.client_comment) + '</div>'
+        : '';
+      const aiRevisionBlock = req.suggested_revision && status === 'pending'
+        ? '<div class="comment-quote" style="margin-top:8px;"><strong>AI revision:</strong> Updated based on your request and ready for review.</div>'
+        : '';
       const addedBadge = String(req.source || '').toLowerCase() === 'client' ? '<span class="added-by-client">Added by client</span>' : '';
       const isSelected = selectedReqIds.has(reqId);
-      const staged = stagedChanges.get(reqId);
-      const canUndo = !!staged;
       const title = cleanTitle(req.title, req.description, reqId);
       const priority = normalizePriority(req.priority);
       const category = displayCategory(req.category);
@@ -1329,12 +1329,13 @@
         + '<div class="req-desc">' + escapeHtml(req.description || '-') + '</div>'
         + '</div>'
         + '</div>'
-        + commentBlock
+        + latestRequestBlock
+        + aiRevisionBlock
         + '<div class="chip-row">'
         + '<span class="fm-badge badge-info">' + escapeHtml(category) + '</span>'
         + '<span class="fm-badge ' + reqPriorityClass(priority) + '">' + escapeHtml(priority) + '</span>'
         + '<span class="status-chip ' + status + '">' + prettyStatus(status) + '</span>'
-        + (canUndo ? '<span class="status-chip pending">Staged</span>' : '')
+        + (req.auto_resolved ? '<span class="status-chip approved">Handled Automatically</span>' : '')
         + '</div>'
         + (isPending ? '<div class="action-row">'
           + '<button class="action-btn approve" data-action="approve" data-id="' + reqId + '">Approve</button>'
@@ -1342,7 +1343,6 @@
           + '<button class="action-btn modify" data-action="request_modification" data-id="' + reqId + '">Request modification</button>'
           + '<button class="action-btn priority" data-action="set-priority" data-id="' + reqId + '">Set priority</button>'
           + '</div>' : '')
-        + (canUndo ? '<div class="action-row" style="margin-top:8px;"><button class="action-btn" data-action="undo" data-id="' + reqId + '">Undo staged change</button></div>' : '')
         + timestamp
         + '<div id="panel-' + reqId + '" class="inline-panel"></div>'
         + '</article>';
@@ -1361,29 +1361,53 @@
       }
     }
 
-    function stageAction(reqId, action, comment, options) {
+    async function stageAction(reqId, action, comment, options) {
       const opts = options || {};
       const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
-      if (idx < 0) return;
-      const req = requirements[idx];
-      stagedChanges.set(String(reqId), {
-        action,
-        comment: comment || '',
-        priority: normalizePriority(req.priority),
-        baseStatus: req._server_review_status,
-        baseComment: req._server_comment,
-        basePriority: req._server_priority,
-      });
-      req.review_status = _action_to_display_status(action);
-      req.client_comment = comment || '';
-      if (!opts.silent) {
+      if (idx < 0) return false;
+
+      try {
+        const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
+          method: 'POST',
+          body: JSON.stringify({ req_id: Number(reqId), action, comment: comment || '' })
+        });
+        if (!res.ok) throw new Error('Could not save review action');
+        const payload = await res.json();
+        const req = requirements[idx];
+        const processedReq = (((payload || {}).auto_processing || {}).requirement) || {};
+
+        req.review_status = processedReq.review_status || _action_to_display_status(action);
+        req.client_comment = processedReq.feedback_comment || comment || '';
+        req.title = cleanTitle(processedReq.title || req.title, processedReq.description || req.description, req.req_id);
+        req.description = processedReq.description || req.description;
+        req.suggested_revision = processedReq.suggested_revision || null;
+        req.auto_resolved = !!processedReq.feedback_resolved;
+        req.priority = normalizePriority(processedReq.priority || req.priority);
+        req._server_review_status = statusClass(req.review_status);
+        req._server_comment = req.client_comment || '';
+        req._server_priority = normalizePriority(req.priority);
+
+        if (opts.silent) return true;
+
         renderFilterPills();
         updateProgress();
         renderRequirements();
         renderMyFeedback();
         renderDocumentsInfo();
         updateSelectionMeta();
-        showToast('Change staged. You can undo before submit.', 'success');
+        if (action === 'request_modification') {
+          showToast('Requirement updated automatically and sent back for your review', 'success');
+        } else if (action === 'reject') {
+          showToast('Requirement rejected and auto-resolved', 'success');
+        } else {
+          showToast('Requirement approved and auto-processed', 'success');
+        }
+        return true;
+      } catch (e) {
+        if (!opts.silent) {
+          showToast('Could not save this action', 'error');
+        }
+        return false;
       }
     }
 
@@ -1394,42 +1418,25 @@
       return 'pending';
     }
 
-    function stagePriority(reqId, priority) {
+    async function stagePriority(reqId, priority) {
       const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
       if (idx < 0) return;
       const req = requirements[idx];
-      req.priority = normalizePriority(priority);
-
-      const current = stagedChanges.get(String(reqId)) || {
-        action: null,
-        comment: req.client_comment || '',
-        baseStatus: req._server_review_status,
-        baseComment: req._server_comment,
-        basePriority: req._server_priority,
-      };
-      current.priority = req.priority;
-      stagedChanges.set(String(reqId), current);
-
-      renderRequirements();
-      updateSelectionMeta();
-      showToast('Priority staged. You can undo before submit.', 'success');
-    }
-
-    function undoStagedChange(reqId) {
-      const idx = requirements.findIndex(r => String(r.req_id) === String(reqId));
-      if (idx < 0) return;
-      const req = requirements[idx];
-      req.review_status = req._server_review_status || 'pending';
-      req.client_comment = req._server_comment || '';
-      req.priority = req._server_priority || 'Medium';
-      stagedChanges.delete(String(reqId));
-      renderFilterPills();
-      updateProgress();
-      renderRequirements();
-      renderMyFeedback();
-      renderDocumentsInfo();
-      updateSelectionMeta();
-      showToast('Staged change removed', 'success');
+      const newPriority = normalizePriority(priority);
+      try {
+        const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/set-priority', {
+          method: 'POST',
+          body: JSON.stringify({ req_id: Number(reqId), priority: newPriority })
+        });
+        if (!res.ok) throw new Error('Could not update priority');
+        req.priority = newPriority;
+        req._server_priority = newPriority;
+        renderRequirements();
+        updateSelectionMeta();
+        showToast('Priority updated', 'success');
+      } catch (e) {
+        showToast('Could not update priority', 'error');
+      }
     }
 
     async function approveAllPending() {
@@ -1448,24 +1455,11 @@
       approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:12px;"></i>Approving...';
 
       try {
-        const results = await Promise.allSettled(
-          pending.map(req => apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
-            method: 'POST',
-            body: JSON.stringify({ req_id: Number(req.req_id), action: 'approve', comment: '' })
-          }))
-        );
-
         let successCount = 0;
-        results.forEach((result, idx) => {
-          if (result.status === 'fulfilled' && result.value && result.value.ok) {
-            const reqId = String(pending[idx].req_id);
-            const rowIdx = requirements.findIndex(r => String(r.req_id) === reqId);
-            if (rowIdx >= 0) {
-              requirements[rowIdx].review_status = 'approved';
-            }
-            successCount += 1;
-          }
-        });
+        for (const req of pending) {
+          const okResult = await stageAction(String(req.req_id), 'approve', '', { silent: true });
+          if (okResult) successCount += 1;
+        }
 
         renderFilterPills();
         updateProgress();
@@ -1500,8 +1494,8 @@
       });
 
       document.querySelectorAll('[data-action="approve"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          stageAction(btn.dataset.id, 'approve', '');
+        btn.addEventListener('click', async () => {
+          await stageAction(btn.dataset.id, 'approve', '');
         });
       });
 
@@ -1517,9 +1511,13 @@
             '</div>'
           );
           const panel = document.getElementById('panel-' + reqId);
-          panel.querySelector('[data-confirm]').addEventListener('click', () => {
+          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
             const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
-            stageAction(reqId, 'reject', comment);
+            const ok = await stageAction(reqId, 'reject', comment);
+            if (ok) {
+              panel.classList.remove('open');
+              panel.innerHTML = '';
+            }
           });
         });
       });
@@ -1536,13 +1534,17 @@
             '</div>'
           );
           const panel = document.getElementById('panel-' + reqId);
-          panel.querySelector('[data-confirm]').addEventListener('click', () => {
+          panel.querySelector('[data-confirm]').addEventListener('click', async () => {
             const comment = (panel.querySelector('#txt-' + reqId).value || '').trim();
             if (!comment) {
               showToast('Please describe the required change', 'error');
               return;
             }
-            stageAction(reqId, 'request_modification', comment);
+            const ok = await stageAction(reqId, 'request_modification', comment);
+            if (ok) {
+              panel.classList.remove('open');
+              panel.innerHTML = '';
+            }
           });
         });
       });
@@ -1570,11 +1572,6 @@
         });
       });
 
-      document.querySelectorAll('[data-action="undo"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          undoStagedChange(btn.dataset.id);
-        });
-      });
     }
 
     async function loadReviewData() {
@@ -1603,7 +1600,6 @@
           row._server_priority = normalizedPriority;
           return row;
         });
-        stagedChanges.clear();
         selectedReqIds.clear();
         reviewMeta = {
           filename: data.filename || ('File ' + fileId),
@@ -1629,8 +1625,7 @@
     function updateSelectionMeta() {
       const meta = document.getElementById('selectionMeta');
       if (!meta) return;
-      const stagedCount = stagedChanges.size;
-      meta.textContent = selectedReqIds.size + ' selected · ' + stagedCount + ' staged changes';
+      meta.textContent = selectedReqIds.size + ' selected';
     }
 
     function selectVisibleRequirements() {
@@ -1645,20 +1640,24 @@
       updateSelectionMeta();
     }
 
-    function bulkStageAction(action) {
+    async function bulkStageAction(action) {
       const selected = requirements.filter(req => selectedReqIds.has(String(req.req_id)));
       if (!selected.length) {
         showToast('Select at least one requirement first', 'error');
         return;
       }
 
+      const pendingRows = selected.filter(req => statusClass(req.review_status) === 'pending');
+      if (!pendingRows.length) {
+        showToast('Selected requirements are already reviewed', 'error');
+        return;
+      }
+
       let changed = 0;
-      selected.forEach(req => {
-        if (statusClass(req.review_status) === 'pending') {
-          stageAction(String(req.req_id), action, '', { silent: true });
-          changed += 1;
-        }
-      });
+      for (const req of pendingRows) {
+        const ok = await stageAction(String(req.req_id), action, '', { silent: true });
+        if (ok) changed += 1;
+      }
 
       if (!changed) {
         showToast('Selected requirements are already reviewed', 'error');
@@ -1669,37 +1668,13 @@
         renderMyFeedback();
         renderDocumentsInfo();
         updateSelectionMeta();
-        showToast(changed + ' requirements staged', 'success');
+        showToast(changed + ' requirements updated', 'success');
       }
     }
 
     async function flushStagedChanges() {
-      const stagedEntries = Array.from(stagedChanges.entries());
-      for (const [reqId, change] of stagedEntries) {
-        if (change.priority && change.priority !== change.basePriority) {
-          const priorityRes = await apiFetch('/review/' + encodeURIComponent(fileId) + '/set-priority', {
-            method: 'POST',
-            body: JSON.stringify({ req_id: Number(reqId), priority: change.priority })
-          });
-          if (!priorityRes.ok) throw new Error('Failed to set priority');
-        }
-
-        if (change.action) {
-          const actionRes = await apiFetch('/review/' + encodeURIComponent(fileId) + '/action', {
-            method: 'POST',
-            body: JSON.stringify({ req_id: Number(reqId), action: change.action, comment: change.comment || '' })
-          });
-          if (!actionRes.ok) throw new Error('Failed to save action');
-        }
-      }
-
-      requirements.forEach(req => {
-        req._server_review_status = req.review_status;
-        req._server_comment = req.client_comment || '';
-        req._server_priority = normalizePriority(req.priority);
-      });
-      stagedChanges.clear();
-      updateSelectionMeta();
+      // Immediate-save mode: nothing to flush.
+      return;
     }
 
     function setupAddRequirementForm() {
@@ -1721,20 +1696,31 @@
         try {
           const res = await apiFetch('/review/' + encodeURIComponent(fileId) + '/add-requirement', {
             method: 'POST',
-            body: JSON.stringify({ title, description, category, priority })
+            body: JSON.stringify({ title, description: description || title, category, priority })
           });
-          if (!res.ok) throw new Error('Failed to add requirement');
+          if (!res.ok) {
+            let message = 'Failed to add requirement';
+            try {
+              const body = await res.json();
+              message = body.detail || body.message || message;
+            } catch (e) {}
+            throw new Error(message);
+          }
           const created = await res.json();
           requirements.push(created);
           panel.classList.remove('open');
           document.getElementById('newReqTitle').value = '';
           document.getElementById('newReqDesc').value = '';
+          document.getElementById('newReqCategory').value = 'functional';
+          document.getElementById('newReqPriority').value = 'Medium';
           renderFilterPills();
           updateProgress();
           renderRequirements();
-          showToast('Requirement added', 'success');
+          renderMyFeedback();
+          renderDocumentsInfo();
+          showToast('Requirement added successfully', 'success');
         } catch (e) {
-          showToast('Something went wrong', 'error');
+          showToast((e && e.message) ? e.message : 'Something went wrong', 'error');
         }
       });
     }

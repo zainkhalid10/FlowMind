@@ -1196,11 +1196,11 @@ class RequirementsExtractionAgent:
     def _infer_priority(self, statement: str) -> str:
         """Infer a simple priority label from requirement language."""
         text = (statement or "").lower()
-        if any(token in text for token in ["must", "shall", "critical", "mandatory"]):
+        if any(token in text for token in ["critical", "mandatory", "security", "compliance", "must", "shall"]):
             return "high"
-        if any(token in text for token in ["should", "important", "recommended"]):
+        if any(token in text for token in ["should", "important", "recommended", "performance", "availability"]):
             return "medium"
-        return "low"
+        return "medium"
 
     def _infer_confidence(self, statement: str) -> float:
         """Infer lightweight confidence from requirement quality signals."""
@@ -3096,6 +3096,19 @@ Thought: {agent_scratchpad}""",
         except TypeError:
             img_docs = self.vectorstore.similarity_search("IMAGE_SUMMARY diagram image OCR workflow", k=20, where=where)  # type: ignore
         _push_docs(img_docs)
+        try:
+            du_docs = self.vectorstore.similarity_search(
+                "DIAGRAM_UNDERSTANDING flowchart architecture narrative explanation implied behavior",
+                k=16,
+                filter=where,
+            )
+        except TypeError:
+            du_docs = self.vectorstore.similarity_search(
+                "DIAGRAM_UNDERSTANDING flowchart architecture narrative explanation implied behavior",
+                k=16,
+                where=where,
+            )  # type: ignore
+        _push_docs(du_docs)
 
         print(f"RETRIEVE: got {len(docs)} chunks from vectorstore")
         print(f"RETRIEVE_SAMPLE: {docs[0].page_content[:200] if docs else 'EMPTY'}")

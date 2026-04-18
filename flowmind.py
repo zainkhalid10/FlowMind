@@ -4288,6 +4288,13 @@ IMPORTANT:
                         continue
                     image_id = res.get("image_id", "")
                     page_num = res.get("page_num", 0)
+                    understanding = (res.get("understanding") or "").strip()
+                    if understanding:
+                        text_output += (
+                            f"\n[DIAGRAM_UNDERSTANDING {image_id}]\n"
+                            f"{sanitize_unicode(understanding)}\n"
+                            f"[/DIAGRAM_UNDERSTANDING]\n"
+                        )
                     reqs = res.get("requirements") or []
                     if not reqs:
                         continue
