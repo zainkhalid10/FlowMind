@@ -507,6 +507,7 @@ async def explain_file_visual_item(
     uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
     image_path: Optional[Path] = None
     fallback_ocr = (payload.ocr_text or "").strip()
+    persisted_vlm_analysis = ""
 
     # Primary resolution path: DB image id linked to this file.
     if payload.image_id:
@@ -522,6 +523,7 @@ async def explain_file_visual_item(
                     image_path = candidate
                 if not fallback_ocr:
                     fallback_ocr = (row.ocr_text or "").strip()
+                persisted_vlm_analysis = (row.vlm_analysis or "").strip()
         except (TypeError, ValueError):
             pass
 
@@ -546,6 +548,10 @@ async def explain_file_visual_item(
     relationships: List[str] = []
     process_steps: List[str] = []
 
+    # Prefer previously stored diagram understanding when available.
+    if persisted_vlm_analysis:
+        explanation_text = persisted_vlm_analysis
+
     try:
         from services.image_service import comprehensive_image_interpretation
 
@@ -554,8 +560,12 @@ async def explain_file_visual_item(
             f"workflow, actors, inputs/outputs, and requirement implications."
         )
         result = comprehensive_image_interpretation(str(image_path), context)
-
-        explanation_text = str(result.get("full_interpretation") or "").strip()
+        # For explain modal, prefer clean VLM narrative over OCR-heavy merged text.
+        if not explanation_text:
+            explanation_text = (
+                str(result.get("vlm_interpretation") or "").strip()
+                or str(result.get("full_interpretation") or "").strip()
+            )
         extracted_requirements = [str(x).strip() for x in (result.get("requirements") or []) if str(x).strip()]
         components = [str(x).strip() for x in (result.get("components") or []) if str(x).strip()]
         relationships = [str(x).strip() for x in (result.get("relationships") or []) if str(x).strip()]

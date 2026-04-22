@@ -50,6 +50,49 @@ def _is_vlm_pass_enabled() -> bool:
     return vlm_enabled
 
 
+def _resolve_vlm_models(ollama_models: List[str]) -> List[str]:
+    """
+    Resolve preferred VLM models from env + installed Ollama tags.
+    Prefers stronger open-source vision models for diagrams/flowcharts.
+    """
+    configured = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
+    if configured:
+        requested = [m.strip() for m in configured.split(",") if m.strip()]
+    else:
+        # Prefer Qwen2.5-VL first for diagram semantics, then LLaVA fallback.
+        requested = [
+            os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "").strip(),
+            "qwen2.5-vl",
+            "qwen2.5-vl:latest",
+            "qwen2.5vl:latest",
+            "llava:13b",
+            "llava:latest",
+            "llava:7b",
+        ]
+
+    requested = [m for m in requested if m]
+    if not requested:
+        requested = ["qwen2.5-vl", "llava:13b"]
+
+    aliases = {
+        "qwen2.5-vl": ["qwen2.5-vl", "qwen2.5-vl:latest", "qwen2.5vl:latest"],
+        "llava": ["llava:13b", "llava:latest", "llava:7b"],
+    }
+
+    available: List[str] = []
+    seen = set()
+    installed = set(ollama_models or [])
+
+    for model in requested:
+        candidates = aliases.get(model, [model])
+        chosen = next((c for c in candidates if c in installed), None)
+        if chosen and chosen not in seen:
+            available.append(chosen)
+            seen.add(chosen)
+
+    return available
+
+
 # ============================================================================
 # ADVANCED OCR WITH PREPROCESSING
 # ============================================================================
@@ -153,6 +196,7 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
         type_scores = {
             'diagram': 0,
             'flowchart': 0,
+            'er_diagram': 0,
             'chart': 0,
             'table': 0,
             'ui_mockup': 0,
@@ -251,6 +295,19 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
         if any(kw in text_lower for kw in table_keywords) or ocr_text.count('|') > 5:
             type_scores['table'] += 40
             characteristics.append('table_structure')
+
+        er_keywords = [
+            'entity', 'relationship', 'primary key', 'foreign key',
+            'varchar', 'char(', 'int', 'pk', 'fk'
+        ]
+        er_hits = sum(1 for kw in er_keywords if kw in text_lower)
+        if er_hits >= 2:
+            type_scores['er_diagram'] += 45
+            type_scores['table'] -= 15
+            characteristics.append('database_schema_terms')
+        if rectangle_count >= 3 and (horizontal_lines + vertical_lines) >= 3 and diamond_count == 0:
+            type_scores['er_diagram'] += 20
+            characteristics.append('entity_boxes_with_connectors')
         
         ui_keywords = ['button', 'menu', 'click', 'field', 'form', 'input']
         if any(kw in text_lower for kw in ui_keywords):
@@ -385,17 +442,10 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             'confidence': 0
         }
     
-    # Support FLOWMIND_VLM_MODELS (qwen2.5-vl,llava:13b) or single FLOWMIND_OLLAMA_VLM_MODEL
-    vlm_models_str = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
-    if vlm_models_str:
-        models = [m.strip() for m in vlm_models_str.split(",") if m.strip()]
-    else:
-        models = [os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")]
-    
     ollama_models = ollama_status.get('models', [])
-    available = [m for m in models if m in ollama_models]
+    available = _resolve_vlm_models(ollama_models)
     if not available:
-        print(f"   ❌ No VLM models found. Tried: {models}")
+        print(f"   ❌ No VLM models found. Installed: {', '.join(ollama_models) if ollama_models else 'None'}")
         print(f"   📦 Available: {', '.join(ollama_models) if ollama_models else 'None'}")
         print(f"   💡 Install with: ollama pull qwen2.5-vl  or  ollama pull llava:13b")
         return {
@@ -495,6 +545,16 @@ This is a system / architecture diagram. Complete Step 1 using the image.
 
 For Step 2, be specific about component names, interfaces, data flows, trust boundaries, and constraints
 implied by how parts are connected. Where possible, phrase as SHALL requirements with evidence (box labels, arrows).
+""",
+
+        'er_diagram': f"""{_diagram_understanding_preamble()}
+This is an ER/database schema diagram. Complete Step 1 using the image and OCR labels.
+
+For Step 2, extract:
+- entities/tables and their attributes
+- primary/foreign keys and inferred cardinality
+- integrity constraints and required validations
+Express each as SHALL requirements with direct evidence from labels/links.
 """,
 
         'chart': """This is a data chart/graph. Analyze and extract:
@@ -693,6 +753,16 @@ def intelligent_ocr_analysis(ocr_text: str, image_type: str) -> Dict:
         # Deduplicate components
         analysis['components'] = list(set(analysis['components']))[:10]
         
+    elif image_type == 'er_diagram':
+        analysis['summary'] = "This appears to be a database/ER diagram with entities, attributes, and relationships."
+        for line in lines:
+            line_lower = line.lower()
+            if any(token in line_lower for token in ['int', 'varchar', 'char', 'primary key', 'foreign key', 'pk', 'fk']):
+                analysis['components'].append(line)
+            if re.search(r'\b(one|many|1:n|n:1|m:n)\b', line_lower):
+                analysis['key_points'].append(line)
+        analysis['components'] = list(set(analysis['components']))[:12]
+
     elif image_type == 'table':
         analysis['summary'] = f"This table contains structured data with {len(lines)} rows."
         # Extract key data points
@@ -729,14 +799,43 @@ def merge_interpretations(ocr_text: str, ocr_confidence: float, vlm_result: Dict
         sections.append(f"\n**Analysis**:")
         sections.append(ocr_analysis['summary'])
     
-    # OCR text (show condensed version)
-    if ocr_text and len(ocr_text) > 50:
+    # OCR text (show condensed version). Suppress noisy dumps for structured visuals.
+    is_structured_visual = image_type in ['flowchart', 'diagram', 'er_diagram']
+    has_vlm = bool((vlm_result.get('interpretation') or "").strip())
+    show_ocr_dump = bool(
+        ocr_text
+        and len(ocr_text) > 50
+        and (
+            (not is_structured_visual)
+            or (is_structured_visual and ocr_confidence >= 60 and len(ocr_text) <= 400)
+        )
+    )
+    if show_ocr_dump:
         sections.append(f"\n**Text Content** (Confidence: {ocr_confidence:.0f}%):")
         # Show structured or condensed version
         if len(ocr_text) > 500:
             sections.append(ocr_text[:500] + "...")
         else:
             sections.append(ocr_text)
+    elif is_structured_visual and ocr_text:
+        labels = []
+        seen = set()
+        for raw in ocr_text.splitlines():
+            line = re.sub(r"\s+", " ", (raw or "").strip())
+            if len(line) < 3 or len(line) > 80:
+                continue
+            if not re.search(r"[A-Za-z]", line):
+                continue
+            key = line.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            labels.append(line)
+            if len(labels) >= 8:
+                break
+        if labels:
+            sections.append("\n**Detected Labels (OCR)**:")
+            sections.append(", ".join(labels))
     
     # Process steps (for flowcharts/algorithms)
     if ocr_analysis.get('process_steps'):
@@ -747,7 +846,7 @@ def merge_interpretations(ocr_text: str, ocr_confidence: float, vlm_result: Dict
     # VLM interpretation (if available) — tag diagrams for RAG / extraction
     if vlm_result.get('interpretation'):
         interp = (vlm_result.get('interpretation') or "").strip()
-        if image_type in ('diagram', 'flowchart'):
+        if image_type in ('diagram', 'flowchart', 'er_diagram'):
             sections.append("\n[DIAGRAM_UNDERSTANDING]")
             sections.append(
                 "Narrative understanding of the figure (use when drafting or validating requirements):"
@@ -784,7 +883,7 @@ def merge_interpretations(ocr_text: str, ocr_confidence: float, vlm_result: Dict
             sections.append(f"• {rel}")
     
     # Technical details
-    if image_type in ['flowchart', 'diagram']:
+    if image_type in ['flowchart', 'diagram', 'er_diagram']:
         details = []
         if type_info.get('details', {}).get('line_count', 0) > 20:
             details.append(f"Contains {type_info['details']['line_count']} structural lines")
@@ -1141,6 +1240,14 @@ List every state shown
 What triggers each transition between states?
 What are the initial and final states?
 Convert each state and transition into a system requirement using SHALL language."""
+    elif diagram_type == "er_diagram":
+        body = """This is an ER/database schema diagram. Analyze entities and constraints.
+
+List each entity/table and key attributes
+Identify primary keys and foreign keys
+Infer relationships and cardinality where visible
+Note validation and integrity rules implied by keys/types
+Convert schema relationships into system/data requirements."""
     else:
         body = """Analyze this technical diagram carefully.
 
@@ -1285,13 +1392,8 @@ def extract_diagram_requirements_vlm(
     ollama_status = check_ollama_status()
     if not ollama_status.get("running"):
         return empty
-    vlm_models_str = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
-    if vlm_models_str:
-        models = [m.strip() for m in vlm_models_str.split(",") if m.strip()]
-    else:
-        models = [os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "llava:13b")]
     ollama_models = ollama_status.get("models", [])
-    available = [m for m in models if m in ollama_models]
+    available = _resolve_vlm_models(ollama_models)
     if not available:
         return empty
 
