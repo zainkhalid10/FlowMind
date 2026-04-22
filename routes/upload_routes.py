@@ -187,18 +187,6 @@ async def upload_agent_doc(
         except Exception:
             pass
         return result
-    except Exception as e:
-        # #region agent log
-        try:
-            f = open(_DEBUG_LOG, "a", encoding="utf-8"); f.write(json.dumps({"sessionId": "0e985e", "hypothesisId": "B", "location": "upload_routes.py:upload_agent_doc except", "message": "analyze_with_agent raised", "data": {"error": str(e), "type": type(e).__name__}, "timestamp": int(time.time() * 1000)}) + "\n"); f.close()
-        except Exception:
-            pass
-        # #endregion
-        import traceback
-        tb = traceback.format_exc()
-        print("Analyze_with_agent error:", tb)
-        remove_progress_tracker(tracker_id)
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
 
 @router.get("/api/progress/{tracker_id}")

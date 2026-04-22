@@ -802,6 +802,29 @@ async def _analyze_document_internal(
     with open(text_file_path, "w", encoding="utf-8") as tf:
         tf.write(sanitized_text)
 
+    # ----------- VALIDATE DOCUMENT QUALITY -----------
+    if tracker:
+        tracker.set_stage(ProcessingStage.VALIDATING)
+        progress = tracker.get_progress()
+        print(f"📊 [{progress['progress']}%] {progress['message']}")
+
+    v_res = validate_document_for_srs(sanitized_text)
+    if v_res.get("is_rejected"):
+        reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
+        print(f"❌ REJECTED: {reject_msg}")
+        if tracker:
+            tracker.set_stage(ProcessingStage.FINALIZING)
+            tracker.complete()
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "DOCUMENT_REJECTED",
+                "message": reject_msg,
+                "score": v_res.get("srs_score"),
+                "reasons": v_res.get("reasons")
+            }
+        )
+
     if tracker:
         tracker.set_stage(ProcessingStage.FINALIZING)
         progress = tracker.get_progress()
@@ -809,11 +832,12 @@ async def _analyze_document_internal(
 
     summary = f"Extracted {len(text_output.split())} words and {image_count} image(s)."
     print(f"✅ Document analysis complete: {summary}")
-    
+
     if tracker:
         tracker.complete()
         final_progress = tracker.get_progress()
         print(f"📊 [{final_progress['progress']}%] {final_progress['message']}")
+
 
     # Build quick lookup for contextual summaries
     ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
@@ -4417,6 +4441,29 @@ IMPORTANT:
         text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
         with open(text_file_path, "w", encoding="utf-8") as tf:
             tf.write(sanitized_text)
+
+        # ----------- VALIDATE DOCUMENT QUALITY -----------
+        if tracker:
+            tracker.set_stage(ProcessingStage.VALIDATING)
+            progress = tracker.get_progress()
+            print(f"📊 Progress: {progress['progress']}% - {progress['message']}")
+
+        v_res = validate_document_for_srs(sanitized_text)
+        if v_res.get("is_rejected"):
+            reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
+            print(f"❌ REJECTED agent flow: {reject_msg}")
+            if tracker:
+                tracker.set_stage(ProcessingStage.FINALIZING)
+                tracker.complete()
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "DOCUMENT_REJECTED",
+                    "message": reject_msg,
+                    "score": v_res.get("srs_score"),
+                    "reasons": v_res.get("reasons")
+                }
+            )
 
         # Process with RAG agent - use async helpers to avoid blocking
         # Get user-specific agent for user-specific learning

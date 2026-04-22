@@ -7,12 +7,13 @@ from enum import Enum
 class ProcessingStage(Enum):
     """Processing stages for document extraction."""
     UPLOADING = ("Uploading file", 0, 5)
-    PARSING = ("Parsing document", 5, 25)
-    TEXT_EXTRACTION = ("Extracting text", 25, 50)
-    IMAGE_DETECTION = ("Detecting images", 50, 65)
-    OCR_PROCESSING = ("Processing OCR", 65, 80)
-    IMAGE_SUMMARIZATION = ("Summarizing images", 80, 90)
-    FINALIZING = ("Finalizing", 90, 100)
+    PARSING = ("Parsing document", 5, 20)
+    TEXT_EXTRACTION = ("Extracting text", 20, 40)
+    VALIDATING = ("Validating content quality", 40, 50)
+    IMAGE_DETECTION = ("Detecting images", 50, 60)
+    OCR_PROCESSING = ("Processing OCR", 60, 75)
+    IMAGE_SUMMARIZATION = ("Summarizing images", 75, 85)
+    FINALIZING = ("Finalizing", 85, 100)
     COMPLETE = ("Complete", 100, 100)
     
     def __init__(self, description: str, start_percent: int, end_percent: int):
@@ -105,23 +106,23 @@ class ProgressTracker:
                 return 5 + page_progress
             return 15
         elif stage == ProcessingStage.TEXT_EXTRACTION:
-            return 40
+            return 35
+        elif stage == ProcessingStage.VALIDATING:
+            return 45
         elif stage == ProcessingStage.IMAGE_DETECTION:
-            return 60
+            return 55
         elif stage == ProcessingStage.OCR_PROCESSING:
             if self.total_images > 0:
                 image_progress = (self.current_image / self.total_images) * 15
-                return 65 + image_progress
-            return 75
+                return 60 + image_progress
+            return 70
         elif stage == ProcessingStage.IMAGE_SUMMARIZATION:
             if self.total_images > 0:
                 image_progress = (self.current_image / self.total_images) * 10
-                return 80 + image_progress
-            return 88
+                return 75 + image_progress
+            return 82
         elif stage == ProcessingStage.FINALIZING:
-            # FINALIZING can be 90-99% depending on sub-stages
-            # We'll use 90% as base, and let it progress to 99% during AI processing
-            return 90
+            return 85
         elif stage == ProcessingStage.COMPLETE:
             return 100
         
