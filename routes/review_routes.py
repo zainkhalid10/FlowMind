@@ -85,6 +85,28 @@ def _action_to_status(action: str) -> str:
     return mapping.get(action, "pending")
 
 
+def is_meaningful_feedback(comment: str) -> bool:
+    # Too short
+    if len((comment or "").strip()) < 10:
+        return False
+    # All same character
+    compact = (comment or "").replace(" ", "")
+    if len(set(compact)) < 4:
+        return False
+    # No real words (check against common English words)
+    words = (comment or "").lower().split()
+    common = {
+        "the", "system", "should", "must", "shall", "requirement", "change",
+        "please", "need", "want", "add", "remove", "update", "incorrect",
+        "wrong", "missing", "unclear", "improve", "fix", "this", "is", "not",
+        "a", "an", "to", "of", "and", "or", "it", "be", "for", "with", "that",
+    }
+    real_words = sum(1 for w in words if w in common or len(w) > 3)
+    if real_words < 2:
+        return False
+    return True
+
+
 def _req_title(feature: Feature) -> str:
     title = (getattr(feature, "title", None) or "").strip()
     if title:
@@ -393,6 +415,9 @@ async def get_review_requirements(
             "suggested_revision": getattr(f, "suggested_revision", None),
             "auto_resolved": bool(getattr(latest_feedback, "resolved", 0)) if latest_feedback else False,
             "feedback_date": latest_feedback.created_at.isoformat() if latest_feedback else None,
+            "classification_reason": getattr(f, "classification_reason", None),
+            "classification_method": getattr(f, "classification_method", None),
+            "classification_confidence_label": getattr(f, "classification_confidence_label", None),
         })
 
     manager = db.query(User).filter(User.id == assignment.manager_id).first()
@@ -423,6 +448,14 @@ async def submit_review_action(
         raise HTTPException(status_code=400, detail="Invalid action")
     if action == "request_modification" and not (payload.comment or "").strip():
         raise HTTPException(status_code=400, detail="Comment is required for modification request")
+    if (payload.comment or "").strip() and not is_meaningful_feedback((payload.comment or "").strip()):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Your comment does not appear to be meaningful feedback. "
+                "Please describe the specific change you want made to this requirement."
+            ),
+        )
 
     assignment = db.query(ReviewAssignment).filter(
         ReviewAssignment.file_id == file_id,

@@ -3,7 +3,7 @@ import json
 import re
 import time
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
 from langchain_community.vectorstores import Chroma
@@ -1220,13 +1220,18 @@ class RequirementsExtractionAgent:
             score += 0.1
         return round(min(score, 0.95), 2)
 
-    def _build_structured_requirements(self, response_text: str) -> List[Dict[str, Any]]:
-        """Build strict structured requirement objects from sectioned response text."""
+    def _build_structured_requirements(
+        self, response_text: str
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Build structured requirement objects; second list is rejected with reasons."""
+        from services.requirement_validation import validate_requirement_statement
+
         text = response_text or ""
         print(f"BUILD_INPUT: {text[:500]}")
         print(f"BUILD_INPUT_TOTAL_LEN: {len(text)}")
         sections = self._parse_response_to_sections(text)
         structured: List[Dict[str, Any]] = []
+        rejected: List[Dict[str, Any]] = []
         seen = set()
 
         for raw_category, items in sections.items():
@@ -1234,9 +1239,46 @@ class RequirementsExtractionAgent:
             for item in items:
                 statement = self._clean_requirement_text(item)
                 if not statement:
+                    rejected.append(
+                        {
+                            "statement": "",
+                            "category_attempt": category,
+                            "validation_ok": False,
+                            "validation_reasons": ["Empty after cleaning."],
+                            "validation_codes": ["EMPTY_CLEAN"],
+                            "source_type": "text",
+                        }
+                    )
                     continue
 
                 if not self._looks_like_requirement(statement):
+                    rejected.append(
+                        {
+                            "statement": statement[:500],
+                            "category_attempt": category,
+                            "validation_ok": False,
+                            "validation_reasons": [
+                                "Did not pass internal requirement-shape heuristics "
+                                "(length / modal verbs / noise filters)."
+                            ],
+                            "validation_codes": ["HEURISTIC_REJECT"],
+                            "source_type": "text",
+                        }
+                    )
+                    continue
+
+                vr = validate_requirement_statement(statement)
+                if not vr.accepted:
+                    rejected.append(
+                        {
+                            "statement": statement[:500],
+                            "category_attempt": category,
+                            "validation_ok": False,
+                            "validation_reasons": vr.reasons,
+                            "validation_codes": vr.codes,
+                            "source_type": "text",
+                        }
+                    )
                     continue
 
                 norm = statement.lower()
@@ -1244,20 +1286,30 @@ class RequirementsExtractionAgent:
                     continue
                 seen.add(norm)
 
+                ev = self.classify_requirement_with_evidence(statement)
+                final_category = self._normalize_requirement_category(ev["category"])
+                conf_map = {"High": 0.9, "Medium": 0.65, "Low": 0.45}
+                conf_num = conf_map.get(ev.get("confidence") or "Medium", 0.65)
+
                 structured.append(
                     {
                         "statement": statement,
-                        "category": category,
+                        "category": final_category,
                         "priority": self._infer_priority(statement),
-                        "confidence": self._infer_confidence(statement),
+                        "confidence": conf_num,
+                        "classification_reason": ev.get("reason", ""),
+                        "classification_method": ev.get("method", "rule-based"),
+                        "classification_confidence_label": ev.get("confidence", "Medium"),
                         "evidence_text": statement[:240],
                         "evidence_page": None,
                         "evidence_image_id": None,
                         "source_type": "text",
+                        "validation_ok": True,
+                        "validation_codes": [c for c in vr.codes if c != "OK"] or ["OK"],
                     }
                 )
 
-        return structured
+        return structured, rejected
         
     # ---------------------- Formatting Helpers ----------------------
     def _normalize_line(self, line: str) -> str:
@@ -2363,79 +2415,272 @@ Thought: {agent_scratchpad}""",
             return max(domain_scores, key=domain_scores.get)
         return 'general'
 
-    def _classify_requirement_improved(self, sentence: str, context: str = '') -> str:
+    # --- Documented rule keywords: explainable classification (classify_requirement_with_evidence) ---
+    _FUNCTIONAL_KEYWORDS = frozenset({
+        "shall", "must", "will", "should", "enable", "allow", "provide", "support",
+        "display", "process", "validate", "authenticate", "generate", "calculate",
+        "store", "retrieve", "update", "delete", "notify",
+    })
+    _NON_FUNCTIONAL_KEYWORDS = frozenset({
+        "performance", "security", "reliability", "usability", "availability", "scalability",
+        "maintainability", "throughput", "latency",
+    })
+    _BUSINESS_KEYWORDS = frozenset({
+        "stakeholder", "business", "cost", "budget", "revenue", "roi", "compliance",
+        "regulation", "policy", "legal", "audit", "sla",
+    })
+    def _rule_layer_scores(self, text: str) -> Dict[str, Any]:
         """
-        Improved classification with context awareness and domain knowledge.
+        First-layer scoring with explicit, documented match reasons per category.
         """
-        normalized = sentence.lower().strip()
+        t = (text or "").strip()
+        low = t.lower()
         import re
-        
-        # Detect domain for context-aware classification
-        domain = self._detect_domain_context(sentence + ' ' + context)
-        
-        # PRIORITY 1: User Stories (highest specificity)
-        user_story_patterns = [
-            r'as\s+(a|an|the)\s+\w+',
-            r'i\s+(want|need|should|can|will)',
-            r'so\s+that',
-            r'user\s+story',
+        words = re.findall(r"[a-z0-9]+", low)
+        word_set = set(words)
+
+        reasons: Dict[str, str] = {}
+        scores: Dict[str, int] = {
+            "functional": 0,
+            "non_functional": 0,
+            "business": 0,
+            "system": 0,
+            "user": 0,
+        }
+
+        # User stories
+        if re.search(r"\bas\s+a\s+[\w\s,]+(i|I)\s+want\b", t, re.IGNORECASE):
+            scores["user"] += 5
+            reasons["user"] = "User-story format (As a ... I want) describes a user-driven behavior"
+        elif re.search(r"\bso\s+that\b", low):
+            scores["user"] += 2
+            reasons["user"] = "Contains 'so that' (typical user-story acceptance phrasing)"
+        elif re.search(r"\bi\s+want\b", low):
+            scores["user"] += 3
+            reasons["user"] = "Contains 'I want' (user-story phrasing)"
+
+        # FUNCTIONAL: keyword hits
+        func_hits = sorted(self._FUNCTIONAL_KEYWORDS & word_set)
+        if func_hits:
+            scores["functional"] += 2 * len(func_hits)
+            v = func_hits[0]
+            reasons["functional"] = f"Contains functional verb [{v}] describing system behavior"
+        if re.search(r"\b(shall|must|should|will)\b", low) and re.search(
+            r"\b(system|application|platform|module|service|dashboard|api|bot|software)\b", low
+        ):
+            scores["functional"] += 2
+            if "functional" not in reasons:
+                reasons["functional"] = "Modal language plus system/component actor (what the system does for a user)"
+
+        # NON-FUNCTIONAL
+        nfr_hits = [w for w in self._NON_FUNCTIONAL_KEYWORDS if w in low]
+        for _ in nfr_hits:
+            scores["non_functional"] += 2
+        if re.search(
+            r"\bresponse\s+time\b|\b\d+(\.\d+)?\s*(ms|s|sec|second|seconds|min|hour|day)s?\b|\b\d+(\.\d+)?\s*%\b",
+            low,
+        ):
+            scores["non_functional"] += 3
+            reasons["non_functional"] = "Contains quality attribute [measurable constraint] or measurable constraint"
+        elif nfr_hits and "non_functional" not in reasons:
+            reasons["non_functional"] = f"Contains quality attribute [{nfr_hits[0]}] or measurable constraint"
+
+        # BUSINESS
+        bus_hits = sorted(self._BUSINESS_KEYWORDS & word_set)
+        for _ in bus_hits:
+            scores["business"] += 2
+        if bus_hits and "business" not in reasons:
+            x = bus_hits[0]
+            reasons["business"] = f"Contains business/organizational concern [{x}]"
+
+        # SYSTEM / infrastructure (word-boundary matches)
+        sys_terms = [
+            "hardware", "server", "database", "network", "cpu", "ram", "memory", "infrastructure",
+            "deployment", "bandwidth", "storage",
         ]
-        
-        if any(re.search(pattern, normalized) for pattern in user_story_patterns):
-            return 'user'
-        
-        # PRIORITY 2: Non-Functional (quality attributes ONLY)
-        nfr_indicators = [
-            'performance', 'latency', 'throughput', 'response time',
-            'security', 'encryption', 'authentication', 
-            'reliability', 'availability', 'uptime', 'downtime',
-            'scalability', 'scalable', 'concurrent users',
-            'usability', 'user-friendly', 'accessible',
-            'maintainability', 'portability', 'compatibility',
-        ]
-        
-        nfr_patterns = [
-            r'within\s+\d+\s*(ms|millisecond|second|minute)',
-            r'\d+%\s+(uptime|availability)',
-            r'requests\s+per\s+second',
-            r'concurrent\s+users',
-        ]
-        
-        # Check for NFR signals
-        nfr_count = sum(1 for indicator in nfr_indicators if indicator in normalized)
-        has_nfr_pattern = any(re.search(pattern, normalized) for pattern in nfr_patterns)
-        
-        # Important: Payment, deposits, calculations are FUNCTIONAL, not NFR
-        # Domain-aware functional indicators
-        functional_business_keywords = [
-            'collect', 'charge', 'payment', 'deposit', 'invoice',
-            'calculate', 'compute', 'fetch', 'gather', 'book', 'reserve',
-            'assign', 'schedule', 'using', 'api', 'maps', 'process order',
-        ]
-        
-        # Add domain-specific functional keywords
-        if domain == 'booking_system':
-            functional_business_keywords.extend(['availability', 'slot', 'calendar'])
-        elif domain == 'e_commerce':
-            functional_business_keywords.extend(['checkout', 'cart', 'product'])
-        
-        has_functional = any(keyword in normalized for keyword in functional_business_keywords)
-        
-        # NFR only if it has NFR signals AND NO functional keywords
-        if (nfr_count >= 2 or has_nfr_pattern) and not has_functional:
-            return 'non_functional'
-        
-        # PRIORITY 3: Business Rules
-        business_indicators = [
-            'business rule', 'policy', 'regulation', 'compliance',
-            'approval', 'stakeholder', 'kpi', 'roi',
-        ]
-        
-        if any(indicator in normalized for indicator in business_indicators):
-            return 'business'
-        
-        # Default: Functional (most action-oriented requirements)
-        return 'functional'
+        sys_match = None
+        for term in sys_terms:
+            if re.search(r"\b" + re.escape(term) + r"\b", low):
+                scores["system"] += 2
+                if not sys_match:
+                    sys_match = term
+        if re.search(r"\b(operating\s+system|o/s)\b", low):
+            scores["system"] += 2
+            if not sys_match:
+                sys_match = "operating system"
+        if scores["system"] > 0 and "system" not in reasons:
+            reasons["system"] = f"Contains technical infrastructure concern [{sys_match or 'infrastructure'}]"
+
+        # Do not let pure NFR wording steal payment/calculation-style functional behavior
+        if re.search(
+            r"\b(collect|charge|payment|calculate|book|assign|invoice|deposit|order|cart)\b", low
+        ) and scores["non_functional"] > scores["functional"]:
+            scores["functional"] = max(scores["functional"], scores["non_functional"] - 1)
+            reasons["functional"] = (
+                "Action-oriented business behavior (e.g. payment, calculate) — treated as functional, not NFR"
+            )
+
+        return {"scores": scores, "reasons": reasons, "user_story_override": scores["user"] >= 4}
+
+    def _llm_tiebreak_category(self, text: str, candidates: List[str], low_confidence: bool) -> Optional[str]:
+        """
+        LLM pick among candidate categories. Returns one of: functional, non_functional, business, system.
+        """
+        if low_confidence:
+            print(
+                f"🤖 [classify] LLM (low rule confidence) preview: {text[:100]!r}..."
+            )
+        else:
+            print(f"🤖 [classify] LLM tie-breaker, candidates={candidates}: {text[:100]!r}...")
+
+        labels = "functional, non_functional, business, system"
+        prompt = (
+            "Classify this software engineering requirement into exactly one category. "
+            f"Reply with a single token from: {labels}.\n\n"
+            "functional: what the system does; non_functional: quality/performance/security; "
+            "business: cost, policy, compliance; system: hardware, DB, network, OS, deployment.\n\n"
+            f"Text:\n{(text or '')[:1800]}\n\n"
+            "Category:"
+        )
+        out = None
+        try:
+            import requests
+            resp = requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": self.ollama_model, "prompt": prompt, "stream": False},
+                timeout=20,
+            )
+            if resp.ok:
+                out = (resp.json().get("response") or "").strip().lower()
+        except Exception:
+            pass
+        if not out and self.openrouter_key:
+            try:
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {self.openrouter_key}",
+                    "Content-Type": "application/json",
+                }
+                body = {
+                    "model": os.getenv("FLOWMIND_OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct"),
+                    "messages": [{"role": "user", "content": prompt}],
+                }
+                resp = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body, timeout=25
+                )
+                if resp.ok:
+                    choice = (resp.json().get("choices") or [{}])[0]
+                    out = ((choice.get("message") or {}).get("content") or "").strip().lower()
+            except Exception:
+                pass
+        if not out:
+            return None
+        for c in ("non_functional", "functional", "business", "system"):
+            if c in out or c.replace("_", " ") in out:
+                return c
+        return None
+
+    def classify_requirement_with_evidence(self, text: str) -> dict:
+        """
+        Transparent hybrid: documented rules first; LLM for medium tie-break or low-signal text.
+
+        Returns:
+            { category, confidence: High|Medium|Low, reason, method: rule-based|llm|hybrid }
+        """
+        t = (text or "").strip()
+        if not t:
+            return {
+                "category": "functional",
+                "confidence": "Low",
+                "reason": "Empty text; default category functional",
+                "method": "rule-based",
+            }
+
+        layer = self._rule_layer_scores(t)
+        scores = layer["scores"]
+        reasons = layer["reasons"]
+
+        if layer.get("user_story_override") or scores["user"] >= 4:
+            return {
+                "category": "functional",
+                "confidence": "High",
+                "reason": reasons.get("user", "User-story phrasing describes desired system behavior"),
+                "method": "rule-based",
+            }
+
+        cats4 = ("functional", "non_functional", "business", "system")
+        best_cat = max(cats4, key=lambda c: scores[c])
+        second_cat = max((c for c in cats4 if c != best_cat), key=lambda c: scores[c])
+        top, second = scores[best_cat], scores[second_cat]
+        margin = top - second
+
+        final_reason = reasons.get(best_cat) or f"Best rule-based match: {best_cat.replace('_', ' ')} (score {top})"
+        use_llm = os.getenv("FLOWMIND_CLASSIFY_LLM", "1") == "1"
+
+        # High rule confidence: clear winner
+        if top >= 4 and margin >= 2:
+            return {
+                "category": {
+                    "functional": "Functional",
+                    "non_functional": "Non-Functional",
+                    "business": "Business",
+                    "system": "System",
+                }[best_cat],
+                "confidence": "High",
+                "reason": final_reason,
+                "method": "rule-based",
+            }
+        # Medium: ambiguous between top categories
+        if top >= 2 and margin < 2 and use_llm:
+            cands = list(dict.fromkeys([best_cat, second_cat, "functional"]))
+            llm_c = self._llm_tiebreak_category(t, cands, low_confidence=False)
+            picked = llm_c or best_cat
+            return {
+                "category": {
+                    "functional": "Functional",
+                    "non_functional": "Non-Functional",
+                    "business": "Business",
+                    "system": "System",
+                }[picked],
+                "confidence": "Medium",
+                "reason": f"{final_reason} | LLM tie-breaker chose '{picked.replace('_', ' ')}' among close rule scores",
+                "method": "hybrid",
+            }
+        # Low or LLM off: weak signals
+        if (top < 2 or (margin >= 2 and top < 4)) and use_llm:
+            print(f"📋 [classify] Low rule-based signal; using LLM assist: {t[:200]!r}...")
+            llm_c = self._llm_tiebreak_category(
+                t, ["functional", "non_functional", "business", "system"], low_confidence=True
+            )
+            picked = llm_c or best_cat
+            return {
+                "category": {
+                    "functional": "Functional",
+                    "non_functional": "Non-Functional",
+                    "business": "Business",
+                    "system": "System",
+                }[picked],
+                "confidence": "Low",
+                "reason": f"Rule scores weak; LLM assist. {reasons.get(picked) or 'LLM-suggested label.'}",
+                "method": "llm",
+            }
+
+        return {
+            "category": {
+                "functional": "Functional",
+                "non_functional": "Non-Functional",
+                "business": "Business",
+                "system": "System",
+            }[best_cat],
+            "confidence": "Low" if top < 2 else "Medium",
+            "reason": final_reason,
+            "method": "rule-based",
+        }
+
+    def _classify_requirement_improved(self, sentence: str, context: str = '') -> str:
+        """Map classify_requirement_with_evidence to internal category key."""
+        ev = self.classify_requirement_with_evidence(sentence + ((" " + context) if context else ""))
+        return self._normalize_requirement_category(ev["category"])
 
     def _heuristic_extract(self, text: str) -> Dict[str, Any]:
         """Enhanced heuristic extraction with improved accuracy and classification."""
@@ -3404,9 +3649,15 @@ Thought: {agent_scratchpad}""",
                 best_result["extraction_method"] = method_used
                 best_result["learning_enabled"] = self.enable_self_learning
                 best_result["quality_score"] = best_score
-                structured_requirements = self._build_structured_requirements(best_result.get("response", ""))
+                from services.requirement_validation import classification_basis_summary
+
+                structured_requirements, validation_rejects = self._build_structured_requirements(
+                    best_result.get("response", "")
+                )
                 best_result["requirements_json"] = structured_requirements
                 best_result["requirements_json_count"] = len(structured_requirements)
+                best_result["validation_rejects"] = validation_rejects
+                best_result["requirement_classification_basis"] = classification_basis_summary()
                 
                 print(f"✅ Used {method_used} extraction method")
                 print(f"📊 Result status: {best_result.get('status')}, Response length: {len(str(best_result.get('response', '')))}")

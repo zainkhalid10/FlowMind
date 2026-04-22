@@ -13,6 +13,7 @@ from database import SessionLocal, Feature, ParsedFile, ImageMeta, User
 from auth import get_current_user, get_visible_user_ids, can_user_access_project, User
 from datetime import datetime
 import re
+import json
 
 try:
     import fitz  # PyMuPDF
@@ -349,6 +350,11 @@ async def get_file_visual_analysis(
                 "image_url": f"/uploads/{path.name}",
                 "ocr_text": "",
                 "agent_note": "Visual detected from uploaded document (OCR summary unavailable for this image).",
+                "diagram_type": "unknown",
+                "type_confidence": 0,
+                "detected_features": [],
+                "vlm_analysis": "",
+                "extracted_requirements_count": 0,
             })
         return out
 
@@ -406,6 +412,11 @@ async def get_file_visual_analysis(
                     "image_url": f"/uploads/{out_name}",
                     "ocr_text": ocr_text,
                     "agent_note": agent_note,
+                    "diagram_type": "unknown",
+                    "type_confidence": 0,
+                    "detected_features": [],
+                    "vlm_analysis": "",
+                    "extracted_requirements_count": 0,
                 })
         except Exception:
             return []
@@ -432,12 +443,28 @@ async def get_file_visual_analysis(
 
     images = []
     for row in image_rows:
+        features = []
+        try:
+            if row.detected_features:
+                parsed = json.loads(row.detected_features)
+                if isinstance(parsed, list):
+                    features = [str(x) for x in parsed]
+                elif isinstance(parsed, str):
+                    features = [parsed]
+        except Exception:
+            features = [str(row.detected_features)] if row.detected_features else []
+
         images.append({
             "id": row.id,
             "page_number": row.page_number,
             "image_url": _to_upload_url(row.image_path),
             "ocr_text": row.ocr_text or "",
             "agent_note": _agent_note(row.ocr_text),
+            "diagram_type": (row.diagram_type or "unknown"),
+            "type_confidence": int(row.type_confidence or 0),
+            "detected_features": features,
+            "vlm_analysis": row.vlm_analysis or "",
+            "extracted_requirements_count": int(row.extracted_requirements_count or 0),
         })
 
     if not images:
@@ -831,6 +858,9 @@ def parse_and_save_features(
                     description=description,
                     status='pending',
                     quality_score=quality_score,
+                    classification_reason=req.get("classification_reason"),
+                    classification_method=req.get("classification_method"),
+                    classification_confidence_label=req.get("classification_confidence_label"),
                 )
                 db.add(feature)
                 features_saved += 1

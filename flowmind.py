@@ -174,6 +174,7 @@ app.add_middleware(
 # Include routers
 from routes import auth_routes, upload_routes, dashboard_routes, training_routes, approval_routes, integration_routes, project_routes, google_oauth_routes, review_routes
 from routes.approval_routes import parse_and_save_features
+from services.document_validator import validate_document_for_srs
 
 app.include_router(auth_routes.router)
 app.include_router(upload_routes.router)
@@ -454,7 +455,18 @@ async def _analyze_document_internal(
     """Internal function: Extracts text, images, and OCR from any uploaded document."""
     from services.progress_service import ProcessingStage
     from services.progress_storage import get_progress_tracker
-    
+    from services.requirement_validation import is_srs_supported_upload
+
+    ok_ext, ext_reasons = is_srs_supported_upload(file.filename or "")
+    if not ok_ext:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported document type for SRS workflow. "
+                + "; ".join(ext_reasons)
+            ),
+        )
+
     print(f"📄 Starting document analysis: {file.filename}")
     print(f"👤 User ID: {user_id}")
     
@@ -803,6 +815,10 @@ async def _analyze_document_internal(
         final_progress = tracker.get_progress()
         print(f"📊 [{final_progress['progress']}%] {final_progress['message']}")
 
+    # Build quick lookup for contextual summaries
+    ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
+    image_analysis_cache = {}
+
     # ----------- SAVE TO DATABASE -----------
     try:
         if db_session is None:
@@ -825,13 +841,46 @@ async def _analyze_document_internal(
         db.commit()
         db.refresh(record)
 
-        # Save image metadata
+        # Save image metadata (including explainable diagram understanding context)
+        from services.image_service import classify_diagram_type, extract_diagram_requirements_vlm
         for image_id, image_path, page_num, ocr_text in image_metadata:
+            context_before = ctx_by_id.get(image_id, "")
+            try:
+                diagram_info = classify_diagram_type(image_path)
+                scenario = "diagram_with_context" if (context_before or (ocr_text or "").strip()) else "diagram_only"
+                vlm_pack = extract_diagram_requirements_vlm(
+                    image_path=image_path,
+                    scenario=scenario,
+                    before_text=context_before,
+                    after_text="",
+                    ocr_text=ocr_text or "",
+                )
+                vlm_analysis = (vlm_pack or {}).get("understanding") or ""
+                req_count = len((vlm_pack or {}).get("requirements") or [])
+            except Exception as img_err:
+                print(f"⚠️ Diagram analysis failed for {image_id}: {img_err}")
+                diagram_info = {"type": "unknown", "confidence": 30, "detected_features": ["unrecognized pattern"]}
+                vlm_analysis = ""
+                req_count = 0
+
+            image_analysis_cache[image_id] = {
+                "diagram_type": diagram_info.get("type", "unknown"),
+                "type_confidence": int(diagram_info.get("confidence", 0) or 0),
+                "detected_features": diagram_info.get("detected_features", []),
+                "vlm_analysis": vlm_analysis,
+                "extracted_requirements_count": req_count,
+            }
+
             img_meta = ImageMeta(
                 file_id=record.id,
                 image_path=image_path,
                 page_number=page_num,
-                ocr_text=ocr_text
+                ocr_text=ocr_text,
+                diagram_type=image_analysis_cache[image_id]["diagram_type"],
+                type_confidence=image_analysis_cache[image_id]["type_confidence"],
+                detected_features=json.dumps(image_analysis_cache[image_id]["detected_features"], ensure_ascii=False),
+                vlm_analysis=image_analysis_cache[image_id]["vlm_analysis"],
+                extracted_requirements_count=image_analysis_cache[image_id]["extracted_requirements_count"],
             )
             db.add(img_meta)
 
@@ -847,14 +896,12 @@ async def _analyze_document_internal(
             except Exception:
                 pass
 
-    # Build quick lookup for contextual summaries
-    ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
-
     # Build image summaries with VLM analysis for AI agent
     image_summaries = []
     images_list = []
     for (iid, path, pg, ocr) in image_metadata:
-        vlm_summary = _vlm_summarize(path, ctx_by_id.get(iid, ""))
+        cached = image_analysis_cache.get(iid) or {}
+        vlm_summary = cached.get("vlm_analysis") or _vlm_summarize(path, ctx_by_id.get(iid, ""))
         ocr_summary = _summarize_image_ocr(ocr or "", context=ctx_by_id.get(iid, ""))
         final_summary = vlm_summary or ocr_summary
         
@@ -869,7 +916,12 @@ async def _analyze_document_internal(
             "page": pg,
             "ocr": sanitized_ocr,
             "summary": sanitized_summary,
-            "interpretation": sanitized_summary  # Alias for compatibility
+            "interpretation": sanitized_summary,  # Alias for compatibility
+            "diagram_type": cached.get("diagram_type", "unknown"),
+            "type_confidence": cached.get("type_confidence", 0),
+            "detected_features": cached.get("detected_features", []),
+            "vlm_analysis": sanitize_unicode(cached.get("vlm_analysis", "")),
+            "extracted_requirements_count": int(cached.get("extracted_requirements_count", 0)),
         })
         
         # Format for display
@@ -878,7 +930,12 @@ async def _analyze_document_internal(
             "path": path,
             "page": pg,
             "ocr": sanitized_ocr,
-            "summary": sanitized_summary
+            "summary": sanitized_summary,
+            "diagram_type": cached.get("diagram_type", "unknown"),
+            "type_confidence": cached.get("type_confidence", 0),
+            "detected_features": cached.get("detected_features", []),
+            "vlm_analysis": sanitize_unicode(cached.get("vlm_analysis", "")),
+            "extracted_requirements_count": int(cached.get("extracted_requirements_count", 0)),
         })
 
     # Sanitize text_output before using it
@@ -3771,6 +3828,18 @@ async def _analyze_with_agent_internal(
         pass
     # #endregion
     try:
+        from services.requirement_validation import is_srs_supported_upload
+
+        ok_ext, ext_reasons = is_srs_supported_upload(file.filename or "")
+        if not ok_ext:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Unsupported document type for SRS workflow. "
+                    + "; ".join(ext_reasons)
+                ),
+            )
+
         # First, extract text using existing functionality
         filepath = os.path.join(UPLOAD_DIR, file.filename)
         if tracker:
@@ -4283,11 +4352,27 @@ IMPORTANT:
                     diagram_jobs_pending,
                     max_workers=max_w,
                 )
+                basic_image_summaries = []
+                if basic_extraction_data and isinstance(basic_extraction_data.get("image_summaries"), list):
+                    basic_image_summaries = basic_extraction_data.get("image_summaries", [])
                 for res in vlm_results:
-                    if res.get("skipped"):
-                        continue
                     image_id = res.get("image_id", "")
                     page_num = res.get("page_num", 0)
+                    diagram_info = res.get("diagram_info") or {}
+                    detected_features = diagram_info.get("detected_features") or []
+                    if basic_image_summaries:
+                        for item in basic_image_summaries:
+                            if str(item.get("image_id")) == str(image_id):
+                                item["diagram_type"] = diagram_info.get("type", item.get("diagram_type", "unknown"))
+                                item["type_confidence"] = int(diagram_info.get("confidence", item.get("type_confidence", 0)) or 0)
+                                item["detected_features"] = detected_features
+                                item["vlm_analysis"] = res.get("vlm_analysis") or item.get("vlm_analysis", "")
+                                item["extracted_requirements_count"] = int(
+                                    res.get("requirements_count", item.get("extracted_requirements_count", 0)) or 0
+                                )
+                                break
+                    if res.get("skipped"):
+                        continue
                     understanding = (res.get("understanding") or "").strip()
                     if understanding:
                         text_output += (
@@ -4465,6 +4550,13 @@ IMPORTANT:
         if agent_result.get("status") != "success":
             msg = agent_result.get("message") or "Agent failed to process document"
             raise HTTPException(status_code=500, detail=msg)
+
+        # Validate document quality/SRS-likeness before extraction starts.
+        srs_validation = validate_document_for_srs(text_output or "")
+        print(
+            f"📋 SRS validation: score={srs_validation.get('srs_score')} "
+            f"confidence={srs_validation.get('confidence')} is_srs={srs_validation.get('is_srs')}"
+        )
 
         # Extract requirements using the agent
         if tracker:
@@ -4654,13 +4746,33 @@ complete context from both basic extraction and AI analysis.
             except Exception:
                 pass
             # #endregion
-            # Save image metadata
+            # Save image metadata (carry diagram-analysis context from basic extraction when available)
+            image_summary_by_id = {}
+            if basic_extraction_data and isinstance(basic_extraction_data.get("image_summaries"), list):
+                for item in basic_extraction_data.get("image_summaries", []):
+                    if isinstance(item, dict):
+                        iid = str(item.get("image_id") or "").strip()
+                        if iid:
+                            image_summary_by_id[iid] = item
+
             for image_id, image_path, page_num, ocr_text in image_metadata:
+                summary_item = image_summary_by_id.get(str(image_id), {})
+                detected_features = summary_item.get("detected_features")
+                if isinstance(detected_features, str):
+                    detected_features = [detected_features]
+                if not isinstance(detected_features, list):
+                    detected_features = []
+
                 img_meta = ImageMeta(
                     file_id=record.id,
                     image_path=image_path,
                     page_number=page_num,
-                    ocr_text=ocr_text
+                    ocr_text=ocr_text,
+                    diagram_type=summary_item.get("diagram_type"),
+                    type_confidence=int(summary_item.get("type_confidence", 0) or 0),
+                    detected_features=json.dumps(detected_features, ensure_ascii=False),
+                    vlm_analysis=summary_item.get("vlm_analysis") or summary_item.get("interpretation") or summary_item.get("summary") or "",
+                    extracted_requirements_count=int(summary_item.get("extracted_requirements_count", 0) or 0),
                 )
                 db.add(img_meta)
 
@@ -4722,9 +4834,24 @@ complete context from both basic extraction and AI analysis.
                     img_records = db_img.query(ImageMeta).filter(ImageMeta.file_id == record.id).all()
                     for img_record in img_records:
                         if img_record.ocr_text and len(img_record.ocr_text) > 50:  # Only use substantial OCR text
+                            features = []
+                            try:
+                                if img_record.detected_features:
+                                    parsed_features = json.loads(img_record.detected_features)
+                                    if isinstance(parsed_features, list):
+                                        features = parsed_features
+                                    elif isinstance(parsed_features, str):
+                                        features = [parsed_features]
+                            except Exception:
+                                features = [str(img_record.detected_features)] if img_record.detected_features else []
                             image_summaries_for_features.append({
                                 'summary': img_record.ocr_text,
-                                'interpretation': img_record.ocr_text
+                                'interpretation': img_record.ocr_text,
+                                'diagram_type': img_record.diagram_type or "unknown",
+                                'type_confidence': int(img_record.type_confidence or 0),
+                                'detected_features': features,
+                                'vlm_analysis': img_record.vlm_analysis or "",
+                                'extracted_requirements_count': int(img_record.extracted_requirements_count or 0),
                             })
                     if image_summaries_for_features:
                         print(f"📸 Found {len(image_summaries_for_features)} image summaries from database")
@@ -4767,6 +4894,20 @@ complete context from both basic extraction and AI analysis.
                     requirements_result["requirements_json_count"] = len(structured_requirements)
             except Exception as le:
                 print(f"Image-text linking failed: {le}")
+            try:
+                from services.requirement_validation import partition_valid_requirements
+
+                structured_requirements, partition_rejects = partition_valid_requirements(
+                    structured_requirements
+                )
+                prev_rej = requirements_result.get("validation_rejects") or []
+                if not isinstance(prev_rej, list):
+                    prev_rej = []
+                requirements_result["validation_rejects"] = prev_rej + partition_rejects
+                requirements_result["requirements_json"] = structured_requirements
+                requirements_result["requirements_json_count"] = len(structured_requirements)
+            except Exception as ve:
+                print(f"Requirement validation partition failed: {ve}")
             has_structured_requirements = isinstance(structured_requirements, list) and len(structured_requirements) > 0
             if (extracted_response or has_structured_requirements) and record and hasattr(record, 'id') and record.id:
                 # Create a new database session for feature parsing (thread-safe)
@@ -4815,7 +4956,12 @@ complete context from both basic extraction and AI analysis.
                 "summary": f"Extracted {len(text_output.split())} words and {image_count} image(s)",
                 "response": requirements_result.get("response", ""),
                 "project_id": project_id,
-                "images": image_summaries
+                "images": image_summaries,
+                "srs_validation": srs_validation,
+                "validation_rejects": requirements_result.get("validation_rejects") or [],
+                "requirement_classification_basis": requirements_result.get(
+                    "requirement_classification_basis", ""
+                ),
             }
             # Save views asynchronously to avoid blocking
             try:
@@ -4843,7 +4989,8 @@ complete context from both basic extraction and AI analysis.
                 "full_text_file": text_file_path or "",
                 "images_detected": image_count,
                 "image_metadata_saved": len(image_metadata),
-                "features_saved": features_count
+                "features_saved": features_count,
+                "srs_validation": srs_validation,
             }
             print(f"✅ Response data built successfully")
             print(f"📊 Response keys: {list(response_data.keys())}")
@@ -4864,7 +5011,8 @@ complete context from both basic extraction and AI analysis.
                 "agent_processing": agent_result or {"status": "success"},
                 "requirements_extraction": requirements_result or {"status": "error", "message": "Error occurred"},
                 "view_id": view_id or str(uuid.uuid4()),
-                "error": f"Error preparing full response: {str(e)}"
+                "error": f"Error preparing full response: {str(e)}",
+                "srs_validation": srs_validation,
             }
             # Sanitize Unicode to prevent encoding errors
             return sanitize_dict(fallback_response)
@@ -4998,7 +5146,10 @@ async def view_requirements(view_id: str):
                 feature_map[key] = {
                     "status": feat.status or "pending",
                     "quality_score": feat.quality_score or 0,
-                    "category": feat.category or ""
+                    "category": feat.category or "",
+                    "classification_reason": getattr(feat, "classification_reason", None) or "",
+                    "classification_method": getattr(feat, "classification_method", None) or "",
+                    "classification_confidence_label": getattr(feat, "classification_confidence_label", None) or "",
                 }
                 feature_stats["total"] += 1
                 if feat.status in feature_stats:
@@ -5010,6 +5161,35 @@ async def view_requirements(view_id: str):
     summary = esc(data.get("summary", ""))
     response_text = data.get("response", "")
     images = data.get("images") or []
+    srs_validation = data.get("srs_validation") or {}
+    srs_confidence = str(srs_validation.get("confidence") or "None")
+    srs_score = int(srs_validation.get("srs_score") or 0)
+    srs_recommendation = esc(str(srs_validation.get("recommendation") or ""))
+    srs_reasons = srs_validation.get("reasons") or []
+    srs_reasons_html = "".join(f"<li>{esc(str(r))}</li>" for r in srs_reasons[:8])
+    srs_banner_class = {
+        "High": "srs-high",
+        "Medium": "srs-medium",
+        "Low": "srs-low",
+        "None": "srs-none",
+    }.get(srs_confidence, "srs-none")
+    srs_banner_html = f"""
+        <div class="srs-banner {srs_banner_class}">
+            <div class="srs-banner-title">
+                <i class="fas fa-shield-alt"></i>
+                Document Validity Check
+            </div>
+            <div class="srs-banner-meta">
+                <strong>SRS Score:</strong> {srs_score}/100 &nbsp;|&nbsp;
+                <strong>Confidence:</strong> {esc(srs_confidence)}
+            </div>
+            <div class="srs-banner-text">{srs_recommendation}</div>
+            <details class="srs-details">
+                <summary>Show scoring findings</summary>
+                <ul>{srs_reasons_html}</ul>
+            </details>
+        </div>
+    """
     
     # Convert to HTML: create collapsible dropdown sections
     import re
@@ -5072,13 +5252,29 @@ async def view_requirements(view_id: str):
         for item_text, status_info in items:
             status_class = ""
             status_badge = ""
+            info_badge = ""
             if status_info:
                 status = status_info.get("status", "pending")
                 status_class = f" status-{status}"
                 status_label = status.capitalize()
                 status_badge = f'<span class="status-pill status-{status}">{status_label}</span>'
+                cat_raw = (status_info.get("category") or "").replace("_", " ").strip() or "unknown"
+                cat = cat_raw.title()
+                reason = status_info.get("classification_reason") or "No stored explanation (re-upload to refresh)."
+                method = (status_info.get("classification_method") or "—").lower()
+                conf_lbl = status_info.get("classification_confidence_label") or "—"
+                if status_info.get("classification_reason") or status_info.get("classification_method"):
+                    tip = (
+                        f"Classified as {cat} because: {reason} "
+                        f"Method: {method}. Confidence: {conf_lbl}."
+                    )
+                    info_badge = (
+                        f'<span class="classify-info" tabindex="0" role="img" '
+                        f'title="{esc(tip)}" data-tooltip="{esc(tip)}">'
+                        f'<i class="fas fa-info-circle" aria-label="Why this classification"></i></span>'
+                    )
 
-            safe_html += f'<li class="simple-item{status_class}"><span class="item-text">{item_text}</span>{status_badge}</li>'
+            safe_html += f'<li class="simple-item{status_class}"><span class="item-text">{item_text}</span>{info_badge}{status_badge}</li>'
         
         safe_html += '''
                 </ul>
@@ -5261,6 +5457,39 @@ async def view_requirements(view_id: str):
                 background: #1d4ed8;
             }}
 
+            .srs-banner {{
+                border-radius: 10px;
+                padding: 12px 14px;
+                margin-bottom: 1rem;
+                border: 1px solid #e2e8f0;
+                background: #f8fafc;
+                color: #0f172a;
+            }}
+            .srs-banner-title {{
+                font-weight: 700;
+                margin-bottom: 0.3rem;
+            }}
+            .srs-banner-meta {{
+                font-size: 0.9rem;
+                margin-bottom: 0.35rem;
+            }}
+            .srs-banner-text {{
+                font-size: 0.95rem;
+            }}
+            .srs-details {{
+                margin-top: 0.45rem;
+                font-size: 0.88rem;
+            }}
+            .srs-details summary {{
+                cursor: pointer;
+                color: #1d4ed8;
+                user-select: none;
+            }}
+            .srs-high {{ background: #ecfdf3; border-color: #86efac; color: #166534; }}
+            .srs-medium {{ background: #fefce8; border-color: #fde68a; color: #854d0e; }}
+            .srs-low {{ background: #fff7ed; border-color: #fdba74; color: #9a3412; }}
+            .srs-none {{ background: #fef2f2; border-color: #fecaca; color: #991b1b; }}
+
             .export-integrate-bar {{
                 display: flex;
                 align-items: center;
@@ -5437,6 +5666,16 @@ async def view_requirements(view_id: str):
                 margin: 0;
             }}
             
+            .classify-info {{
+                color: #94a3b8;
+                cursor: help;
+                margin-left: 0.25rem;
+                display: inline-flex;
+                align-items: center;
+                font-size: 0.95rem;
+            }}
+            .classify-info:hover, .classify-info:focus {{ color: #2563eb; outline: none; }}
+
             .simple-item {{
                 padding: 0.75rem 0;
                 border-bottom: 1px solid #f1f5f9;
@@ -5757,6 +5996,8 @@ async def view_requirements(view_id: str):
                 <i class="fas fa-arrow-left"></i>
                 Back to FlowMind
             </a>
+
+            {srs_banner_html}
 
             <div class="export-integrate-bar">
                 <span class="export-label"><i class="fas fa-download"></i> Export:</span>

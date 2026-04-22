@@ -57,6 +57,11 @@ class ImageMeta(Base):
     image_path = Column(String(512))
     page_number = Column(Integer)
     ocr_text = Column(Text)
+    diagram_type = Column(String(64), nullable=True)
+    type_confidence = Column(Integer, nullable=True)
+    detected_features = Column(Text, nullable=True)  # JSON list of detected visual features
+    vlm_analysis = Column(Text, nullable=True)
+    extracted_requirements_count = Column(Integer, default=0)
 
     file = relationship("ParsedFile", back_populates="images")
 
@@ -164,6 +169,10 @@ class Feature(Base):
     manager_attention = Column(Integer, default=0)  # 1 when manager should review/resolve auto suggestion
     status = Column(String(20), default="pending")  # pending, approved, denied
     quality_score = Column(Integer, default=0)
+    # Explainable classification (rag_agent.classify_requirement_with_evidence)
+    classification_reason = Column(Text, nullable=True)
+    classification_method = Column(String(20), nullable=True)  # rule-based | llm | hybrid
+    classification_confidence_label = Column(String(16), nullable=True)  # High | Medium | Low
     feedback = Column(Text, nullable=True)  # Client feedback on the requirement
     assigned_to_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Team head/manager assigns to member
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -276,6 +285,8 @@ def init_db():
     _migrate_review_tables()
     _migrate_review_assignment_password_column()
     _migrate_agent_chat_history_table()
+    _migrate_feature_classification_columns()
+    _migrate_image_meta_analysis_columns()
     seed_teams_if_empty()
 
 
@@ -559,3 +570,57 @@ def _migrate_agent_chat_history_table():
     tables = insp.get_table_names()
     if "agent_chat_history" not in tables:
         Base.metadata.create_all(bind=engine, tables=[AgentChatHistory.__table__])
+
+
+def _migrate_feature_classification_columns():
+    """Add explainable classification columns to features if missing."""
+    from sqlalchemy import inspect, text
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "features" not in insp.get_table_names():
+            return
+        cols = [c["name"] for c in insp.get_columns("features")]
+        if "classification_reason" not in cols:
+            conn.execute(text("ALTER TABLE features ADD COLUMN classification_reason TEXT"))
+            conn.commit()
+        if "classification_method" not in cols:
+            conn.execute(text("ALTER TABLE features ADD COLUMN classification_method VARCHAR(20)"))
+            conn.commit()
+        if "classification_confidence_label" not in cols:
+            conn.execute(text("ALTER TABLE features ADD COLUMN classification_confidence_label VARCHAR(16)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration feature classification columns note: {e}")
+    finally:
+        conn.close()
+
+
+def _migrate_image_meta_analysis_columns():
+    """Add diagram analysis columns to image_meta if missing."""
+    from sqlalchemy import inspect, text
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "image_meta" not in insp.get_table_names():
+            return
+        cols = [c["name"] for c in insp.get_columns("image_meta")]
+        if "diagram_type" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN diagram_type VARCHAR(64)"))
+            conn.commit()
+        if "type_confidence" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN type_confidence INTEGER"))
+            conn.commit()
+        if "detected_features" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN detected_features TEXT"))
+            conn.commit()
+        if "vlm_analysis" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN vlm_analysis TEXT"))
+            conn.commit()
+        if "extracted_requirements_count" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN extracted_requirements_count INTEGER DEFAULT 0"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration image_meta analysis columns note: {e}")
+    finally:
+        conn.close()

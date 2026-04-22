@@ -792,14 +792,31 @@
         const thumb = img.image_url
           ? '<img class="insight-thumb" data-open-insight="' + idx + '" src="' + img.image_url + '" alt="Extracted image">'
           : '';
+        const diagramTypeRaw = String(img.diagram_type || 'unknown');
+        const diagramLabel = diagramTypeRaw
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+        const confidence = Number(img.type_confidence || 0);
+        const detected = Array.isArray(img.detected_features) ? img.detected_features : [];
+        const detectedHtml = detected.length
+          ? '<div class="insight-note"><strong>Detected features:</strong> ' + detected.map(x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ') + '</div>'
+          : '';
+        const vlmAnalysis = String(img.vlm_analysis || '').trim();
+        const safeVlm = vlmAnalysis
+          ? vlmAnalysis.slice(0, 320).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          : '';
         const safeNote = String(img.agent_note || 'No insight available.')
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
         return '<article class="insight-card">'
           + '<div class="insight-title">' + title + '</div>'
+          + '<div class="insight-note"><span class="fm-badge badge-info">' + diagramLabel + ' (' + confidence + '%)</span>'
+          + '<span class="fm-badge badge-info">Extracted requirements: ' + Number(img.extracted_requirements_count || 0) + '</span></div>'
           + '<div class="insight-actions"><button class="fm-btn-outline fm-btn-sm" data-open-insight="' + idx + '">Open image</button><button class="fm-btn-primary fm-btn-sm" data-explain-insight="' + idx + '">View agent summary</button></div>'
           + thumb
+          + detectedHtml
+          + (safeVlm ? '<div class="insight-note"><strong>VLM analysis:</strong> ' + safeVlm + (vlmAnalysis.length > 320 ? '...' : '') + '</div>' : '')
           + '<div class="insight-note"><strong>Agent insight:</strong> ' + safeNote + '</div>'
           + '</article>';
       }).join('');
@@ -864,7 +881,19 @@
       const title = 'Image ' + (idx + 1) + (img.page_number ? (' · Page ' + img.page_number) : '');
       const note = String(img.agent_note || 'No insight available.').trim();
       const ocr = String(img.ocr_text || '').trim();
-      const detail = note + (ocr ? ('\n\nOCR excerpt:\n' + ocr.slice(0, 1200)) : '');
+      const diagramType = String(img.diagram_type || 'unknown').replace(/_/g, ' ');
+      const confidence = Number(img.type_confidence || 0);
+      const detected = Array.isArray(img.detected_features) && img.detected_features.length
+        ? img.detected_features.map(x => String(x)).join('; ')
+        : 'unrecognized pattern';
+      const vlmAnalysis = String(img.vlm_analysis || '').trim();
+      const reqCount = Number(img.extracted_requirements_count || 0);
+      const detail = 'Diagram type: ' + diagramType + ' (' + confidence + '%)'
+        + '\nDetected features: ' + detected
+        + '\nExtracted requirements: ' + reqCount
+        + (vlmAnalysis ? ('\n\nVLM analysis:\n' + vlmAnalysis) : '')
+        + '\n\nAgent insight:\n' + note
+        + (ocr ? ('\n\nOCR excerpt:\n' + ocr.slice(0, 1200)) : '');
 
       document.getElementById('insightModalTitle').textContent = title;
       document.getElementById('insightModalImage').src = img.image_url || '';

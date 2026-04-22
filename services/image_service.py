@@ -915,81 +915,130 @@ def get_image_context(
     }
 
 
-def classify_diagram_type(image_path: str, ocr_text: str) -> str:
+def classify_diagram_type(image_path: str) -> Dict[str, Any]:
     """
-    Classify diagram type for prompt selection.
-    Priority: flowchart > table > architecture > state > generic diagram.
+    Classify diagram type using OpenCV shape detection.
+
+    Returns:
+    {
+      type: flowchart/table/architecture/state_diagram/er_diagram/unknown,
+      confidence: 0-100,
+      detected_features: [list]
+    }
     """
     try:
         img = cv2.imread(image_path)
         if img is None:
-            text_lower = (ocr_text or "").lower()
-            if "state" in text_lower and "transition" in text_lower:
-                return "state_diagram"
-            if any(k in text_lower for k in ("table", "row", "column")):
-                return "table"
-            if any(k in text_lower for k in ("start", "decision", "end", "yes", "no")):
-                return "flowchart"
-            return "diagram"
+            return {
+                "type": "unknown",
+                "confidence": 30,
+                "detected_features": ["unrecognized pattern"],
+            }
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
-        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=40, maxLineGap=12)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        rectangle_count = 0
-        diamond_count = 0
-        circle_count = 0
-        horizontal_lines = 0
-        vertical_lines = 0
+        diamonds = 0
+        rectangles = 0
+        circles = 0
+        oval_like = 0
 
+        for cnt in contours:
+            if cv2.contourArea(cnt) < 200:
+                continue
+            perimeter = cv2.arcLength(cnt, True)
+            if perimeter <= 0:
+                continue
+            approx = cv2.approxPolyDP(cnt, 0.04 * perimeter, True)
+            sides = len(approx)
+
+            if sides == 4:
+                x, y, w, h = cv2.boundingRect(approx)
+                aspect = (float(w) / float(h)) if h > 0 else 0.0
+                # Square-like rotated boxes are commonly decisions / diamond candidates.
+                if 0.8 < aspect < 1.2:
+                    diamonds += 1
+                else:
+                    rectangles += 1
+            elif sides > 8:
+                circles += 1
+                x, y, w, h = cv2.boundingRect(cnt)
+                aspect = (float(w) / float(h)) if h > 0 else 0.0
+                # Treat stretched circles as oval-like (use-case / ER cues).
+                if 1.25 < aspect < 2.8 or 0.35 < aspect < 0.8:
+                    oval_like += 1
+
+        # Detect line orientation for table/grid and connection hints.
+        lines = cv2.HoughLinesP(
+            edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10
+        )
+        horizontal = 0
+        vertical = 0
         if lines is not None:
             for ln in lines:
                 x1, y1, x2, y2 = ln[0]
                 dx = abs(x2 - x1)
                 dy = abs(y2 - y1)
                 if dx > dy * 2:
-                    horizontal_lines += 1
+                    horizontal += 1
                 elif dy > dx * 2:
-                    vertical_lines += 1
+                    vertical += 1
+        has_grid = horizontal >= 6 and vertical >= 6
+        has_connectors = (horizontal + vertical) >= 5
 
-        for c in contours:
-            area = cv2.contourArea(c)
-            if area < 250:
-                continue
-            peri = cv2.arcLength(c, True)
-            if peri <= 0:
-                continue
-            approx = cv2.approxPolyDP(c, 0.04 * peri, True)
-            if len(approx) == 4:
-                rect = cv2.minAreaRect(c)
-                rw, rh = rect[1]
-                if rw > 1 and rh > 1:
-                    ratio = max(rw, rh) / max(1.0, min(rw, rh))
-                    angle = abs(rect[2])
-                    if 0.75 <= ratio <= 1.35 and 20 <= angle <= 70:
-                        diamond_count += 1
-                    else:
-                        rectangle_count += 1
-            elif len(approx) > 6:
-                circle_count += 1
+        detected_features: List[str] = []
+        if diamonds:
+            detected_features.append(f"{diamonds} decision nodes found")
+        if rectangles:
+            detected_features.append(f"{rectangles} rectangular cells/boxes found")
+        if circles:
+            detected_features.append(f"{circles} circular nodes found")
+        if oval_like:
+            detected_features.append(f"{oval_like} oval nodes found")
+        if has_grid:
+            detected_features.append("grid of lines detected")
+        if has_connectors:
+            detected_features.append("connecting lines detected")
 
-        text_lower = (ocr_text or "").lower()
-        has_grid = horizontal_lines >= 6 and vertical_lines >= 6
-        has_flow_words = any(k in text_lower for k in ("start", "decision", "end", "yes", "no", "loop"))
-
-        # Check for flowchart BEFORE checking for table.
-        if (diamond_count > 0 and rectangle_count > 0) or diamond_count >= 2 or has_flow_words:
-            return "flowchart"
-        if has_grid and diamond_count == 0:
-            return "table"
-        if circle_count >= 3 and any(k in text_lower for k in ("state", "transition", "event")):
-            return "state_diagram"
-        if any(k in text_lower for k in ("api", "service", "database", "gateway", "module", "component")):
-            return "architecture_diagram"
-        return "diagram"
-    except Exception:
-        return "diagram"
+        if diamonds >= 2:
+            return {
+                "type": "flowchart",
+                "confidence": 80,
+                "detected_features": detected_features or [f"{diamonds} decision nodes found"],
+            }
+        if has_grid and rectangles > 6 and circles == 0:
+            return {
+                "type": "table",
+                "confidence": 75,
+                "detected_features": detected_features or [f"{rectangles} rectangular cells found"],
+            }
+        if circles >= 3:
+            return {
+                "type": "state_diagram",
+                "confidence": 70,
+                "detected_features": detected_features or [f"{circles} circular nodes found"],
+            }
+        if oval_like >= 2:
+            return {
+                "type": "er_diagram",
+                "confidence": 68,
+                "detected_features": detected_features or [f"{oval_like} oval nodes found"],
+            }
+        if rectangles >= 3 and diamonds == 0:
+            return {
+                "type": "architecture",
+                "confidence": 65,
+                "detected_features": detected_features or [f"{rectangles} component boxes found"],
+            }
+        return {
+            "type": "unknown",
+            "confidence": 30,
+            "detected_features": detected_features or ["unrecognized pattern"],
+        }
+    except Exception as e:
+        print(f"classify_diagram_type failed: {e}")
+        return {"type": "unknown", "confidence": 30, "detected_features": ["unrecognized pattern"]}
 
 
 def _diagram_understanding_preamble() -> str:
@@ -1054,45 +1103,54 @@ def _extract_understanding_from_diagram_vlm(merged: str) -> str:
 
 
 def _build_type_specific_diagram_prompt(diagram_type: str, surrounding_document_text: str) -> str:
+    """
+    Type-specific prompts per architecture spec:
+    flowchart / table / architecture / state_diagram / unknown.
+    """
     surrounding = (surrounding_document_text or "").strip()[:1000]
     preamble = _diagram_understanding_preamble()
     if diagram_type == "flowchart":
-        return f"""{preamble}
-This is a flowchart diagram. For Step 2, analyze the complete flow and extract SHALL-style requirements:
-1. Starting condition(s)
-2. ALL decision points and yes/no outcomes
-3. Loops and what triggers them
-4. Termination conditions
-5. Failure / exception paths
-Pay special attention to: numeric limits (e.g. retry counts), blocking conditions, error handling.
+        body = """This is a flowchart. Analyze the complete flow step by step.
 
-Use this surrounding document text for context:
-{surrounding}
-"""
-    if diagram_type == "table":
-        return f"""{preamble}
-This is a table diagram. For Step 2, extract explicit constraints, limits, and mapping rules as SHALL requirements.
+What is the starting condition or trigger?
+List every decision point and both outcomes (yes/no or true/false)
+What loops exist and what condition breaks them?
+What are all the end states?
+What happens on the error or failure path?
+Convert each path into a SHALL requirement. A flowchart with a login attempt limit means:
+The system SHALL block access after N failed attempts."""
+    elif diagram_type == "table":
+        body = """This is a data table. Analyze its structure.
 
-Surrounding document text:
-{surrounding}
-"""
-    if diagram_type == "architecture_diagram":
-        return f"""{preamble}
-This is an architecture / component diagram. For Step 2, extract integration, interface, boundary, and
-reliability SHALL requirements grounded in what is drawn.
+What entity does this table represent?
+What are the column headers and what do they mean?
+What relationships or constraints does this table show?
+Convert the table structure into system requirements about data storage and retrieval."""
+    elif diagram_type == "architecture":
+        body = """This is a system architecture diagram. Analyze the components.
 
-Surrounding document text:
-{surrounding}
-"""
-    if diagram_type == "state_diagram":
-        return f"""{preamble}
-This is a state diagram. For Step 2, extract transitions, triggers, guards, and invalid transitions as SHALL requirements.
+List every component or module shown
+What does each component do based on its label?
+What connections exist between components?
+What data flows between them?
+Convert each component and connection into a system requirement."""
+    elif diagram_type == "state_diagram":
+        body = """This is a state diagram. Analyze all states and transitions.
 
-Surrounding document text:
-{surrounding}
-"""
+List every state shown
+What triggers each transition between states?
+What are the initial and final states?
+Convert each state and transition into a system requirement using SHALL language."""
+    else:
+        body = """Analyze this technical diagram carefully.
+
+What type of diagram is this?
+What system or process does it describe?
+What behaviors, constraints, or rules does it show?
+Extract any implied system requirements using SHALL/MUST language."""
+
     return f"""{preamble}
-This is a technical diagram. For Step 2, extract functional and system SHALL requirements strictly grounded in diagram evidence.
+{body}
 
 Surrounding document text:
 {surrounding}
@@ -1213,9 +1271,13 @@ def extract_diagram_requirements_vlm(
 ) -> Dict[str, Any]:
     """
     Scenario-aware VLM pass: narrative diagram understanding plus formal REQUIREMENT blocks.
-    Returns {"requirements": [...], "understanding": "..."}.
+    Returns {"requirements": [...], "understanding": "...", "diagram_info": {...}}.
     """
-    empty = {"requirements": [], "understanding": ""}
+    empty = {
+        "requirements": [],
+        "understanding": "",
+        "diagram_info": {"type": "unknown", "confidence": 30, "detected_features": ["unrecognized pattern"]},
+    }
     if not _is_vlm_pass_enabled():
         return empty
     if not image_path or not os.path.exists(image_path):
@@ -1238,8 +1300,9 @@ def extract_diagram_requirements_vlm(
             b64 = base64.b64encode(f.read()).decode("utf-8")
         vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
         surrounding_document_text = f"{(before_text or '')[-500:]}\n{(after_text or '')[:500]}".strip()
-        diagram_type = classify_diagram_type(image_path, ocr_text)
-        print(f"DIAGRAM_TYPE_CLASSIFIED: {diagram_type}")
+        diagram_info = classify_diagram_type(image_path)
+        diagram_type = str(diagram_info.get("type") or "unknown")
+        print(f"DIAGRAM_TYPE_CLASSIFIED: {diagram_type} ({diagram_info.get('confidence', 0)}%)")
         prompt = _build_scenario_vlm_prompt(
             scenario,
             before_text,
@@ -1261,7 +1324,11 @@ def extract_diagram_requirements_vlm(
         reqs = _parse_vlm_requirement_blocks(merged)
         if not reqs and "NO_REQUIREMENTS_FOUND" in merged.upper():
             reqs = []
-        return {"requirements": reqs, "understanding": understanding.strip()}
+        return {
+            "requirements": reqs,
+            "understanding": understanding.strip(),
+            "diagram_info": diagram_info,
+        }
     except Exception as e:
         print(f"extract_diagram_requirements_vlm failed: {e}")
         return empty
@@ -1310,10 +1377,18 @@ def run_parallel_diagram_vlm_jobs(
         except Exception:
             pil = None
         if not should_run_vlm_requirements_pass(pil or image_path, ocr_text):
+            diagram_info = classify_diagram_type(image_path) if image_path else {
+                "type": "unknown",
+                "confidence": 30,
+                "detected_features": ["unrecognized pattern"],
+            }
             return {
                 "image_id": image_id,
                 "page_num": page_num,
                 "requirements": [],
+                "requirements_count": 0,
+                "diagram_info": diagram_info,
+                "vlm_analysis": "",
                 "skipped": True,
             }
         pack = extract_diagram_requirements_vlm(
@@ -1325,11 +1400,19 @@ def run_parallel_diagram_vlm_jobs(
         )
         reqs = list((pack or {}).get("requirements") or [])
         understanding = str((pack or {}).get("understanding") or "").strip()
+        diagram_info = (pack or {}).get("diagram_info") or {
+            "type": "unknown",
+            "confidence": 30,
+            "detected_features": ["unrecognized pattern"],
+        }
         return {
             "image_id": image_id,
             "page_num": page_num,
             "requirements": reqs,
+            "requirements_count": len(reqs),
             "understanding": understanding,
+            "diagram_info": diagram_info,
+            "vlm_analysis": understanding,
             "skipped": False,
         }
 
