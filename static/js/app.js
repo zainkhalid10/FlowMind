@@ -109,6 +109,54 @@ async function apiFetch(path, options = {}) {
   return response;
 }
 
+/**
+ * Extracts a readable error message from an API response body or Error object.
+ */
+function extractErrorMessage(err, defaultMsg = 'An unexpected error occurred') {
+  if (!err) return defaultMsg;
+  
+  // If it's a string, return it
+  if (typeof err === 'string') return err;
+  
+  // If it's an Error object, check its message
+  if (err instanceof Error) {
+    if (err.message === '[object Object]' && err.responseBody) {
+      return extractErrorMessage(err.responseBody);
+    }
+    return err.message || defaultMsg;
+  }
+  
+  // If it's an object (likely API response body)
+  if (typeof err === 'object') {
+    // Handle FastAPI validation error arrays
+    if (Array.isArray(err)) {
+      return err.map(m => (typeof m === 'object' ? (m.msg || m.message || JSON.stringify(m)) : String(m))).join('; ');
+    }
+    
+    // Check detail property (FastAPI common)
+    if (err.detail) {
+      return extractErrorMessage(err.detail);
+    }
+    
+    // Check other common properties
+    const msg = err.message || err.msg || err.error || err.statusText;
+    if (msg && typeof msg === 'string') return msg;
+    if (msg && typeof msg === 'object') return extractErrorMessage(msg);
+    
+    // Special handling for DOCUMENT_REJECTED
+    if (err.error === 'DOCUMENT_REJECTED') {
+      let m = err.message || 'Document does not meet quality standards.';
+      if (err.score !== undefined) m += ' (Score: ' + err.score + '/100)';
+      if (Array.isArray(err.reasons)) m += ' Reasons: ' + err.reasons.join(', ');
+      return m;
+    }
+    
+    return JSON.stringify(err);
+  }
+  
+  return String(err);
+}
+
 // ==================== Notifications ====================
 function showToast(message, type = '') {
   let toast = document.getElementById('fm-toast');
@@ -118,12 +166,14 @@ function showToast(message, type = '') {
     document.body.appendChild(toast);
   }
   
-  toast.textContent = message;
+  const displayMessage = extractErrorMessage(message);
+  
+  toast.textContent = String(displayMessage);
   toast.className = 'fm-toast show ' + type;
   
   setTimeout(() => {
     toast.classList.remove('show');
-  }, 3000);
+  }, 5000); 
 }
 
 // ==================== Navigation ====================

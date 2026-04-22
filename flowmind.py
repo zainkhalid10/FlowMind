@@ -1364,8 +1364,12 @@ async def login_page():
                     setTimeout(() => window.location.href = target, 1000);
                 } else {
                     let msg = data.detail || 'Login failed. Please try again.';
-                    if (Array.isArray(msg)) msg = (msg[0] && msg[0].msg) ? msg.map(function(x){ return x.msg; }).join('; ') : String(msg);
-                    else if (msg && typeof msg === 'object' && msg.msg) msg = msg.msg;
+                    if (typeof msg === 'object' && msg !== null) {
+                        msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+                        if (typeof msg === 'object' && msg !== null) {
+                            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+                        }
+                    }
                     showAlert(msg);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
@@ -1763,7 +1767,14 @@ async def signup_page():
                     showAlert('Account created successfully! Redirecting...', 'success');
                     setTimeout(() => window.location.href = '/extract', 1000);
                 } else {
-                    showAlert(data.detail || 'Signup failed. Please try again.');
+                    let msg = data.detail || 'Account creation failed. Please try again.';
+                    if (typeof msg === 'object' && msg !== null) {
+                        msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+                        if (typeof msg === 'object' && msg !== null) {
+                            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+                        }
+                    }
+                    showAlert(msg);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
                 }

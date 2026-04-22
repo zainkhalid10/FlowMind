@@ -568,9 +568,17 @@
           setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
         } else {
           let err = 'Upload failed';
+          let fullError = null;
           try {
             const body = JSON.parse(xhr.responseText || '{}');
-            err = body.detail || body.message || err;
+            fullError = body.detail || body;
+            err = (typeof fullError === 'object') ? (fullError.message || fullError.error || JSON.stringify(fullError)) : fullError;
+            
+            // Special handling for document rejection
+            if (fullError.error === 'DOCUMENT_REJECTED') {
+              err = 'Rejection: ' + (fullError.message || 'Document does not meet quality standards.');
+              if (fullError.score !== undefined) err += ' (Score: ' + fullError.score + '/100)';
+            }
           } catch (e) {}
 
           if (stageTimer) {
@@ -586,7 +594,7 @@
           }
 
           txt.textContent = err;
-          showToast(err, 'error');
+          showToast(fullError || err, 'error');
         }
       };
 

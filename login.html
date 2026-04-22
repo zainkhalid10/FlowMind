@@ -527,7 +527,14 @@
           window.location.href = role === 'client' ? '/client-review' : '/dashboard';
         } else {
           // Show error
-          errorEl.textContent = data.detail || 'Sign in failed. Please try again.';
+          let msg = data.detail || 'Sign in failed. Please try again.';
+          if (typeof msg === 'object' && msg !== null) {
+            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+            if (typeof msg === 'object' && msg !== null) {
+              msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+            }
+          }
+          errorEl.textContent = msg;
           errorEl.classList.add('show');
         }
       } catch (error) {
@@ -597,7 +604,14 @@
           window.location.href = role === 'client' ? '/client-review' : '/dashboard';
         } else {
           // Show error
-          errorEl.textContent = data.detail || 'Sign up failed. Please try again.';
+          let msg = data.detail || 'Sign up failed. Please try again.';
+          if (typeof msg === 'object' && msg !== null) {
+            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+            if (typeof msg === 'object' && msg !== null) {
+              msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
+            }
+          }
+          errorEl.textContent = msg;
           errorEl.classList.add('show');
         }
       } catch (error) {

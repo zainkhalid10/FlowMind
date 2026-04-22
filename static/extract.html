@@ -813,10 +813,11 @@
         
         function showAlert(containerId, message, type = 'danger') {
             const container = document.getElementById(containerId);
-            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            const displayMessage = extractErrorMessage(message);
+            container.innerHTML = `<div class="alert alert-${type}">${escapeHtml(String(displayMessage))}</div>`;
             setTimeout(() => {
                 container.innerHTML = '';
-            }, 5000);
+            }, 8000); // Extended for complex errors
         }
         
         function showError(containerId, message) {

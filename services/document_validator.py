@@ -105,6 +105,14 @@ def validate_document_for_srs(text: str) -> dict:
     if all(re.search(fr"\b{token}s?\b", lower) for token in ("system", "user", "stakeholder")):
         score += 10
         reasons.append("Found system/user/stakeholder perspective terms (+10)")
+    
+    # +10 points: common software engineering vocabulary
+    tech_keywords = ["database", "server", "client", "api", "interface", "login", "auth", "security", 
+                     "performance", "latency", "storage", "memory", "cpu", "cloud", "deployment", 
+                     "testing", "validation", "verification"]
+    if sum(1 for kw in tech_keywords if kw in lower) >= 5:
+        score += 10
+        reasons.append("Found common technical/SRS vocabulary (+10)")
 
     # +15 points: numbered requirements patterns (increased from 10)
     if re.search(
@@ -140,24 +148,25 @@ def validate_document_for_srs(text: str) -> dict:
             "([n], et al., doi:) (-20)"
         )
 
-    # -30 points: fewer than 50 words
-    if words < 50:
-        score -= 30
-        reasons.append(f"Very short content ({words} words < 50) (-30)")
+    # -15 points: fewer than 30 words (reduced from 50 words/-30)
+    if words < 30:
+        score -= 15
+        reasons.append(f"Very short content ({words} words < 30) (-15)")
 
-    # -20 points: no sentence-ending periods
+    # -10 points: no sentence-ending periods
     if not re.search(r"\.", content):
-        score -= 20
+        score -= 10
         reasons.append(
             "No sentence-ending periods found; "
-            "text quality appears poor (-20)"
+            "text quality appears poor (-10)"
         )
 
     # Garbage check
     is_junk, junk_reason = is_garbage(content)
+    # Reduce is_junk penalty to be more permissive
     if is_junk:
-        score -= 50
-        reasons.append(f"Garbage detection: {junk_reason} (-50)")
+        score -= 15
+        reasons.append("Contains patterns often seen in non-technical content.")
 
     # Thematic check
     theme_penalty, theme_findings = detect_thematic_mismatch(content)
@@ -172,10 +181,11 @@ def validate_document_for_srs(text: str) -> dict:
     is_rejected = False
     reject_reason = ""
     
-    if score < 15:
+    # If very low score, reject
+    if score < 10:
         is_rejected = True
-        reject_reason = "Document score too low to be a valid technical/SRS document."
-    elif is_junk and score < 30:
+        reject_reason = "Extremely low technical content detected."
+    elif is_junk and score < 20:
         is_rejected = True
         reject_reason = "High likelihood of garbage/noise content."
 
