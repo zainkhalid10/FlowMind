@@ -538,70 +538,8 @@ async def _analyze_document_internal(
         if tracker:
             tracker.set_stage(ProcessingStage.TEXT_EXTRACTION)
 
-        # Extract images using pypdf Page.images if available
-        print(f"🖼️ Starting image detection and extraction...")
-        if tracker:
-            tracker.set_stage(ProcessingStage.IMAGE_DETECTION)
-            progress = tracker.get_progress()
-            print(f"📊 [{progress['progress']}%] {progress['message']}")
-        
-        try:
-            from io import BytesIO
-            detected_images = 0
-            for page_num, page in enumerate(reader.pages, start=1):
-                try:
-                    imgs = getattr(page, "images", []) or []
-                except Exception:
-                    imgs = []
-                for img_idx, img in enumerate(imgs, start=1):
-                    try:
-                        data = getattr(img, "data", None)
-                        if not data:
-                            continue
-                        image_count += 1
-                        image_id = gen_image_id(file.filename, page_num, img_idx)
-                        out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
-                        try:
-                            im = Image.open(BytesIO(data))
-                            im.save(out_path, format="PNG")
-                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
-                        except Exception:
-                            # If PIL cannot decode, just dump bytes and skip OCR
-                            with open(out_path, "wb") as fimg:
-                                fimg.write(data)
-                            ocr_text = ""
-                        image_metadata.append((image_id, out_path, page_num, ocr_text))
-                        detected_images += 1
-                        # Compute a simple position for context: end of that page's text
-                        pos = page_end_offsets.get(page_num, len(text_output))
-                        context_before = text_output[max(0, pos - 500):pos]
-                        image_positions.append({
-                            "image_id": image_id,
-                            "page": page_num,
-                            "char_offset": pos,
-                            "context_before": context_before
-                        })
-                        
-                        # Update progress for OCR
-                        if tracker:
-                            tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=detected_images, current_image=detected_images)
-                            progress = tracker.get_progress()
-                            print(f"📊 [{progress['progress']}%] Processing OCR for image {detected_images} (page {page_num})")
-                        
-                        # Try VLM summary
-                        if tracker:
-                            tracker.set_stage(ProcessingStage.IMAGE_SUMMARIZATION, total_images=detected_images, current_image=detected_images)
-                        vlm_sum = _vlm_summarize(out_path, context_before)
-                        if vlm_sum:
-                            print(f"✅ Generated summary for image {detected_images} on page {page_num}")
-                        if vlm_sum:
-                            text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
-                        if (ocr_text or "").strip():
-                            text_output += f"\n[IMAGE {image_id}]\nOCR: {(ocr_text or '').strip()}\n"
-                    except Exception:
-                        continue
-        except Exception:
-            pass
+        # Defer image extraction until after validation
+        pass
 
     # ----------- DOC (legacy) PARSING via LibreOffice conversion -----------
     elif file.filename.endswith(".doc"):
@@ -616,41 +554,8 @@ async def _analyze_document_internal(
                 d = docx.Document(converted)
                 for para in d.paragraphs:
                     text_output += para.text + "\n"
-                # Extract images from converted DOCX
-                img_idx = 0
-                for rel in d.part.rels.values():
-                    if "image" in rel.reltype and getattr(rel, "target_part", None):
-                        try:
-                            img_idx += 1
-                            image_count += 1
-                            blob = rel.target_part.blob
-                            page_num = 1
-                            image_id = gen_image_id(file.filename, page_num, img_idx)
-                            ext = ".png"
-                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                            with open(out_path, "wb") as imf:
-                                imf.write(blob)
-                            try:
-                                img = Image.open(out_path)
-                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                            except Exception:
-                                ocr_text = ""
-                            image_metadata.append((image_id, out_path, page_num, ocr_text))
-                            pos = len(text_output)
-                            context_before = text_output[max(0, pos - 500):pos]
-                            image_positions.append({
-                                "image_id": image_id,
-                                "page": page_num,
-                                "char_offset": pos,
-                                "context_before": context_before
-                            })
-                            vlm_sum = _vlm_summarize(out_path, context_before)
-                            if vlm_sum:
-                                text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
-                            if ocr_text.strip():
-                                text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                        except Exception:
-                            pass
+                        # Defer image extraction
+                        pass
             except Exception as e:
                 text_output = f"Conversion error for .doc: {e}"
 
@@ -659,32 +564,8 @@ async def _analyze_document_internal(
         d = docx.Document(filepath)
         for para in d.paragraphs:
             text_output += para.text + "\n"
-        # Extract images from DOCX
-        img_idx = 0
-        for rel in d.part.rels.values():
-            if "image" in rel.reltype and getattr(rel, "target_part", None):
-                try:
-                    img_idx += 1
-                    image_count += 1
-                    blob = rel.target_part.blob
-                    page_num = 1
-                    image_id = gen_image_id(file.filename, page_num, img_idx)
-                    ext = ".png"
-                    out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                    with open(out_path, "wb") as imf:
-                        imf.write(blob)
-                    # OCR
-                    try:
-                        img = Image.open(out_path)
-                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                    except Exception:
-                        ocr_text = ""
-                    image_metadata.append((image_id, out_path, page_num, ocr_text))
-                    # Inject lightweight context for agent
-                    if ocr_text.strip():
-                        text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                except Exception:
-                    pass
+        # Defer image extraction
+        pass
 
     # ----------- PPT (legacy) PARSING via LibreOffice conversion -----------
     elif file.filename.endswith(".ppt"):
@@ -700,35 +581,8 @@ async def _analyze_document_internal(
                     for shape in slide.shapes:
                         if hasattr(shape, "text"):
                             text_output += shape.text + "\n"
-                        if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
-                            try:
-                                image_count += 1
-                                image_id = gen_image_id(file.filename, 1, image_count)
-                                ext = ".png"
-                                out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                                with open(out_path, "wb") as imf:
-                                    imf.write(shape.image.blob)
-                                try:
-                                    img = Image.open(out_path)
-                                    ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                                except Exception:
-                                    ocr_text = ""
-                                image_metadata.append((image_id, out_path, 1, ocr_text))
-                                pos = len(text_output)
-                                context_before = text_output[max(0, pos - 500):pos]
-                                image_positions.append({
-                                    "image_id": image_id,
-                                    "page": 1,
-                                    "char_offset": pos,
-                                    "context_before": context_before
-                                })
-                                vlm_sum = _vlm_summarize(out_path, context_before)
-                                if vlm_sum:
-                                    text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
-                                if ocr_text.strip():
-                                    text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                            except Exception:
-                                pass
+                # Defer image extraction
+                pass
             except Exception as e:
                 text_output = f"Conversion error for .ppt: {e}"
 
@@ -741,35 +595,8 @@ async def _analyze_document_internal(
                 if hasattr(shape, "text"):
                     text_output += shape.text + "\n"
                 # 13 == MSO_SHAPE_TYPE.PICTURE
-                if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
-                    try:
-                        image_count += 1
-                        image_id = gen_image_id(file.filename, slide_idx, image_count)
-                        ext = ".png"
-                        out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                        with open(out_path, "wb") as imf:
-                            imf.write(shape.image.blob)
-                            try:
-                                img = Image.open(out_path)
-                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                            except Exception:
-                                ocr_text = ""
-                            image_metadata.append((image_id, out_path, slide_idx, ocr_text))
-                        pos = len(text_output)
-                        context_before = text_output[max(0, pos - 500):pos]
-                        image_positions.append({
-                            "image_id": image_id,
-                            "page": slide_idx,
-                            "char_offset": pos,
-                            "context_before": context_before
-                        })
-                        vlm_sum = _vlm_summarize(out_path, context_before)
-                        if vlm_sum:
-                            text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
-                        if ocr_text.strip():
-                            text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                    except Exception:
-                        pass
+                # Defer image extraction
+                pass
 
     # ----------- IMAGE PARSING -----------
     elif file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
@@ -802,16 +629,16 @@ async def _analyze_document_internal(
     with open(text_file_path, "w", encoding="utf-8") as tf:
         tf.write(sanitized_text)
 
-    # ----------- VALIDATE DOCUMENT QUALITY -----------
+    # ----------- VALIDATE DOCUMENT QUALITY (EARLY CHECK) -----------
     if tracker:
         tracker.set_stage(ProcessingStage.VALIDATING)
         progress = tracker.get_progress()
-        print(f"📊 [{progress['progress']}%] {progress['message']}")
+        print(f"📊 [{progress['progress']}%] Performing early document validation...")
 
     v_res = validate_document_for_srs(sanitized_text)
     if v_res.get("is_rejected"):
         reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
-        print(f"❌ REJECTED: {reject_msg}")
+        print(f"❌ REJECTED (Early): {reject_msg}")
         if tracker:
             tracker.set_stage(ProcessingStage.FINALIZING)
             tracker.complete()
@@ -825,6 +652,108 @@ async def _analyze_document_internal(
             }
         )
 
+    # ----------- LATE IMAGE EXTRACTION (Only if Valid) -----------
+    if file.filename.endswith(".pdf"):
+        print(f"🖼️ Starting delayed image extraction for PDF...")
+        try:
+            from io import BytesIO
+            detected_images = 0
+            for page_num, page in enumerate(reader.pages, start=1):
+                try:
+                    imgs = getattr(page, "images", []) or []
+                except Exception: imgs = []
+                for img_idx, img in enumerate(imgs, start=1):
+                    try:
+                        data = getattr(img, "data", None)
+                        if not data: continue
+                        image_count += 1
+                        image_id = gen_image_id(file.filename, page_num, img_idx)
+                        out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                        try:
+                            im = Image.open(BytesIO(data))
+                            im.save(out_path, format="PNG")
+                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
+                        except Exception:
+                            with open(out_path, "wb") as fimg: fimg.write(data)
+                            ocr_text = ""
+                        image_metadata.append((image_id, out_path, page_num, ocr_text))
+                        detected_images += 1
+                        pos = page_end_offsets.get(page_num, len(text_output))
+                        context_before = text_output[max(0, pos - 500):pos]
+                        image_positions.append({
+                            "image_id": image_id, "page": page_num, "char_offset": pos, "context_before": context_before
+                        })
+                        if tracker:
+                            tracker.set_stage(ProcessingStage.OCR_PROCESSING, total_images=detected_images, current_image=detected_images)
+                            tracker.set_stage(ProcessingStage.IMAGE_SUMMARIZATION, total_images=detected_images, current_image=detected_images)
+                        vlm_sum = _vlm_summarize(out_path, context_before)
+                        if vlm_sum:
+                            text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
+                        if (ocr_text or "").strip():
+                            text_output += f"\n[IMAGE {image_id}]\nOCR: {(ocr_text or '').strip()}\n"
+                    except Exception: continue
+        except Exception: pass
+
+    elif file.filename.endswith(".docx") or file.filename.endswith(".doc"):
+        print(f"🖼️ Starting delayed image extraction for DOCX/DOC...")
+        try:
+            doc_obj = d if 'd' in locals() else docx.Document(filepath)
+            img_idx = 0
+            for rel in doc_obj.part.rels.values():
+                if "image" in rel.reltype and getattr(rel, "target_part", None):
+                    try:
+                        img_idx += 1
+                        image_count += 1
+                        blob = rel.target_part.blob
+                        image_id = gen_image_id(file.filename, 1, img_idx)
+                        out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                        with open(out_path, "wb") as imf: imf.write(blob)
+                        try:
+                            img = Image.open(out_path)
+                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
+                        except Exception: ocr_text = ""
+                        image_metadata.append((image_id, out_path, 1, ocr_text))
+                        pos = len(text_output)
+                        context_before = text_output[max(0, pos - 500):pos]
+                        image_positions.append({
+                            "image_id": image_id, "page": 1, "char_offset": pos, "context_before": context_before
+                        })
+                        vlm_sum = _vlm_summarize(out_path, context_before)
+                        if vlm_sum: text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
+                        if ocr_text.strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
+                    except Exception: continue
+        except Exception: pass
+
+    elif file.filename.endswith(".pptx") or file.filename.endswith(".ppt"):
+        print(f"🖼️ Starting delayed image extraction for PPTX/PPT...")
+        try:
+            pres_obj = prs if 'prs' in locals() else pptx.Presentation(filepath)
+            img_idx = 0
+            for slide_idx, slide in enumerate(pres_obj.slides, start=1):
+                for shape in slide.shapes:
+                    if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
+                        try:
+                            img_idx += 1
+                            image_count += 1
+                            image_id = gen_image_id(file.filename, slide_idx, img_idx)
+                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                            with open(out_path, "wb") as imf: imf.write(shape.image.blob)
+                            try:
+                                img = Image.open(out_path)
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
+                            except Exception: ocr_text = ""
+                            image_metadata.append((image_id, out_path, slide_idx, ocr_text))
+                            pos = len(text_output)
+                            context_before = text_output[max(0, pos - 500):pos]
+                            image_positions.append({
+                                "image_id": image_id, "page": slide_idx, "char_offset": pos, "context_before": context_before
+                            })
+                            vlm_sum = _vlm_summarize(out_path, context_before)
+                            if vlm_sum: text_output += f"\n[IMAGE_SUMMARY {image_id}]\n{vlm_sum}\n"
+                            if ocr_text.strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
+                        except Exception: continue
+        except Exception: pass
+
     if tracker:
         tracker.set_stage(ProcessingStage.FINALIZING)
         progress = tracker.get_progress()
@@ -835,9 +764,6 @@ async def _analyze_document_internal(
 
     if tracker:
         tracker.complete()
-        final_progress = tracker.get_progress()
-        print(f"📊 [{final_progress['progress']}%] {final_progress['message']}")
-
 
     # Build quick lookup for contextual summaries
     ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
@@ -4014,40 +3940,8 @@ async def _analyze_with_agent_internal(
                     d = docx.Document(converted)
                     for para in d.paragraphs:
                         text_output += para.text + "\n"
-                    # Extract images from converted DOCX
-                    img_idx = 0
-                    for rel in d.part.rels.values():
-                        if "image" in rel.reltype and getattr(rel, "target_part", None):
-                            try:
-                                img_idx += 1
-                                image_count += 1
-                                blob = rel.target_part.blob
-                                page_num = 1
-                                image_id = gen_image_id(file.filename, page_num, img_idx)
-                                ext = ".png"
-                                out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                                with open(out_path, "wb") as imf:
-                                    imf.write(blob)
-                                    try:
-                                        img = Image.open(out_path)
-                                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                                    except Exception:
-                                        ocr_text = ""
-                                    image_metadata.append((image_id, out_path, page_num, ocr_text))
-                                    from services.image_service import get_image_context
-                                    prior = text_output[max(0, len(text_output) - 500):]
-                                    ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, page_num)
-                                    diagram_jobs_pending.append({
-                                        "image_path": out_path,
-                                        "image_id": image_id,
-                                        "page_num": page_num,
-                                        "ocr_text": ocr_text or "",
-                                        "context": ctx,
-                                    })
-                                    if ocr_text.strip():
-                                        text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                            except Exception:
-                                pass
+                    # Defer image extraction
+                    pass
                 except Exception as e:
                     text_output = f"Conversion error for .doc: {e}"
 
@@ -4055,40 +3949,8 @@ async def _analyze_with_agent_internal(
             d = docx.Document(filepath)
             for para in d.paragraphs:
                 text_output += para.text + "\n"
-            # Extract images from DOCX
-            img_idx = 0
-            for rel in d.part.rels.values():
-                if "image" in rel.reltype and getattr(rel, "target_part", None):
-                    try:
-                        img_idx += 1
-                        image_count += 1
-                        blob = rel.target_part.blob
-                        page_num = 1
-                        image_id = gen_image_id(file.filename, page_num, img_idx)
-                        ext = ".png"
-                        out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                        with open(out_path, "wb") as imf:
-                            imf.write(blob)
-                        try:
-                            img = Image.open(out_path)
-                            ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                        except Exception:
-                            ocr_text = ""
-                        image_metadata.append((image_id, out_path, page_num, ocr_text))
-                        from services.image_service import get_image_context
-                        prior = text_output[max(0, len(text_output) - 500):]
-                        ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, page_num)
-                        diagram_jobs_pending.append({
-                            "image_path": out_path,
-                            "image_id": image_id,
-                            "page_num": page_num,
-                            "ocr_text": ocr_text or "",
-                            "context": ctx,
-                        })
-                        if ocr_text.strip():
-                            text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                    except Exception:
-                        pass
+            # Defer image extraction
+            pass
 
         elif file.filename.endswith(".ppt"):
             soffice = _get_soffice_path()
@@ -4103,34 +3965,8 @@ async def _analyze_with_agent_internal(
                         for shape in slide.shapes:
                             if hasattr(shape, "text"):
                                 text_output += shape.text + "\n"
-                            if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
-                                try:
-                                    image_count += 1
-                                    image_id = gen_image_id(file.filename, 1, image_count)
-                                    ext = ".png"
-                                    out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                                    with open(out_path, "wb") as imf:
-                                        imf.write(shape.image.blob)
-                                    try:
-                                        img = Image.open(out_path)
-                                        ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                                    except Exception:
-                                        ocr_text = ""
-                                    image_metadata.append((image_id, out_path, 1, ocr_text))
-                                    from services.image_service import get_image_context
-                                    prior = text_output[max(0, len(text_output) - 500):]
-                                    ctx = get_image_context(prior[-500:], "", ocr_text or "", image_count, 1)
-                                    diagram_jobs_pending.append({
-                                        "image_path": out_path,
-                                        "image_id": image_id,
-                                        "page_num": 1,
-                                        "ocr_text": ocr_text or "",
-                                        "context": ctx,
-                                    })
-                                    if ocr_text.strip():
-                                        text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                                except Exception:
-                                    pass
+                                # Defer image extraction
+                                pass
                 except Exception as e:
                     text_output = f"Conversion error for .ppt: {e}"
 
@@ -4140,34 +3976,8 @@ async def _analyze_with_agent_internal(
                 for shape in slide.shapes:
                     if hasattr(shape, "text"):
                         text_output += shape.text + "\n"
-                    if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
-                        try:
-                            image_count += 1
-                            image_id = gen_image_id(file.filename, slide_idx, image_count)
-                            ext = ".png"
-                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}{ext}")
-                            with open(out_path, "wb") as imf:
-                                imf.write(shape.image.blob)
-                            try:
-                                img = Image.open(out_path)
-                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
-                            except Exception:
-                                ocr_text = ""
-                            image_metadata.append((image_id, out_path, slide_idx, ocr_text))
-                            from services.image_service import get_image_context
-                            prior = text_output[max(0, len(text_output) - 500):]
-                            ctx = get_image_context(prior[-500:], "", ocr_text or "", image_count, slide_idx)
-                            diagram_jobs_pending.append({
-                                "image_path": out_path,
-                                "image_id": image_id,
-                                "page_num": slide_idx,
-                                "ocr_text": ocr_text or "",
-                                "context": ctx,
-                            })
-                            if ocr_text.strip():
-                                text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
-                        except Exception:
-                            pass
+                        # Defer image extraction
+                        pass
 
         elif file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
             if tracker:
@@ -4202,6 +4012,36 @@ async def _analyze_with_agent_internal(
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")
 
+        # ----------- VALIDATE DOCUMENT QUALITY (EARLY CHECK) -----------
+        sanitized_text = sanitize_unicode(text_output or "")
+        if tracker:
+            tracker.set_stage(ProcessingStage.VALIDATING)
+            progress = tracker.get_progress()
+            print(f"📊 [{progress['progress']}%] Performing early agent-flow validation...")
+
+        v_res = validate_document_for_srs(sanitized_text)
+        if v_res.get("is_rejected"):
+            reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
+            print(f"❌ REJECTED agent flow (Early): {reject_msg}")
+            if tracker:
+                tracker.set_stage(ProcessingStage.FINALIZING)
+                tracker.complete()
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "DOCUMENT_REJECTED",
+                    "message": reject_msg,
+                    "score": v_res.get("srs_score"),
+                    "reasons": v_res.get("reasons")
+                }
+            )
+
+        # Save full text file for debugging/audit
+        sanitized_text = sanitize_unicode(text_output or "")
+        text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
+        with open(text_file_path, "w", encoding="utf-8") as tf:
+            tf.write(sanitized_text)
+
         # Merge Basic Extraction data if provided
         if basic_extraction_data:
             print(f"🔄 Merging Basic Extraction data with AI extraction for enhanced analysis...")
@@ -4214,7 +4054,7 @@ async def _analyze_with_agent_internal(
             # Add instruction note for the agent at the beginning
             instruction_note = """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                    REQUIREMENTS EXTRACTION INSTRUCTIONS                        ║
+║                    REQUIREMENTS EXTRACTION INSTRUCTIONS                      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 You have access to data from TWO sources that have been merged:
@@ -4447,34 +4287,102 @@ IMPORTANT:
             except Exception as img_req_err:
                 print(f"Image requirements VLM batch failed: {img_req_err}")
 
-        # Save full text file
-        sanitized_text = sanitize_unicode(text_output or "")
-        text_file_path = os.path.join(UPLOAD_DIR, f"{file.filename}_full.txt")
-        with open(text_file_path, "w", encoding="utf-8") as tf:
-            tf.write(sanitized_text)
 
-        # ----------- VALIDATE DOCUMENT QUALITY -----------
-        if tracker:
-            tracker.set_stage(ProcessingStage.VALIDATING)
-            progress = tracker.get_progress()
-            print(f"📊 Progress: {progress['progress']}% - {progress['message']}")
-
-        v_res = validate_document_for_srs(sanitized_text)
-        if v_res.get("is_rejected"):
-            reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
-            print(f"❌ REJECTED agent flow: {reject_msg}")
-            if tracker:
-                tracker.set_stage(ProcessingStage.FINALIZING)
-                tracker.complete()
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "DOCUMENT_REJECTED",
-                    "message": reject_msg,
-                    "score": v_res.get("srs_score"),
-                    "reasons": v_res.get("reasons")
-                }
-            )
+        # ----------- LATE IMAGE EXTRACTION FOR AGENT FLOW -----------
+        if file.filename.endswith(".pdf"):
+            print(f"🖼️ Starting delayed image extraction for agent flow (PDF)...")
+            try:
+                images_per_page: dict = {}
+                for pn, pg in enumerate(reader.pages, start=1):
+                    try: imgs0 = getattr(pg, "images", []) or []; images_per_page[pn] = len(imgs0)
+                    except Exception: images_per_page[pn] = 0
+                from io import BytesIO
+                from services.image_service import split_page_text_around_image, get_image_context
+                for page_num, page in enumerate(reader.pages, start=1):
+                    try: imgs = getattr(page, "images", []) or []
+                    except Exception: imgs = []
+                    for img_idx, img in enumerate(imgs, start=1):
+                        try:
+                            data = getattr(img, "data", None)
+                            if not data: continue
+                            image_count += 1
+                            image_id = gen_image_id(file.filename, page_num, img_idx)
+                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                            try:
+                                im = Image.open(BytesIO(data))
+                                im.save(out_path, format="PNG")
+                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
+                            except Exception:
+                                with open(out_path, "wb") as fimg: fimg.write(data)
+                                ocr_text = ""
+                            image_metadata.append((image_id, out_path, page_num, ocr_text))
+                            detected_images += 1
+                            pos = page_end_offsets.get(page_num, len(text_output))
+                            pt = page_text_by_page.get(page_num, "")
+                            nimg = max(1, images_per_page.get(page_num, 1))
+                            bef, aft = split_page_text_around_image(pt, img_idx, nimg)
+                            ctx = get_image_context(bef, aft, ocr_text or "", img_idx, page_num)
+                            diagram_jobs_pending.append({
+                                "image_path": out_path, "image_id": image_id, "page_num": page_num,
+                                "ocr_text": ocr_text or "", "context": ctx
+                            })
+                            if (ocr_text or "").strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {(ocr_text or '').strip()}\n"
+                        except Exception: continue
+            except Exception: pass
+        elif file.filename.endswith(".docx") or file.filename.endswith(".doc"):
+            print(f"🖼️ Starting delayed image extraction for agent flow (DOCX/DOC)...")
+            try:
+                doc_obj = d if 'd' in locals() else docx.Document(filepath)
+                img_idx = 0
+                for rel in doc_obj.part.rels.values():
+                    if "image" in rel.reltype and getattr(rel, "target_part", None):
+                        try:
+                            img_idx += 1; image_count += 1
+                            blob = rel.target_part.blob
+                            image_id = gen_image_id(file.filename, 1, img_idx)
+                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                            with open(out_path, "wb") as imf: imf.write(blob)
+                            try:
+                                img = Image.open(out_path); ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
+                            except Exception: ocr_text = ""
+                            image_metadata.append((image_id, out_path, 1, ocr_text))
+                            from services.image_service import get_image_context
+                            prior = text_output[max(0, len(text_output) - 500):]
+                            ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, 1)
+                            diagram_jobs_pending.append({
+                                "image_path": out_path, "image_id": image_id, "page_num": 1,
+                                "ocr_text": ocr_text or "", "context": ctx
+                            })
+                            if ocr_text.strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
+                        except Exception: continue
+            except Exception: pass
+        elif file.filename.endswith(".pptx") or file.filename.endswith(".ppt"):
+            print(f"🖼️ Starting delayed image extraction for agent flow (PPTX/PPT)...")
+            try:
+                pres_obj = prs if 'prs' in locals() else pptx.Presentation(filepath)
+                img_idx = 0
+                for slide_idx, slide in enumerate(pres_obj.slides, start=1):
+                    for shape in slide.shapes:
+                        if getattr(shape, "shape_type", None) == 13 and hasattr(shape, "image"):
+                            try:
+                                img_idx += 1; image_count += 1
+                                image_id = gen_image_id(file.filename, slide_idx, img_idx)
+                                out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
+                                with open(out_path, "wb") as imf: imf.write(shape.image.blob)
+                                try:
+                                    img = Image.open(out_path); ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=img)
+                                except Exception: ocr_text = ""
+                                image_metadata.append((image_id, out_path, slide_idx, ocr_text))
+                                from services.image_service import get_image_context
+                                prior = text_output[max(0, len(text_output) - 500):]
+                                ctx = get_image_context(prior[-500:], "", ocr_text or "", img_idx, slide_idx)
+                                diagram_jobs_pending.append({
+                                    "image_path": out_path, "image_id": image_id, "page_num": slide_idx,
+                                    "ocr_text": ocr_text or "", "context": ctx
+                                })
+                                if ocr_text.strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {ocr_text.strip()}\n"
+                            except Exception: continue
+            except Exception: pass
 
         # Process with RAG agent - use async helpers to avoid blocking
         # Get user-specific agent for user-specific learning
