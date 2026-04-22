@@ -5,7 +5,7 @@ This project is maintained collaboratively for FYP Phase 2.
 ## Collaboration Model
 
 - Main repository: https://github.com/musa106/fyp_phase2
-- Owners/collaborators: musa106, zainkhalid10
+- Owners/collaborators: musa106, zainkhalid10, Nouman
 - Default branch: main
 
 ## Basic Workflow
@@ -15,6 +15,26 @@ This project is maintained collaboratively for FYP Phase 2.
 3. Commit small, focused changes.
 4. Push branch and open a pull request.
 5. Merge only after review.
+
+## New Machine Setup (Contributor Checklist)
+
+Before starting code work on a fresh machine:
+
+1. Clone repo and create virtual environment.
+2. Install dependencies from `requirements.txt`.
+3. Install OCR + runtime tools:
+   - Tesseract OCR
+   - LibreOffice
+   - Ollama
+4. Pull required Ollama models (`llama3:8b`, `llava:13b` or project-approved alternatives).
+5. Configure `.env` from `.env.example`.
+6. Start server and run tests before first commit:
+   - `.\run_server.ps1`
+   - `.\.venv\Scripts\python.exe -m pytest tests/ -v`
+
+GPU note:
+- GPU significantly improves VLM/LLM performance.
+- Non-GPU is still supported with rule-based + OCR fallback behavior.
 
 ## Git Commands
 

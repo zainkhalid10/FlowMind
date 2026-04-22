@@ -53,6 +53,72 @@ uvicorn flowmind:app --host 0.0.0.0 --port 8000
 
 Open: http://localhost:8000
 
+## New Contributor Onboarding (Nouman)
+
+Use this checklist when setting up a fresh machine for validation.
+
+### 1) Prerequisites
+
+- Python 3.10+ (project uses venv)
+- Git
+- Tesseract OCR installed and available in PATH
+- LibreOffice (for legacy DOC/PPT conversion)
+- Ollama installed (for local LLM/VLM runs)
+
+### 2) Python packages
+
+```powershell
+cd D:\fyp_phase2\FlowMind
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install pytest "httpx<0.28" opencv-python
+```
+
+### 3) Required runtime services
+
+- Start Ollama:
+
+```powershell
+ollama serve
+```
+
+- Pull at least one text model and one vision model:
+
+```powershell
+ollama pull llama3:8b
+ollama pull llava:13b
+```
+
+### 4) Environment configuration
+
+Copy `.env.example` to `.env` and confirm these keys:
+
+- `SECRET_KEY`
+- `TESSERACT_CMD` (if not auto-detected)
+- `FLOWMIND_VLM_MODELS=qwen2.5-vl,llava:13b` (or available local models)
+- `FLOWMIND_OLLAMA_MODEL=llama3:8b`
+- `FLOWMIND_IMAGE_REQ_VLM_PASS=1`
+- `FLOWMIND_SRS_STRICT_VALIDATION=0` (set `1` only when strict modal validation is needed)
+
+### 5) Run + validate
+
+```powershell
+.\run_server.ps1
+.\.venv\Scripts\python.exe -m pytest tests/ -v
+```
+
+### 6) GPU vs non-GPU expectations
+
+- On GPU laptops:
+  - Faster VLM/LLM responses for image/diagram understanding
+  - Better real-time experience on larger docs
+- On non-GPU laptops:
+  - Core system still works (upload, OCR, OpenCV diagram type detection, SRS validator, garbage feedback checks)
+  - VLM-heavy responses can be slower or may fallback if model timeouts happen
+
+This project is designed with rule-based fallbacks, so uploads and validation should still complete without GPU.
+
 ## Configuration
 
 Create a `.env` file (or copy from `.env.example`) and set values:
@@ -139,6 +205,12 @@ git push -u origin main
 
 ```bash
 gh api -X PUT repos/musa106/fyp_phase2/collaborators/zainkhalid10 -f permission=push
+```
+
+For Nouman (replace with exact GitHub username if different):
+
+```bash
+gh api -X PUT repos/musa106/fyp_phase2/collaborators/nouman -f permission=push
 ```
 
 ### Verify collaborator list
