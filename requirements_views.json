@@ -7936,5 +7936,3313 @@
       }
     ],
     "requirement_classification_basis": "Classification basis (high level): (1) User / story phrasing ('As a …', 'I want …', 'so that') → user requirements. (2) Non-functional: quality attributes or measurable constraints — performance, latency, security, encryption, authentication, reliability, availability, scalability, usability, maintainability, portability, compatibility, or patterns like 'within N ms', uptime %, RPS, concurrent users — but not when the sentence is clearly about a business action (payment, booking, API call, calculation, etc.); those stay functional. (3) Business: policy, regulation, compliance, stakeholder, KPI-style wording. (4) Otherwise default to functional (system behaviour / capability). Extractor section headings also influence grouping before this refinement."
+  },
+  "3b9bf5fb-9433-4229-9661-a002873c03ae": {
+    "filename": "i3Project-Proposal.pdf",
+    "summary": "Extracted 2492 words and 5 image(s)",
+    "response": "Functional Requirements (37 items (Avg Quality: 65/100)):\n- ✅ System shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ Management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ In addition, an inventory management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the i.\n- ⚠️  ️ This project aims to develop an Enterprise I nformation System (EIS) which shall be able to improve retail companies ’ daily activity coordination and inventory management.\n- ⚠️  ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ⚠️  ️ It is hoped that retail companies ’ staff shall find this system to be efficient and serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Flow chart of searching for sales records Finally, a login system shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record.\n- ⚠️  ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database.\n- ⚠️  ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage.\n- ⚠️  ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- System shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2].\n- As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ❌ It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ❌ Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ⚠️  ️ Logy should serve not only big business, but small business as well.\n- ⚠️  ️ But technology should serve not only big business, but small business as well.\n- ⚠️  ️ Management Information Systems, Managing the Digital Firm.\n- ⚠️  ️ These sources indicate the significant role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5.\n- ⚠️  ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol.\n- ⚠️  ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world.\n- ⚠️  ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities.\n- ⚠️  ️ Provide efficient response in bringing the latest fashion s to retail consumer s.\n- ⚠️  ️ Allow customers to access the inventory information of branches directly.\n- ⚠️  ️ Allow the information entered by one bra nch to be available to other branches immediately.\n- ⚠️  ️ ES plays a significant role as the coordinator of data communication between retail branches.\n- ⚠️  ️ Enhancing the platform to allow customers to access the inventory information of branches directly.\n- ⚠️  ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Management and inventory issues for small businesses, as well as offer additional features.\n- ⚠️  ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be.\n- ⚠️  ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- Logy to support small and management, ” Computers and Applied Chemistry, vol.\n\nNon-Functional Requirements (12 items (Avg Quality: 67/100)):\n- ⚠️  ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour).\n- ⚠️  ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed.\n- Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world.\n- Efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- ✅ Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program.\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Information system s refer to a set of interrelated components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ \"SS = TPS3 ONG SLY, - ay S raepte \\ (orcta OBK</ Zs Ve in total.\n- ⚠️  ️ Compatibility of the system and promoting its use internationally.\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data 5 m ‘®t ProductNNo INT 4 5 a “® BranchNo INT “© ProductName VARCHAR (45) © © BranchName VARCHAR(45) © Manufacture VARCHAR(45) ‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45) © FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS) LastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45) Gyo PhoneNo VARCHAR(45) bd © VARCHAR (45) ‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT ‘BranchName VARCHAR(45) Indexes ‘@ BranchInfo_BranchNo INT o> Indexes a = Oo m ‘?\n\nUser Requirements / Stories (6 items (Avg Quality: 65/100)):\n- ⚠️  ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ⚠️  ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ Product_ProductNo INT ‘Size VARCHAR(45) “?\n- ⚠️  ️ Role as the coordinator of data communication between retail branches.\n- With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol.\n\nSystem Requirements (15 items (Avg Quality: 62/100)):\n- ️ Database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ❌ Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ❌ Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired.\n- ✅ Apid develo pment in Information S ystem s (IS), the application of information technologies in business process es.\n- ⚠️  ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol.\n- ⚠️  ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month.\n- ⚠️  ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo.\n- ⚠️  ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Integration based on Internet of Things technology, ” Management & Engineering, vol.\n- ⚠️  ️ Database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Database for data management and storage.\n- ⚠️  ️ Serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- ❌ database\n\nBusiness Requirements (19 items (Avg Quality: 58/100)):\n- ⚠️  ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Business processes through a digital network.\n- ⚠️  ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS.\n- ⚠️  ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Process of searching the sales records from the system by illustrating the logic design of the programming language and codes.\n- ⚠️  ️ 10 branch for a single item [2].\n- ⚠️  ️ Process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Business, but small business as well.\n- ⚠️  ️ Businesses, as well as offer additional features.\n- ⚠️  ️ The o bject -oriented method is employed in the relationship design.\n- ⚠️  ️ The content inside the block is the attributes of thi s entity, describing the entity ’s.\n- ⚠️  ️ Process, store, and distribute information, to support decision making, coordination, and control [1].\n- ❌ Processes 3.\n- ❌ Business process es.\n- ❌ Businesses operational excellence.\n- ❌ Business and daily activities.\n\nFeatures (12 items (Avg Quality: 62/100)):\n- Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ✅ Flow Chart of the login system 4.\n- ⚠️  ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month.\n- ⚠️  ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i.\n- ⚠️  ️ Services to today ’s modern consumers.\n- ⚠️  ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Preferences in different regions, and retail branches.\n- ⚠️  ️ Service for company producti vity, sales, and management.\n- ⚠️  ️ Preferences in different regions, and informing managers ’ decision -making.\n- Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- ❌ features",
+    "project_id": null,
+    "images": [
+      {
+        "image_id": "IMG-73cfa1c6f4-5-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-73cfa1c6f4-5-1.png",
+        "page": 5,
+        "ocr": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data",
+        "summary": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data"
+      },
+      {
+        "image_id": "IMG-4f29a00ed4-6-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-4f29a00ed4-6-1.png",
+        "page": 6,
+        "ocr": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS)\nLastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45)\nGyo PhoneNo VARCHAR(45) bd © VARCHAR (45)\n‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT\n‘BranchName VARCHAR(45) Indexes\n‘@ BranchInfo_BranchNo INT o>\nIndexes\na = Oo\nm\n‘? Product_ProductNo INT\n‘Size VARCHAR(45)\n“? Color VARCHAR(45)\nPrice VARCHAR(45)\n© SalesRecord VARCHAR(45)\nO InventoryLevels VARCHAR(45)\nIndexes",
+        "summary": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName V"
+      },
+      {
+        "image_id": "IMG-859739b2ff-7-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-859739b2ff-7-1.png",
+        "page": 7,
+        "ocr": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe",
+        "summary": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe"
+      },
+      {
+        "image_id": "IMG-e5b697bc36-8-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-e5b697bc36-8-1.png",
+        "page": 8,
+        "ocr": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2\n| No",
+        "summary": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2"
+      },
+      {
+        "image_id": "IMG-cc818611cb-9-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-cc818611cb-9-1.png",
+        "page": 9,
+        "ocr": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem",
+        "summary": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem"
+      }
+    ],
+    "srs_validation": {
+      "is_srs": false,
+      "is_rejected": false,
+      "reject_reason": "",
+      "confidence": "Low",
+      "srs_score": 20,
+      "reasons": [
+        "Found 13 requirement modals (shall/must/should/will) (+15)",
+        "Found common technical/SRS vocabulary (+10)",
+        "Found structured requirement IDs/numbering (1.1/FR-/NFR-/REQ-) (+15)",
+        "Found document structure markers (objective, introduction) (+10)",
+        "Document length is 2371 words (>500) (+5)",
+        "High citation/reference density detected ([n], et al., doi:) (-20)",
+        "Contains patterns often seen in non-technical content."
+      ],
+      "recommendation": "This may not be an SRS document. Review results carefully."
+    },
+    "validation_rejects": [
+      {
+        "statement": "️ ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ But technology should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Information Systems, Managing the Digital Firm",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ These sources indicate the significant role of the information system in achieving businesses operational excellence",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Provide efficient response in bringing the latest fashion s to retail consumer s",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow customers to access the inventory information of branches directly",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ ES plays a significant role as the coordinator of data communication between retail branches",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management and inventory issues for small businesses, as well as offer additional features",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Logy to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour)",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ \"SS = TPS3 ONG SLY, - ay S raepte \\ (orcta OBK</ Zs Ve in total",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Compatibility of the system and promoting its use internationally",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data 5 m ‘®t ProductNNo INT 4 5 a “® BranchNo INT “© ProductName VARCHAR (45) © © BranchName VARCHAR(45) © Manufacture VARCHAR(45) ‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45) © FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS) LastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45) Gyo PhoneNo VARCHAR(45) bd © VARCHAR (45) ‘Email VA",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role of the information system in achieving businesses operational excellence",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Product_ProductNo INT ‘Size VARCHAR(45) “?",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role as the coordinator of data communication between retail branches",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the centra",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Integration based on Internet of Things technology, ” Management & Engineering, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database for data management and storage",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Serviceable for checking stock levels and r equest ing product t ransfers",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "database",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business processes through a digital network",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 10 branch for a single item [2]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business, but small business as well",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Businesses, as well as offer additional features",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The o bject -oriented method is employed in the relationship design",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The content inside the block is the attributes of thi s entity, describing the entity ’s",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Processes 3",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business process es",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses operational excellence",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business and daily activities",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Flow Chart of the login system 4",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Services to today ’s modern consumers",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and retail branches",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service for company producti vity, sales, and management",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and informing managers ’ decision -making",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "features",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      }
+    ],
+    "requirement_classification_basis": "Classification basis (high level): (1) User / story phrasing ('As a …', 'I want …', 'so that') → user requirements. (2) Non-functional: quality attributes or measurable constraints — performance, latency, security, encryption, authentication, reliability, availability, scalability, usability, maintainability, portability, compatibility, or patterns like 'within N ms', uptime %, RPS, concurrent users — but not when the sentence is clearly about a business action (payment, booking, API call, calculation, etc.); those stay functional. (3) Business: policy, regulation, compliance, stakeholder, KPI-style wording. (4) Otherwise default to functional (system behaviour / capability). Extractor section headings also influence grouping before this refinement."
+  },
+  "d6fa532f-199a-495b-b3b6-d0c8d4552a49": {
+    "filename": "i3Project-Proposal.pdf",
+    "summary": "Extracted 2706 words and 10 image(s)",
+    "response": "Functional Requirements (38 items (Avg Quality: 65/100)):\n- ✅ System shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ Management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ In addition, an inventory management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the i.\n- ⚠️  ️ This project aims to develop an Enterprise I nformation System (EIS) which shall be able to improve retail companies ’ daily activity coordination and inventory management.\n- ⚠️  ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ⚠️  ️ It is hoped that retail companies ’ staff shall find this system to be efficient and serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Flow chart of searching for sales records Finally, a login system shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record.\n- ⚠️  ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database.\n- ⚠️  ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage.\n- ⚠️  ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- System shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2].\n- As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ❌ It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ❌ Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ⚠️  ️ Logy should serve not only big business, but small business as well.\n- ⚠️  ️ But technology should serve not only big business, but small business as well.\n- ⚠️  ️ Management Information Systems, Managing the Digital Firm.\n- ⚠️  ️ These sources indicate the significant role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ The total price of six months ’ lease is $3000 * 6 = HK$18, 000.\n- ⚠️  ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5.\n- ⚠️  ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol.\n- ⚠️  ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world.\n- ⚠️  ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities.\n- ⚠️  ️ Provide efficient response in bringing the latest fashion s to retail consumer s.\n- ⚠️  ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business i.\n- ⚠️  ️ Allow customers to access the inventory information of branches directly.\n- ⚠️  ️ Allow the information entered by one bra nch to be available to other branches immediately.\n- ⚠️  ️ ES plays a significant role as the coordinator of data communication between retail branches.\n- ⚠️  ️ Enhancing the platform to allow customers to access the inventory information of branches directly.\n- ⚠️  ️ Management and inventory issues for small businesses, as well as offer additional features.\n- ⚠️  ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- Logy to support small and management, ” Computers and Applied Chemistry, vol.\n- ❌ Enter Password | (3 attempts allowed) Block the Incorrect Check the system for 3 times Password Correct | Enter the system Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data process, store, and distribute information, to support decision making, coordination, and control [1].\n\nNon-Functional Requirements (11 items (Avg Quality: 68/100)):\n- ⚠️  ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour).\n- ⚠️  ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed.\n- Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world.\n- Efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- ✅ Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program.\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Information system s refer to a set of interrelated components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business i.\n- ⚠️  ️ Compatibility of the system and promoting its use internationally.\n- ⚠️  ️ The o bject -oriented method is employed in the relationship design.\n\nUser Requirements / Stories (6 items (Avg Quality: 65/100)):\n- ⚠️  ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ⚠️  ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ Product_ProductNo INT ‘Size VARCHAR(45) “?\n- ⚠️  ️ Role as the coordinator of data communication between retail branches.\n- With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol.\n\nSystem Requirements (15 items (Avg Quality: 62/100)):\n- ️ Database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ❌ Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ❌ Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired.\n- ✅ Apid develo pment in Information S ystem s (IS), the application of information technologies in business process es.\n- ⚠️  ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol.\n- ⚠️  ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month.\n- ⚠️  ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo.\n- ⚠️  ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Integration based on Internet of Things technology, ” Management & Engineering, vol.\n- ⚠️  ️ Database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Database for data management and storage.\n- ⚠️  ️ Serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- ❌ database\n\nBusiness Requirements (18 items (Avg Quality: 58/100)):\n- ⚠️  ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Business processes through a digital network.\n- ⚠️  ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS.\n- ⚠️  ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Process of searching the sales records from the system by illustrating the logic design of the programming language and codes.\n- ⚠️  ️ 10 branch for a single item [2].\n- ⚠️  ️ Process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Business, but small business as well.\n- ⚠️  ️ Businesses, as well as offer additional features.\n- ⚠️  ️ The content inside the block is the attributes of thi s entity, describing the entity ’s.\n- ⚠️  ️ Process, store, and distribute information, to support decision making, coordination, and control [1].\n- ❌ Processes 3.\n- ❌ Business process es.\n- ❌ Businesses operational excellence.\n- ❌ Business and daily activities.\n\nFeatures (12 items (Avg Quality: 64/100)):\n- Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ✅ Flow Chart of the login system 4.\n- ⚠️  ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month.\n- ⚠️  ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business i.\n- ⚠️  ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i.\n- ⚠️  ️ Services to today ’s modern consumers.\n- ⚠️  ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Preferences in different regions, and retail branches.\n- ⚠️  ️ Service for company producti vity, sales, and management.\n- ⚠️  ️ Preferences in different regions, and informing managers ’ decision -making.\n- ❌ features",
+    "project_id": null,
+    "images": [
+      {
+        "image_id": "IMG-73cfa1c6f4-5-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-73cfa1c6f4-5-1.png",
+        "page": 5,
+        "ocr": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data",
+        "summary": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data"
+      },
+      {
+        "image_id": "IMG-4f29a00ed4-6-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-4f29a00ed4-6-1.png",
+        "page": 6,
+        "ocr": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS)\nLastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45)\nGyo PhoneNo VARCHAR(45) bd © VARCHAR (45)\n‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT\n‘BranchName VARCHAR(45) Indexes\n‘@ BranchInfo_BranchNo INT o>\nIndexes\na = Oo\nm\n‘? Product_ProductNo INT\n‘Size VARCHAR(45)\n“? Color VARCHAR(45)\nPrice VARCHAR(45)\n© SalesRecord VARCHAR(45)\nO InventoryLevels VARCHAR(45)\nIndexes",
+        "summary": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName V"
+      },
+      {
+        "image_id": "IMG-859739b2ff-7-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-859739b2ff-7-1.png",
+        "page": 7,
+        "ocr": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe",
+        "summary": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe"
+      },
+      {
+        "image_id": "IMG-e5b697bc36-8-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-e5b697bc36-8-1.png",
+        "page": 8,
+        "ocr": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2\n| No",
+        "summary": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2"
+      },
+      {
+        "image_id": "IMG-cc818611cb-9-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-cc818611cb-9-1.png",
+        "page": 9,
+        "ocr": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem",
+        "summary": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem"
+      },
+      {
+        "image_id": "IMG-73cfa1c6f4-5-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-73cfa1c6f4-5-1.png",
+        "page": 5,
+        "ocr": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data",
+        "summary": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data"
+      },
+      {
+        "image_id": "IMG-4f29a00ed4-6-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-4f29a00ed4-6-1.png",
+        "page": 6,
+        "ocr": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS)\nLastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45)\nGyo PhoneNo VARCHAR(45) bd © VARCHAR (45)\n‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT\n‘BranchName VARCHAR(45) Indexes\n‘@ BranchInfo_BranchNo INT o>\nIndexes\na = Oo\nm\n‘? Product_ProductNo INT\n‘Size VARCHAR(45)\n“? Color VARCHAR(45)\nPrice VARCHAR(45)\n© SalesRecord VARCHAR(45)\nO InventoryLevels VARCHAR(45)\nIndexes",
+        "summary": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName V"
+      },
+      {
+        "image_id": "IMG-859739b2ff-7-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-859739b2ff-7-1.png",
+        "page": 7,
+        "ocr": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe",
+        "summary": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe"
+      },
+      {
+        "image_id": "IMG-e5b697bc36-8-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-e5b697bc36-8-1.png",
+        "page": 8,
+        "ocr": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2\n| No",
+        "summary": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2"
+      },
+      {
+        "image_id": "IMG-cc818611cb-9-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-cc818611cb-9-1.png",
+        "page": 9,
+        "ocr": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem",
+        "summary": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem"
+      }
+    ],
+    "srs_validation": {
+      "is_srs": false,
+      "is_rejected": false,
+      "reject_reason": "",
+      "confidence": "Low",
+      "srs_score": 20,
+      "reasons": [
+        "Found 13 requirement modals (shall/must/should/will) (+15)",
+        "Found common technical/SRS vocabulary (+10)",
+        "Found structured requirement IDs/numbering (1.1/FR-/NFR-/REQ-) (+15)",
+        "Found document structure markers (objective, introduction) (+10)",
+        "Document length is 2563 words (>500) (+5)",
+        "High citation/reference density detected ([n], et al., doi:) (-20)",
+        "Contains patterns often seen in non-technical content."
+      ],
+      "recommendation": "This may not be an SRS document. Review results carefully."
+    },
+    "validation_rejects": [
+      {
+        "statement": "️ ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ But technology should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Information Systems, Managing the Digital Firm",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ These sources indicate the significant role of the information system in achieving businesses operational excellence",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The total price of six months ’ lease is $3000 * 6 = HK$18, 000",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Provide efficient response in bringing the latest fashion s to retail consumer s",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business i",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow customers to access the inventory information of branches directly",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ ES plays a significant role as the coordinator of data communication between retail branches",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management and inventory issues for small businesses, as well as offer additional features",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Logy to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Enter Password | (3 attempts allowed) Block the Incorrect Check the system for 3 times Password Correct | Enter the system Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour)",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business i",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Compatibility of the system and promoting its use internationally",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The o bject -oriented method is employed in the relationship design",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role of the information system in achieving businesses operational excellence",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Product_ProductNo INT ‘Size VARCHAR(45) “?",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role as the coordinator of data communication between retail branches",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the centra",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Integration based on Internet of Things technology, ” Management & Engineering, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database for data management and storage",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Serviceable for checking stock levels and r equest ing product t ransfers",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "database",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business processes through a digital network",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 10 branch for a single item [2]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business, but small business as well",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Businesses, as well as offer additional features",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The content inside the block is the attributes of thi s entity, describing the entity ’s",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Processes 3",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business process es",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses operational excellence",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business and daily activities",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Flow Chart of the login system 4",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business i",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Services to today ’s modern consumers",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and retail branches",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service for company producti vity, sales, and management",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and informing managers ’ decision -making",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "features",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      }
+    ],
+    "requirement_classification_basis": "Classification basis (high level): (1) User / story phrasing ('As a …', 'I want …', 'so that') → user requirements. (2) Non-functional: quality attributes or measurable constraints — performance, latency, security, encryption, authentication, reliability, availability, scalability, usability, maintainability, portability, compatibility, or patterns like 'within N ms', uptime %, RPS, concurrent users — but not when the sentence is clearly about a business action (payment, booking, API call, calculation, etc.); those stay functional. (3) Business: policy, regulation, compliance, stakeholder, KPI-style wording. (4) Otherwise default to functional (system behaviour / capability). Extractor section headings also influence grouping before this refinement."
+  },
+  "e5cc0bfc-8f7d-45aa-b08e-dc9e274dab9c": {
+    "filename": "i3Project-Proposal.pdf",
+    "summary": "Extracted 2492 words and 5 image(s)",
+    "response": "Functional Requirements (37 items (Avg Quality: 65/100)):\n- ✅ System shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ Management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ In addition, an inventory management system shall be able to solve the oversupply problems which are due to inaccurate information and the tende ncy to increase inventory levels [6].\n- ⚠️  ️ System shall be able to solve the oversupply problems which are due to inaccurate information and the i.\n- ⚠️  ️ This project aims to develop an Enterprise I nformation System (EIS) which shall be able to improve retail companies ’ daily activity coordination and inventory management.\n- ⚠️  ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ⚠️  ️ It is hoped that retail companies ’ staff shall find this system to be efficient and serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Flow chart of searching for sales records Finally, a login system shall be constructed bas ed on the C++ Virtual Studio to ensure that only the internal staff shall be able to access the data (see F igure 5 ).\n- ⚠️  ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record.\n- ⚠️  ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database.\n- ⚠️  ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage.\n- ⚠️  ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- System shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2].\n- As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ❌ It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ❌ Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ⚠️  ️ Logy should serve not only big business, but small business as well.\n- ⚠️  ️ But technology should serve not only big business, but small business as well.\n- ⚠️  ️ Management Information Systems, Managing the Digital Firm.\n- ⚠️  ️ These sources indicate the significant role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5.\n- ⚠️  ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol.\n- ⚠️  ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world.\n- ⚠️  ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities.\n- ⚠️  ️ Provide efficient response in bringing the latest fashion s to retail consumer s.\n- ⚠️  ️ Allow customers to access the inventory information of branches directly.\n- ⚠️  ️ Allow the information entered by one bra nch to be available to other branches immediately.\n- ⚠️  ️ ES plays a significant role as the coordinator of data communication between retail branches.\n- ⚠️  ️ Enhancing the platform to allow customers to access the inventory information of branches directly.\n- ⚠️  ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Management and inventory issues for small businesses, as well as offer additional features.\n- ⚠️  ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be.\n- ⚠️  ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- Logy to support small and management, ” Computers and Applied Chemistry, vol.\n\nNon-Functional Requirements (12 items (Avg Quality: 67/100)):\n- ⚠️  ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour).\n- ⚠️  ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed.\n- Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world.\n- Efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- ✅ Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program.\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Information system s refer to a set of interrelated components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ \"SS = TPS3 ONG SLY, - ay S raepte \\ (orcta OBK</ Zs Ve in total.\n- ⚠️  ️ Compatibility of the system and promoting its use internationally.\n- ⚠️  ️ Performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data 5 m ‘®t ProductNNo INT 4 5 a “® BranchNo INT “© ProductName VARCHAR (45) © © BranchName VARCHAR(45) © Manufacture VARCHAR(45) ‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45) © FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS) LastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45) Gyo PhoneNo VARCHAR(45) bd © VARCHAR (45) ‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT ‘BranchName VARCHAR(45) Indexes ‘@ BranchInfo_BranchNo INT o> Indexes a = Oo m ‘?\n\nUser Requirements / Stories (6 items (Avg Quality: 65/100)):\n- ⚠️  ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life.\n- ⚠️  ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Role of the information system in achieving businesses operational excellence.\n- ⚠️  ️ Product_ProductNo INT ‘Size VARCHAR(45) “?\n- ⚠️  ️ Role as the coordinator of data communication between retail branches.\n- With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol.\n\nSystem Requirements (15 items (Avg Quality: 62/100)):\n- ️ Database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database.\n- ❌ Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ❌ Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired.\n- ✅ Apid develo pment in Information S ystem s (IS), the application of information technologies in business process es.\n- ⚠️  ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol.\n- ⚠️  ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month.\n- ⚠️  ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo.\n- ⚠️  ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1].\n- ⚠️  ️ Integration based on Internet of Things technology, ” Management & Engineering, vol.\n- ⚠️  ️ Database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Database for data management and storage.\n- ⚠️  ️ Serviceable for checking stock levels and r equest ing product t ransfers.\n- ⚠️  ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately.\n- ❌ database\n\nBusiness Requirements (19 items (Avg Quality: 58/100)):\n- ⚠️  ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world.\n- Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management.\n- Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently.\n- ⚠️  ️ Business processes through a digital network.\n- ⚠️  ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS.\n- ⚠️  ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Process of searching the sales records from the system by illustrating the logic design of the programming language and codes.\n- ⚠️  ️ 10 branch for a single item [2].\n- ⚠️  ️ Process optimization, and also enhance new business collaboration networks [4].\n- ⚠️  ️ Business, but small business as well.\n- ⚠️  ️ Businesses, as well as offer additional features.\n- ⚠️  ️ The o bject -oriented method is employed in the relationship design.\n- ⚠️  ️ The content inside the block is the attributes of thi s entity, describing the entity ’s.\n- ⚠️  ️ Process, store, and distribute information, to support decision making, coordination, and control [1].\n- ❌ Processes 3.\n- ❌ Business process es.\n- ❌ Businesses operational excellence.\n- ❌ Business and daily activities.\n\nFeatures (12 items (Avg Quality: 62/100)):\n- Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations.\n- ✅ Flow Chart of the login system 4.\n- ⚠️  ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month.\n- ⚠️  ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1].\n- ⚠️  ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i.\n- ⚠️  ️ Services to today ’s modern consumers.\n- ⚠️  ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s.\n- ⚠️  ️ Preferences in different regions, and retail branches.\n- ⚠️  ️ Service for company producti vity, sales, and management.\n- ⚠️  ️ Preferences in different regions, and informing managers ’ decision -making.\n- Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1].\n- ❌ features",
+    "project_id": null,
+    "images": [
+      {
+        "image_id": "IMG-73cfa1c6f4-5-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-73cfa1c6f4-5-1.png",
+        "page": 5,
+        "ocr": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data",
+        "summary": "Employee Data\nManagement\n> | lies) =\":\nInventory z=\nStock Management =\nDatabase System\noe\nApplications\nProduct Data"
+      },
+      {
+        "image_id": "IMG-4f29a00ed4-6-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-4f29a00ed4-6-1.png",
+        "page": 6,
+        "ocr": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS)\nLastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45)\nGyo PhoneNo VARCHAR(45) bd © VARCHAR (45)\n‘Email VARCHAR(45) ‘@ Branchinfo_BranchNo INT\n‘BranchName VARCHAR(45) Indexes\n‘@ BranchInfo_BranchNo INT o>\nIndexes\na = Oo\nm\n‘? Product_ProductNo INT\n‘Size VARCHAR(45)\n“? Color VARCHAR(45)\nPrice VARCHAR(45)\n© SalesRecord VARCHAR(45)\nO InventoryLevels VARCHAR(45)\nIndexes",
+        "summary": "5\nm ‘®t ProductNNo INT\n4 5 a “® BranchNo INT “© ProductName VARCHAR (45)\n© © BranchName VARCHAR(45) © Manufacture VARCHAR(45)\n‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45)\n© FirstName V"
+      },
+      {
+        "image_id": "IMG-859739b2ff-7-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-859739b2ff-7-1.png",
+        "page": 7,
+        "ocr": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe",
+        "summary": "i. TPS1\na\n<a - -\nD>\n> . \"SS = TPS3\nONG SLY, - ay S\nraepte \\ (orcta\nOBK</ Zs\nVe"
+      },
+      {
+        "image_id": "IMG-e5b697bc36-8-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-e5b697bc36-8-1.png",
+        "page": 8,
+        "ocr": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2\n| No",
+        "summary": "Start\n‘ogi No\nsuccessf ——> / Block the\nlly? system\nYes |\nInput\nProductNo\nSELECT InventoryLevels from\ntable SalesRecords in database\nPrint to\nscreen\nYes |\nAre There any ot]\nbranches having this\noduct 2"
+      },
+      {
+        "image_id": "IMG-cc818611cb-9-1",
+        "path": "D:\\fyp_phase2\\FlowMind\\uploads\\i3Project-Proposal.pdf_IMG-cc818611cb-9-1.png",
+        "page": 9,
+        "ocr": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem",
+        "summary": "Enter the\nEmployeeNo\nCheck the\nEmployeeNo.\nEnter\nPassword\n| (3 attempts allowed)\nBlock the Incorrect Check the\nsystem for 3 times Password\nCorrect |\nEnter the\nsystem"
+      }
+    ],
+    "srs_validation": {
+      "is_srs": false,
+      "is_rejected": false,
+      "reject_reason": "",
+      "confidence": "Low",
+      "srs_score": 20,
+      "reasons": [
+        "Found 13 requirement modals (shall/must/should/will) (+15)",
+        "Found common technical/SRS vocabulary (+10)",
+        "Found structured requirement IDs/numbering (1.1/FR-/NFR-/REQ-) (+15)",
+        "Found document structure markers (objective, introduction) (+10)",
+        "Document length is 2371 words (>500) (+5)",
+        "High citation/reference density detected ([n], et al., doi:) (-20)",
+        "Contains patterns often seen in non-technical content."
+      ],
+      "recommendation": "This may not be an SRS document. Review results carefully."
+    },
+    "validation_rejects": [
+      {
+        "statement": "️ ️ Transaction Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, and JavaScript codes shall be used to implement the logic flow of sales record",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The Relational Model Terminology shall be applied in this design and used to build the Relational Model Database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Inventory management TPS for each independent branch of a retail company MySQL shall be used to design the database for data management and storage",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "This may cause a situation in which customers shall wait for a long time while employees manually check stock shelves for products or find information on the computer and call another branch for a single item [2]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "As pointed out by Ma and Wang [3], an enterprise information management and decision support system shall be able to effective ly achieve the integrati on of heterogeneous data, which further realizes the potential of t he information service for company producti vity, sales, and management",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "It is hoped that these concepts shall be able to be adopted to benefit smal ler retail shoppers and enterprises, so that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Enterprise System for the communication of intranet information [1] 3. 2 Front -end user i nterface In addition to TPS and ES, which work together to store and manage the information in the database, SQL shall be used with other programming language s, such as HTML5, JavaScript, and C++, to create the user interface and facilitate access to the information in the database",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ But technology should serve not only big business, but small business as well",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Information Systems, Managing the Digital Firm",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ These sources indicate the significant role of the information system in achieving businesses operational excellence",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ SQL, C++, HTML, Inscribe - a journal of undergraduate writing at PolyU 10 5",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Wu, “The application of information system in inventory management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Logy to its advantage to improve both the customers ’ experience and its prominence in the efficient with minimal latency fashion world",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management Foreword Enterprise Information Systems are commonly used by large retail companies to effectively manage their business and daily activities",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Provide efficient response in bringing the latest fashion s to retail consumer s",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow customers to access the inventory information of branches directly",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ ES plays a significant role as the coordinator of data communication between retail branches",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ A ddition ally, three Moroccan computer science researchers propose that inter -organizational information systems based on the service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Management and inventory issues for small businesses, as well as offer additional features",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ It is composed of integrated software modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Logy to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ They shall work 8 hours per day, 5 days a week full time ( HK $120/hour)",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Consequently, the author proposes to build an EIS for retail companies ’ internal inventory management which shall be able to be easily implement ed",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Fashion ideas move from the design concept phase to finished product s in just 10 days; five days later, shoppers shall be able to buy the clothes in more than 850 stores around the world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Just a s small businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Inscribe - a journal of undergraduate writing at PolyU 11 1) Transforming this information system into a mobile application -based program",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ \"SS = TPS3 ONG SLY, - ay S raepte \\ (orcta OBK</ Zs Ve in total",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Compatibility of the system and promoting its use internationally",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Employee Data Management > | lies) =\": Inventory z= Stock Management = Database System oe Applications Product Data 5 m ‘®t ProductNNo INT 4 5 a “® BranchNo INT “© ProductName VARCHAR (45) © © BranchName VARCHAR(45) © Manufacture VARCHAR(45) ‘P EmployeeNo INT © District VARCHAR(45) “OPrice VARCHAR(45) © FirstName VARCHAR(45) |——— FH Location vaRcHancs) a — = 4S O Stock VARCHARIAS) LastName VARCHAR(45) f] © TelephoneNo VARCHAR(45) © VARCHAR (45) Gyo PhoneNo VARCHAR(45) bd © VARCHAR (45) ‘Email VA",
+        "category_attempt": "non_functional",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ So that IT shall be able to be best utilized by all for the improvement and enhancement of our quality of life",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ As a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role of the information system in achieving businesses operational excellence",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Product_ProductNo INT ‘Size VARCHAR(45) “?",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Role as the coordinator of data communication between retail branches",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "With the example of Z ara in mind, the idea of adapting technology to support small and management, ” Computers and Applied Chemistry, vol",
+        "category_attempt": "user",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Database for TPS; Build TPS connection and ES server; Formulate C++, HTML5, SQL and JavaScript; Database systems; C++, HTML5, SQL, and JavaScript software code; TPS and ES server; User interface Testing 3 weeks Test functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the centra",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Server 6-month lease 18, 000 (3) Software: Visual Studio 2017 Enterprise 6-month lease 12, 000 (4) Marketing & Promotion Up to 1 month after project - finalization 8, 000 Total: 518, 000 Cost -justification: (1) Human Resources: 2 Programmers, 1 Internet Engineer, 1 Hardware and Electronic Engineer and 1 Marketing Officer shall be hired",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Architecture could improve organizational performance through bus iness process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service oriented enterprise architecture frameworks review for information system management of collaboration networks, ” International Journal of Computer Science Issues, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Servers: The authorized subscription fee for the X -Power 12 Intel server is $3000/month",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database Print to screen Yes | Are There any ot] branches having this oduct 2 | No Enter the EmployeeNo Check the EmployeeNo",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Components which collect, process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Integration based on Internet of Things technology, ” Management & Engineering, vol",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Database for data management and storage",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Serviceable for checking stock levels and r equest ing product t ransfers",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Modules and a common central database which allow the information entered by one bra nch to be available to other branches immediately",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "database",
+        "category_attempt": "system",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses use free Google products such as Gmail, Drive and Docs to improve their efficiency, my hope is that smaller companies without large IT budgets shall be able to use this system to enhance their efficiency and performance in today ’s competitive busines s world",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Different kinds of E nterprise Information S ystems (EIS) shall be able to serve various management levels and enhance different business processes, s ome of which are mainly intended for supply chai n management, while others focus on customer relationship management",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Objectives The primary goal of th is project is to build an EIS as a central data processing unit which shall be able to be utilized in various retail companies for their daily activities coordination including: 1) Daily Inventory Management: Sharing inventory levels of all branches with employees to respond to customer orders more efficiently",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business processes through a digital network",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing Systems (TPS) and Enterprise Applications (EA), are adopted to build the inventory management EIS",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 10 branch for a single item [2]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process optimization, and also enhance new business collaboration networks [4]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Business, but small business as well",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Businesses, as well as offer additional features",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The o bject -oriented method is employed in the relationship design",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ The content inside the block is the attributes of thi s entity, describing the entity ’s",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Processes 3",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business process es",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Businesses operational excellence",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Business and daily activities",
+        "category_attempt": "business",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Functionality and compatibili ty of the system; Meet with clients; Demonstration Project finalization 2 weeks Deliver f inal presentation; Launch promotion Oral presentation Systems and Enterprise Applications shall be co nstructed for data transfer between each branch and the central data warehouse of retail organizations",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Flow Chart of the login system 4",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ (3) Visual Studio 2017 Enterprise is charged at 250 USD/month on the official website, equivalent to about 2000 HKD/month",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ 1. 1 Transaction Processing System (TPS) A TPS is used to perform and record daily routine transactions for operational managers and staff [1]",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Color VARCHAR(45) Price VARCHAR(45) © SalesRecord VARCHAR(45) O InventoryLevels VARCHAR(45) Indexes i",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Services to today ’s modern consumers",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Tools including database systems, object -oriented development, and SQL and C++ programming language s",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and retail branches",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Service for company producti vity, sales, and management",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "️ ️ Preferences in different regions, and informing managers ’ decision -making",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "Service - oriented enterprise architecture could improve organizational performance through bus iness process optimization, and also enhance new business process, store, and distribute information, to support decision making, coordination, and control [1]",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      },
+      {
+        "statement": "features",
+        "category_attempt": "features",
+        "validation_ok": false,
+        "validation_reasons": [
+          "Did not pass internal requirement-shape heuristics (length / modal verbs / noise filters)."
+        ],
+        "validation_codes": [
+          "HEURISTIC_REJECT"
+        ],
+        "source_type": "text"
+      }
+    ],
+    "requirement_classification_basis": "Classification basis (high level): (1) User / story phrasing ('As a …', 'I want …', 'so that') → user requirements. (2) Non-functional: quality attributes or measurable constraints — performance, latency, security, encryption, authentication, reliability, availability, scalability, usability, maintainability, portability, compatibility, or patterns like 'within N ms', uptime %, RPS, concurrent users — but not when the sentence is clearly about a business action (payment, booking, API call, calculation, etc.); those stay functional. (3) Business: policy, regulation, compliance, stakeholder, KPI-style wording. (4) Otherwise default to functional (system behaviour / capability). Extractor section headings also influence grouping before this refinement."
   }
 }

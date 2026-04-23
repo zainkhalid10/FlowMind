@@ -62,6 +62,8 @@ class ImageMeta(Base):
     detected_features = Column(Text, nullable=True)  # JSON list of detected visual features
     vlm_analysis = Column(Text, nullable=True)
     extracted_requirements_count = Column(Integer, default=0)
+    # MD5 of raw image bytes; used to deduplicate repeated extractions of the same picture
+    image_hash = Column(String(32), nullable=True, index=True)
 
     file = relationship("ParsedFile", back_populates="images")
 
@@ -287,6 +289,7 @@ def init_db():
     _migrate_agent_chat_history_table()
     _migrate_feature_classification_columns()
     _migrate_image_meta_analysis_columns()
+    _migrate_image_meta_image_hash_column()
     seed_teams_if_empty()
 
 
@@ -622,5 +625,23 @@ def _migrate_image_meta_analysis_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration image_meta analysis columns note: {e}")
+    finally:
+        conn.close()
+
+
+def _migrate_image_meta_image_hash_column():
+    """Add image_hash (MD5) to image_meta for per-file image deduplication."""
+    from sqlalchemy import inspect, text
+    conn = engine.connect()
+    try:
+        insp = inspect(engine)
+        if "image_meta" not in insp.get_table_names():
+            return
+        cols = [c["name"] for c in insp.get_columns("image_meta")]
+        if "image_hash" not in cols:
+            conn.execute(text("ALTER TABLE image_meta ADD COLUMN image_hash VARCHAR(32)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration image_meta image_hash note: {e}")
     finally:
         conn.close()

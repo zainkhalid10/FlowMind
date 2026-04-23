@@ -554,8 +554,8 @@ async def _analyze_document_internal(
                 d = docx.Document(converted)
                 for para in d.paragraphs:
                     text_output += para.text + "\n"
-                        # Defer image extraction
-                        pass
+                # Defer image extraction
+                pass
             except Exception as e:
                 text_output = f"Conversion error for .doc: {e}"
 
@@ -768,6 +768,9 @@ async def _analyze_document_internal(
     # Build quick lookup for contextual summaries
     ctx_by_id = {pos.get("image_id"): (pos.get("context_before") or "") for pos in image_positions}
     image_analysis_cache = {}
+    image_hash_by_id = {}
+    image_meta_rows_saved = 0
+    _unknown_diagram = {"type": "unknown", "confidence": 30, "detected_features": ["unrecognized pattern"]}
 
     # ----------- SAVE TO DATABASE -----------
     try:
@@ -792,8 +795,39 @@ async def _analyze_document_internal(
         db.refresh(record)
 
         # Save image metadata (including explainable diagram understanding context)
-        from services.image_service import classify_diagram_type, extract_diagram_requirements_vlm
+        from services.image_service import classify_diagram_type, extract_diagram_requirements_vlm, compute_image_file_md5
+        seen_file_hashes = set()
+        first_image_id_by_hash = {}
+        image_meta_rows_saved = 0
+
         for image_id, image_path, page_num, ocr_text in image_metadata:
+            content_hash = None
+            if image_path and os.path.isfile(image_path):
+                try:
+                    content_hash = compute_image_file_md5(image_path)
+                except OSError as he:
+                    print(f"⚠️ Image hash failed for {image_id}: {he}")
+            if content_hash and content_hash in seen_file_hashes:
+                first_iid = first_image_id_by_hash.get(content_hash)
+                if first_iid and first_iid in image_analysis_cache:
+                    image_analysis_cache[image_id] = dict(image_analysis_cache[first_iid])
+                else:
+                    image_analysis_cache[image_id] = {
+                        "diagram_type": _unknown_diagram.get("type", "unknown"),
+                        "type_confidence": 30,
+                        "detected_features": list(_unknown_diagram.get("detected_features") or []),
+                        "vlm_analysis": "",
+                        "extracted_requirements_count": 0,
+                    }
+                image_hash_by_id[image_id] = content_hash
+                print(f"📷 Skipping duplicate image bytes (MD5) for {image_id} — same as earlier extraction in this file")
+                continue
+            if content_hash:
+                seen_file_hashes.add(content_hash)
+                first_image_id_by_hash[content_hash] = image_id
+            if content_hash:
+                image_hash_by_id[image_id] = content_hash
+
             context_before = ctx_by_id.get(image_id, "")
             try:
                 diagram_info = classify_diagram_type(image_path)
@@ -809,7 +843,7 @@ async def _analyze_document_internal(
                 req_count = len((vlm_pack or {}).get("requirements") or [])
             except Exception as img_err:
                 print(f"⚠️ Diagram analysis failed for {image_id}: {img_err}")
-                diagram_info = {"type": "unknown", "confidence": 30, "detected_features": ["unrecognized pattern"]}
+                diagram_info = _unknown_diagram
                 vlm_analysis = ""
                 req_count = 0
 
@@ -831,8 +865,10 @@ async def _analyze_document_internal(
                 detected_features=json.dumps(image_analysis_cache[image_id]["detected_features"], ensure_ascii=False),
                 vlm_analysis=image_analysis_cache[image_id]["vlm_analysis"],
                 extracted_requirements_count=image_analysis_cache[image_id]["extracted_requirements_count"],
+                image_hash=content_hash,
             )
             db.add(img_meta)
+            image_meta_rows_saved += 1
 
         db.commit()
     except Exception as e:
@@ -849,7 +885,13 @@ async def _analyze_document_internal(
     # Build image summaries with VLM analysis for AI agent
     image_summaries = []
     images_list = []
+    summary_hashes_emitted = set()
     for (iid, path, pg, ocr) in image_metadata:
+        h = image_hash_by_id.get(iid)
+        if h and h in summary_hashes_emitted:
+            continue
+        if h:
+            summary_hashes_emitted.add(h)
         cached = image_analysis_cache.get(iid) or {}
         vlm_summary = cached.get("vlm_analysis") or _vlm_summarize(path, ctx_by_id.get(iid, ""))
         ocr_summary = _summarize_image_ocr(ocr or "", context=ctx_by_id.get(iid, ""))
@@ -899,7 +941,7 @@ async def _analyze_document_internal(
         "extracted_text": sanitized_text_output,  # The extracted text content for AI agent
         "full_text": sanitized_text_output,  # Same as extracted_text for compatibility
         "images_detected": image_count,
-        "image_metadata_saved": len(image_metadata),
+        "image_metadata_saved": image_meta_rows_saved,
         "image_summaries": image_summaries,  # Formatted summaries for AI agent
         "images": images_list,  # For display
         "image_positions": image_positions
@@ -4289,47 +4331,8 @@ IMPORTANT:
 
 
         # ----------- LATE IMAGE EXTRACTION FOR AGENT FLOW -----------
-        if file.filename.endswith(".pdf"):
-            print(f"🖼️ Starting delayed image extraction for agent flow (PDF)...")
-            try:
-                images_per_page: dict = {}
-                for pn, pg in enumerate(reader.pages, start=1):
-                    try: imgs0 = getattr(pg, "images", []) or []; images_per_page[pn] = len(imgs0)
-                    except Exception: images_per_page[pn] = 0
-                from io import BytesIO
-                from services.image_service import split_page_text_around_image, get_image_context
-                for page_num, page in enumerate(reader.pages, start=1):
-                    try: imgs = getattr(page, "images", []) or []
-                    except Exception: imgs = []
-                    for img_idx, img in enumerate(imgs, start=1):
-                        try:
-                            data = getattr(img, "data", None)
-                            if not data: continue
-                            image_count += 1
-                            image_id = gen_image_id(file.filename, page_num, img_idx)
-                            out_path = os.path.join(UPLOAD_DIR, f"{file.filename}_{image_id}.png")
-                            try:
-                                im = Image.open(BytesIO(data))
-                                im.save(out_path, format="PNG")
-                                ocr_text = _advanced_ocr_text(image_path=out_path, pil_image=im)
-                            except Exception:
-                                with open(out_path, "wb") as fimg: fimg.write(data)
-                                ocr_text = ""
-                            image_metadata.append((image_id, out_path, page_num, ocr_text))
-                            detected_images += 1
-                            pos = page_end_offsets.get(page_num, len(text_output))
-                            pt = page_text_by_page.get(page_num, "")
-                            nimg = max(1, images_per_page.get(page_num, 1))
-                            bef, aft = split_page_text_around_image(pt, img_idx, nimg)
-                            ctx = get_image_context(bef, aft, ocr_text or "", img_idx, page_num)
-                            diagram_jobs_pending.append({
-                                "image_path": out_path, "image_id": image_id, "page_num": page_num,
-                                "ocr_text": ocr_text or "", "context": ctx
-                            })
-                            if (ocr_text or "").strip(): text_output += f"\n[IMAGE {image_id}]\nOCR: {(ocr_text or '').strip()}\n"
-                        except Exception: continue
-            except Exception: pass
-        elif file.filename.endswith(".docx") or file.filename.endswith(".doc"):
+        # PDF embedded images are extracted once above (pypdf loop); do not run a second pass here
+        if file.filename.endswith(".docx") or file.filename.endswith(".doc"):
             print(f"🖼️ Starting delayed image extraction for agent flow (DOCX/DOC)...")
             try:
                 doc_obj = d if 'd' in locals() else docx.Document(filepath)
@@ -4684,6 +4687,7 @@ complete context from both basic extraction and AI analysis.
         # Save to database - ensure session is closed promptly
         record = None
         view_id = str(uuid.uuid4())  # Generate view_id upfront
+        rag_image_meta_rows = 0
         try:
             if db_session is None:
                 db = SessionLocal()
@@ -4721,7 +4725,24 @@ complete context from both basic extraction and AI analysis.
                         if iid:
                             image_summary_by_id[iid] = item
 
+            from services.image_service import compute_image_file_md5
+
+            _seen_rag_image_hashes = set()
             for image_id, image_path, page_num, ocr_text in image_metadata:
+                content_hash = None
+                if image_path and os.path.isfile(image_path):
+                    try:
+                        content_hash = compute_image_file_md5(image_path)
+                    except OSError as he:
+                        print(f"⚠️ RAG path image hash failed for {image_id}: {he}")
+                if content_hash and content_hash in _seen_rag_image_hashes:
+                    print(
+                        f"📷 RAG: skipping duplicate image bytes (MD5) for {image_id} — same as an earlier image in this file"
+                    )
+                    continue
+                if content_hash:
+                    _seen_rag_image_hashes.add(content_hash)
+
                 summary_item = image_summary_by_id.get(str(image_id), {})
                 detected_features = summary_item.get("detected_features")
                 if isinstance(detected_features, str):
@@ -4739,8 +4760,10 @@ complete context from both basic extraction and AI analysis.
                     detected_features=json.dumps(detected_features, ensure_ascii=False),
                     vlm_analysis=summary_item.get("vlm_analysis") or summary_item.get("interpretation") or summary_item.get("summary") or "",
                     extracted_requirements_count=int(summary_item.get("extracted_requirements_count", 0) or 0),
+                    image_hash=content_hash,
                 )
                 db.add(img_meta)
+                rag_image_meta_rows += 1
 
             # Persist AI response so users can see previous chat-style results after refresh/restart.
             assistant_message = str(requirements_result.get("response") or "").strip()
@@ -4902,9 +4925,21 @@ complete context from both basic extraction and AI analysis.
         
         # Save to REQUIREMENTS_VIEWS for backward compatibility (use OCR text as summary, don't re-process)
         try:
+            from services.image_service import compute_image_file_md5
             # Use OCR text as summary to avoid slow VLM re-processing
             image_summaries = []
+            _view_img_hashes = set()
             for (iid, path, pg, ocr) in image_metadata:
+                ch = None
+                if path and os.path.isfile(path):
+                    try:
+                        ch = compute_image_file_md5(path)
+                    except OSError:
+                        ch = None
+                if ch and ch in _view_img_hashes:
+                    continue
+                if ch:
+                    _view_img_hashes.add(ch)
                 # Sanitize OCR text and create summary
                 sanitized_ocr = sanitize_unicode((ocr or "").strip())
                 summary = sanitized_ocr[:200] if sanitized_ocr else ""  # Just use OCR, no extra processing
@@ -4954,7 +4989,7 @@ complete context from both basic extraction and AI analysis.
                 "view_id": view_id or str(uuid.uuid4()),
                 "full_text_file": text_file_path or "",
                 "images_detected": image_count,
-                "image_metadata_saved": len(image_metadata),
+                "image_metadata_saved": rag_image_meta_rows,
                 "features_saved": features_count,
                 "srs_validation": srs_validation,
             }

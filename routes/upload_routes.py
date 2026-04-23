@@ -187,6 +187,9 @@ async def upload_agent_doc(
         except Exception:
             pass
         return result
+    except Exception:
+        remove_progress_tracker(tracker_id)
+        raise
 
 
 @router.get("/api/progress/{tracker_id}")

@@ -13,6 +13,7 @@ from typing import Optional, Dict, List, Any, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import io
+import hashlib
 
 
 def sanitize_unicode_text(text: str) -> str:
@@ -50,47 +51,100 @@ def _is_vlm_pass_enabled() -> bool:
     return vlm_enabled
 
 
+def _flex_vlm_name_matches(preferred: str, installed: str) -> bool:
+    """True if a requested tag and an Ollama model name refer to the same model (OCR/tag variants)."""
+    if not preferred or not installed:
+        return False
+    a, b = preferred.lower(), installed.lower()
+    if a in b or b in a:
+        return True
+    # e.g. qwen2.5-vl vs qwen2.5vl:7b (hyphen and tag differ)
+    a0, b0 = a.replace("-", ""), b.replace("-", "")
+    return a0 in b0 or b0 in a0
+
+
+# Ollama tag preference when multiple VLMs are installed (Qwen2.5-VL first, then LLaVA)
+_PREFERRED_VLM_ORDER: List[str] = [
+    "qwen2.5-vl:7b",
+    "qwen2.5vl:7b",
+    "qwen2.5-vl",
+    "qwen2.5vl",
+    "llava:13b",
+    "llava:7b",
+    "llava",
+]
+
+
+def find_available_vlm_model(installed_models: list) -> Optional[str]:
+    """
+    Pick the first installed model that flex-matches a preferred VLM (e.g. qwen2.5vl:7b vs qwen2.5-vl).
+    """
+    for model in _PREFERRED_VLM_ORDER:
+        for installed in installed_models or []:
+            if _flex_vlm_name_matches(model, installed):
+                return installed
+    return None
+
+
+def find_all_available_vlm_models(installed_models: list) -> List[str]:
+    """
+    Ordered list of unique installed models matching the preferred VLM order (for fallback chain).
+    """
+    preferred = _PREFERRED_VLM_ORDER
+    result: List[str] = []
+    seen = set()
+    for model in preferred:
+        for installed in installed_models or []:
+            if not installed:
+                continue
+            if _flex_vlm_name_matches(model, installed):
+                if installed not in seen:
+                    result.append(installed)
+                    seen.add(installed)
+                break
+    return result
+
+
+def _flex_resolve_request_to_installed(request: str, installed_models: List[str]) -> Optional[str]:
+    """Map a name from env (e.g. qwen2.5-vl) to the exact tag Ollama reports (e.g. qwen2.5vl:7b)."""
+    r = (request or "").strip()
+    if not r:
+        return None
+    for ins in installed_models or []:
+        if not ins:
+            continue
+        if _flex_vlm_name_matches(r, ins):
+            return ins
+    return None
+
+
 def _resolve_vlm_models(ollama_models: List[str]) -> List[str]:
     """
     Resolve preferred VLM models from env + installed Ollama tags.
-    Prefers stronger open-source vision models for diagrams/flowcharts.
+    Uses flexible name matching (hyphen vs dot, tags like :7b).
     """
+    installed = list(ollama_models or [])
+    out: List[str] = []
+    seen = set()
+
+    def add_hit(m: Optional[str]) -> None:
+        if m and m not in seen:
+            out.append(m)
+            seen.add(m)
+
     configured = os.getenv("FLOWMIND_VLM_MODELS", "").strip()
     if configured:
-        requested = [m.strip() for m in configured.split(",") if m.strip()]
-    else:
-        # Prefer Qwen2.5-VL first for diagram semantics, then LLaVA fallback.
-        requested = [
-            os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "").strip(),
-            "qwen2.5-vl",
-            "qwen2.5-vl:latest",
-            "qwen2.5vl:latest",
-            "llava:13b",
-            "llava:latest",
-            "llava:7b",
-        ]
+        for part in [m.strip() for m in configured.split(",") if m.strip()]:
+            add_hit(_flex_resolve_request_to_installed(part, installed))
+        return out
 
-    requested = [m for m in requested if m]
-    if not requested:
-        requested = ["qwen2.5-vl", "llava:13b"]
-
-    aliases = {
-        "qwen2.5-vl": ["qwen2.5-vl", "qwen2.5-vl:latest", "qwen2.5vl:latest"],
-        "llava": ["llava:13b", "llava:latest", "llava:7b"],
-    }
-
-    available: List[str] = []
-    seen = set()
-    installed = set(ollama_models or [])
-
-    for model in requested:
-        candidates = aliases.get(model, [model])
-        chosen = next((c for c in candidates if c in installed), None)
-        if chosen and chosen not in seen:
-            available.append(chosen)
-            seen.add(chosen)
-
-    return available
+    # Default chain: single-model env override, then ordered flex matches (Qwen VL then LLaVA)
+    add_hit(_flex_resolve_request_to_installed(os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "").strip(), installed))
+    for m in find_all_available_vlm_models(installed):
+        add_hit(m)
+    if not out:
+        add_hit(find_available_vlm_model(installed))
+    return out
 
 
 # ============================================================================
@@ -179,6 +233,55 @@ def preprocess_denoise(img: Image.Image) -> Image.Image:
 # INTELLIGENT IMAGE ANALYSIS
 # ============================================================================
 
+def compute_image_file_md5(image_path: str) -> str:
+    """MD5 hex digest of raw image file bytes (content-addressable deduplication)."""
+    h = hashlib.md5()
+    with open(image_path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _ocr_definite_flowchart(ocr_text: str) -> bool:
+    """
+    Start AND End AND (Yes OR No) in OCR => flowchart, overriding other types.
+    Word boundaries avoid common false positives in English.
+    """
+    if not ocr_text or not str(ocr_text).strip():
+        return False
+    t = ocr_text.lower()
+    return bool(
+        re.search(r"(?<!\w)start(?!\w)", t)
+        and re.search(r"(?<!\w)end(?!\w)", t)
+        and (re.search(r"(?<!\w)yes(?!\w)", t) or re.search(r"(?<!\w)no(?!\w)", t))
+    )
+
+
+def _flowchart_ocr_keywords_present(ocr_text: str) -> bool:
+    """Any of: Start, End, Yes, No, Login, Input, Select, Print (word or common OCR)."""
+    if not ocr_text or not str(ocr_text).strip():
+        return False
+    t = ocr_text.lower()
+    # Word-boundaried short tokens; longer / SQL-style tokens with flexible match
+    if re.search(
+        r"(?<!\w)(start|end|yes|no|input|print)(?!\w)", t, re.IGNORECASE
+    ):
+        return True
+    if re.search(r"(?<!\w)login(?!\w)", t, re.IGNORECASE):
+        return True
+    if re.search(r"(?<!\w)select(?!\w)", t, re.IGNORECASE):
+        return True
+    return False
+
+
+def _has_flowchart_indicators(ocr_text: str, diamond_count: int) -> bool:
+    return (
+        diamond_count > 0
+        or _ocr_definite_flowchart(ocr_text)
+        or _flowchart_ocr_keywords_present(ocr_text)
+    )
+
+
 def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]:
     """
     Advanced image type detection using visual and textual features.
@@ -253,7 +356,25 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
                     diamond_count += 1
                 else:
                     rectangle_count += 1
-        
+
+        if _ocr_definite_flowchart(ocr_text):
+            return {
+                'type': 'flowchart',
+                'confidence': 95,
+                'characteristics': ['definite_flowchart_ocr'],
+                'details': {
+                    'line_count': line_count,
+                    'edge_density': float(edge_density),
+                    'contour_count': len(contours),
+                    'text_length': len(ocr_text),
+                    'horizontal_lines': horizontal_lines,
+                    'vertical_lines': vertical_lines,
+                    'rectangle_count': rectangle_count,
+                    'diamond_count': diamond_count,
+                    'quadrilateral_count': quadrilateral_count,
+                },
+            }
+
         # Scoring logic
         if line_count > 20:
             type_scores['diagram'] += 30
@@ -264,11 +385,16 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
             type_scores['diagram'] += 20
             characteristics.append('high_structure')
         
-        # Text-based detection
-        flowchart_keywords = ['start', 'end', 'decision', 'process', 'if', 'else', 'loop']
-        if any(kw in text_lower for kw in flowchart_keywords):
-            type_scores['flowchart'] += 40
-            characteristics.append('flowchart_keywords')
+        # Text-based flowchart signals (table scoring runs only if none of these apply)
+        flowchart_term_hits = [
+            'decision', 'process', 'if', 'else', 'loop',
+        ]
+        if any(kw in text_lower for kw in flowchart_term_hits):
+            type_scores['flowchart'] += 30
+            characteristics.append('flowchart_terms')
+        if _flowchart_ocr_keywords_present(ocr_text):
+            type_scores['flowchart'] += 45
+            characteristics.append('flowchart_process_keywords')
         
         chart_keywords = ['chart', 'graph', 'data', '%', 'axis', 'plot']
         if any(kw in text_lower for kw in chart_keywords):
@@ -286,13 +412,16 @@ def detect_image_type_advanced(image_path: str, ocr_text: str) -> Dict[str, any]
         elif diamond_count >= 2:
             type_scores['flowchart'] += 20
 
+        no_table_due_to_flowchart = _has_flowchart_indicators(ocr_text, diamond_count)
         has_grid_pattern = horizontal_lines >= 6 and vertical_lines >= 6
-        if has_grid_pattern:
+        if not no_table_due_to_flowchart and has_grid_pattern:
             type_scores['table'] += 35
             characteristics.append('grid_lines')
 
         table_keywords = ['table', 'row', 'column', '|']
-        if any(kw in text_lower for kw in table_keywords) or ocr_text.count('|') > 5:
+        if not no_table_due_to_flowchart and (
+            any(kw in text_lower for kw in table_keywords) or ocr_text.count('|') > 5
+        ):
             type_scores['table'] += 40
             characteristics.append('table_structure')
 
@@ -366,7 +495,12 @@ def check_ollama_status() -> Dict:
             return {
                 'running': True,
                 'models': models,
-                'has_vlm': any('llava' in m.lower() or 'vision' in m.lower() for m in models)
+                'has_vlm': any(
+                    'llava' in m.lower()
+                    or 'vision' in m.lower()
+                    or ('qwen' in m.lower() and 'vl' in m.lower())
+                    for m in models
+                ),
             }
     except Exception as e:
         return {
@@ -378,41 +512,111 @@ def check_ollama_status() -> Dict:
     return {'running': False, 'models': []}
 
 
-def _try_vlm_model(model: str, b64: str, prompt: str, ollama_models: list, vlm_timeout: float) -> str:
+def _coerce_vlm_to_installed_tag(model: str, ollama_models: list) -> Optional[str]:
+    """Resolve a requested name to the exact tag Ollama lists (e.g. qwen2.5-vl -> qwen2.5vl:7b)."""
+    if not model or not ollama_models:
+        return None
+    if model in ollama_models:
+        return model
+    for m in ollama_models:
+        if m and _flex_vlm_name_matches(model, m):
+            return m
+    return None
+
+
+# Default; override with FLOWMIND_VLM_TIMEOUT.
+_DEFAULT_FLOWMIND_VLM_TIMEOUT = 300.0
+
+
+def get_vlm_timeout_seconds() -> float:
+    raw = os.getenv("FLOWMIND_VLM_TIMEOUT", str(int(_DEFAULT_FLOWMIND_VLM_TIMEOUT))).strip()
+    try:
+        return max(1.0, float(raw))
+    except (TypeError, ValueError):
+        return _DEFAULT_FLOWMIND_VLM_TIMEOUT
+
+
+def call_ollama_vlm(
+    model: str,
+    image_path: str,
+    prompt: str,
+    timeout: int = 300,
+    ollama_options: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """
+    Send one image to Ollama /api/generate (vision). Uses the same JSON shape as the Ollama CLI/API docs.
+    Returns model text on success, None on transport/HTTP error or empty body when appropriate.
+    """
+    if not image_path or not os.path.isfile(image_path):
+        return None
+    try:
+        with open(image_path, "rb") as f:
+            image_data = base64.b64encode(f.read()).decode("utf-8")
+    except OSError as e:
+        print(f"   ⚠️  VLM: could not read image {image_path!r}: {e}")
+        return None
+
+    payload: Dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "images": [image_data],
+        "stream": False,
+    }
+    if ollama_options:
+        payload["options"] = ollama_options
+
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json=payload,
+            timeout=timeout,
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"   ⚠️  Ollama VLM request failed: {e}")
+        return None
+
+    if response.status_code == 200:
+        return (response.json().get("response") or "").strip()
+    try:
+        err_body = (response.text or "")[:500]
+    except Exception:
+        err_body = ""
+    print(f"   ⚠️  Ollama VLM HTTP {response.status_code}: {err_body}")
+    return None
+
+
+def _try_vlm_model(
+    model: str,
+    image_path: str,
+    prompt: str,
+    ollama_models: list,
+    vlm_timeout: float,
+    ollama_options: Optional[Dict[str, Any]] = None,
+) -> str:
     """Try a single VLM model. Returns interpretation string or empty."""
-    if model not in ollama_models:
+    resolved = _coerce_vlm_to_installed_tag(model, ollama_models)
+    if not resolved:
         print(f"   ⚠️  Model '{model}' not in Ollama, skipping")
         return ""
-    try:
-        test_img = Image.new('RGB', (5, 5), color='red')
-        test_buf = io.BytesIO()
-        test_img.save(test_buf, format='PNG')
-        test_b64 = base64.b64encode(test_buf.getvalue()).decode()
-        test_resp = requests.post(
-            "http://localhost:11434/api/generate",
-            json={"model": model, "prompt": "OK", "images": [test_b64], "stream": False,
-                  "options": {"num_predict": 5, "temperature": 0.1}},
-            timeout=15
-        )
-        if not test_resp.ok:
-            return ""
-    except Exception:
-        return ""
-    resp = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": model,
-            "prompt": prompt,
-            "images": [b64],
-            "stream": False,
-            "options": {"temperature": 0.2, "top_p": 0.9, "num_predict": 500, "num_ctx": 2048, "repeat_penalty": 1.1}
-        },
-        timeout=vlm_timeout
+    model = resolved
+    timeout_int = max(1, int(vlm_timeout))
+    opts = ollama_options
+    if opts is None:
+        opts = {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "num_predict": 500,
+            "num_ctx": 2048,
+            "repeat_penalty": 1.1,
+        }
+    out = call_ollama_vlm(
+        model,
+        image_path,
+        prompt,
+        timeout=timeout_int,
+        ollama_options=opts,
     )
-    if resp.ok:
-        result = resp.json().get("response", "").strip()
-        return result if result else ""
-    return ""
+    return out if out else ""
 
 
 def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, context: str = "") -> Dict:
@@ -457,18 +661,16 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
     
     print(f"   🤖 Using VLM models: {', '.join(available)}")
     
-    vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+    vlm_timeout = get_vlm_timeout_seconds()
     if not _is_vlm_pass_enabled():
         print("   ⚠️  VLM is disabled (FLOWMIND_IMAGE_REQ_VLM_PASS!=1), skipping VLM analysis")
         return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
     
     try:
-        with open(image_path, 'rb') as f:
-            image_data = f.read()
-            image_size_mb = len(image_data) / (1024 * 1024)
+        if image_path and os.path.isfile(image_path):
+            image_size_mb = os.path.getsize(image_path) / (1024 * 1024)
             if image_size_mb > 10:
                 print(f"   ⚠️  Large image detected ({image_size_mb:.1f} MB) - processing may take longer")
-            b64 = base64.b64encode(image_data).decode('utf-8')
         
         prompt = build_smart_prompt(image_type, ocr_text, context)
         
@@ -476,7 +678,7 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
         interpretations = []
         for model in available:
             print(f"   🔍 Trying model: {model}")
-            result = _try_vlm_model(model, b64, prompt, ollama_models, vlm_timeout)
+            result = _try_vlm_model(model, image_path, prompt, ollama_models, vlm_timeout)
             if result:
                 interpretations.append((model, result))
                 print(f"   ✅ {model}: {len(result)} chars")
@@ -511,7 +713,7 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             
     except requests.exceptions.Timeout:
         print(f"   ⏱️  VLM request timed out after {vlm_timeout}s")
-        print(f"   💡 Set FLOWMIND_IMAGE_REQ_VLM_PASS=0 or FLOWMIND_VLM_TIMEOUT=120 in .env")
+        print(f"   💡 Set FLOWMIND_IMAGE_REQ_VLM_PASS=0 or increase FLOWMIND_VLM_TIMEOUT (default 300) in .env")
     except Exception as e:
         print(f"   ❌ VLM analysis exception: {type(e).__name__}: {str(e)}")
         import traceback
@@ -1016,7 +1218,9 @@ def get_image_context(
 
 def classify_diagram_type(image_path: str) -> Dict[str, Any]:
     """
-    Classify diagram type using OpenCV shape detection.
+    Classify diagram type using OpenCV shape detection and OCR.
+    Flowchart is evaluated before table: tables are not chosen when flowchart
+    indicators (diamonds, decision OCR, or process keywords) are present.
 
     Returns:
     {
@@ -1033,6 +1237,10 @@ def classify_diagram_type(image_path: str) -> Dict[str, Any]:
                 "confidence": 30,
                 "detected_features": ["unrecognized pattern"],
             }
+
+        ocr_result = advanced_ocr_extract(image_path)
+        ocr_text = (ocr_result.get("text") or "") if isinstance(ocr_result, dict) else ""
+        ocr_text = sanitize_unicode_text(str(ocr_text))
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
@@ -1099,36 +1307,67 @@ def classify_diagram_type(image_path: str) -> Dict[str, Any]:
             detected_features.append("grid of lines detected")
         if has_connectors:
             detected_features.append("connecting lines detected")
+        if (ocr_text or "").strip():
+            preview = ocr_text.strip()[:200].replace("\n", " ")
+            detected_features.append(f"OCR sample: {preview}")
 
-        if diamonds >= 2:
+        is_definite_fc = _ocr_definite_flowchart(ocr_text)
+
+        # 1) Flowchart first (including OCR-only signals before any table rule).
+        if is_definite_fc:
+            if "definite flowchart (Start+End+Yes/No in OCR)" not in detected_features:
+                detected_features.append("definite flowchart (Start+End+Yes/No in OCR)")
             return {
                 "type": "flowchart",
-                "confidence": 80,
-                "detected_features": detected_features or [f"{diamonds} decision nodes found"],
+                "confidence": 95,
+                "detected_features": detected_features
+                or ["OCR: Start/End/Yes/No pattern"],
             }
+        if diamonds >= 1:
+            return {
+                "type": "flowchart",
+                "confidence": 88 if diamonds >= 2 else 82,
+                "detected_features": detected_features
+                or [f"{diamonds} decision node(s) found"],
+            }
+        if _flowchart_ocr_keywords_present(ocr_text):
+            if "flowchart keywords in OCR" not in detected_features:
+                detected_features.append("flowchart keywords in OCR")
+            return {
+                "type": "flowchart",
+                "confidence": 78,
+                "detected_features": detected_features
+                or ["flowchart process keywords in OCR"],
+            }
+
+        # 2) Table only when no flowchart indicators matched above.
         if has_grid and rectangles > 6 and circles == 0:
             return {
                 "type": "table",
                 "confidence": 75,
-                "detected_features": detected_features or [f"{rectangles} rectangular cells found"],
+                "detected_features": detected_features
+                or [f"{rectangles} rectangular cells found"],
             }
         if circles >= 3:
             return {
                 "type": "state_diagram",
                 "confidence": 70,
-                "detected_features": detected_features or [f"{circles} circular nodes found"],
+                "detected_features": detected_features
+                or [f"{circles} circular nodes found"],
             }
         if oval_like >= 2:
             return {
                 "type": "er_diagram",
                 "confidence": 68,
-                "detected_features": detected_features or [f"{oval_like} oval nodes found"],
+                "detected_features": detected_features
+                or [f"{oval_like} oval nodes found"],
             }
         if rectangles >= 3 and diamonds == 0:
             return {
                 "type": "architecture",
                 "confidence": 65,
-                "detected_features": detected_features or [f"{rectangles} component boxes found"],
+                "detected_features": detected_features
+                or [f"{rectangles} component boxes found"],
             }
         return {
             "type": "unknown",
@@ -1398,9 +1637,7 @@ def extract_diagram_requirements_vlm(
         return empty
 
     try:
-        with open(image_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
-        vlm_timeout = float(os.getenv("FLOWMIND_VLM_TIMEOUT", "60.0"))
+        vlm_timeout = get_vlm_timeout_seconds()
         surrounding_document_text = f"{(before_text or '')[-500:]}\n{(after_text or '')[:500]}".strip()
         diagram_info = classify_diagram_type(image_path)
         diagram_type = str(diagram_info.get("type") or "unknown")
@@ -1414,8 +1651,22 @@ def extract_diagram_requirements_vlm(
             surrounding_document_text=surrounding_document_text,
         )
         responses: List[str] = []
+        diagram_options = {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "num_predict": 1500,
+            "num_ctx": 4096,
+            "repeat_penalty": 1.1,
+        }
         for model in available:
-            out = _try_vlm_model(model, b64, prompt, ollama_models, vlm_timeout)
+            out = _try_vlm_model(
+                model,
+                image_path,
+                prompt,
+                ollama_models,
+                vlm_timeout,
+                ollama_options=diagram_options,
+            )
             if out:
                 responses.append(out)
                 break
