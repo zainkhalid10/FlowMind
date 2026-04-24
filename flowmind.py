@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, status
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -162,6 +162,66 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="FlowMind")
 init_db()
 
+
+def _warmup_models() -> None:
+    """Preload Ollama text/vision models and the RAG agent so the first real
+    user request doesn't pay the cold-start cost (which is dominated by
+    loading ~9 GB of LLM weights into VRAM plus ~400 MB of embeddings into
+    RAM). Runs on a daemon thread so startup is never blocked; failures are
+    swallowed because a warm cache is a nice-to-have, not a correctness bug.
+    """
+    import threading
+    import time as _time
+
+    def _work() -> None:
+        t0 = _time.time()
+        print("🔥 [warmup] starting background model warmup…")
+
+        # --- 1. Preload the text LLM into Ollama's model cache ------------
+        try:
+            import requests as _requests
+            model = os.getenv("FLOWMIND_OLLAMA_MODEL", "qwen2.5:14b")
+            _requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": model, "prompt": "ok", "stream": False, "keep_alive": "30m"},
+                timeout=300,
+            )
+            print(f"🔥 [warmup] Ollama text model resident: {model}  (+{_time.time()-t0:.1f}s)")
+        except Exception as e:
+            print(f"⚠️ [warmup] text model preload skipped: {e}")
+
+        # --- 2. Preload the preferred VLM -------------------------------
+        try:
+            import requests as _requests
+            vlm = os.getenv("FLOWMIND_OLLAMA_VLM_MODEL", "qwen2.5-vl")
+            _requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": vlm, "prompt": "ok", "stream": False, "keep_alive": "30m"},
+                timeout=300,
+            )
+            print(f"🔥 [warmup] Ollama VLM resident: {vlm}  (+{_time.time()-t0:.1f}s)")
+        except Exception as e:
+            print(f"⚠️ [warmup] VLM preload skipped: {e}")
+
+        # --- 3. Instantiate the RAG agent so bge-base/spaCy load now --
+        try:
+            from rag_agent import get_agent
+            get_agent()
+            print(f"🔥 [warmup] RAG agent ready (embeddings + vector store)  (+{_time.time()-t0:.1f}s)")
+        except Exception as e:
+            print(f"⚠️ [warmup] RAG agent preload skipped: {e}")
+
+        print(f"🔥 [warmup] complete in {_time.time()-t0:.1f}s — first user request will be fast")
+
+    threading.Thread(target=_work, daemon=True, name="flowmind-warmup").start()
+
+
+# Kick off warmup. This is an opt-out: set FLOWMIND_DISABLE_WARMUP=1 during
+# development if you're iterating and don't want to pay the startup cost.
+if os.getenv("FLOWMIND_DISABLE_WARMUP", "0") != "1":
+    _warmup_models()
+
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -174,7 +234,7 @@ app.add_middleware(
 # Include routers
 from routes import auth_routes, upload_routes, dashboard_routes, training_routes, approval_routes, integration_routes, project_routes, google_oauth_routes, review_routes
 from routes.approval_routes import parse_and_save_features
-from services.document_validator import validate_document_for_srs
+from services.document_validator import validate_document_for_srs, pre_model_gate
 
 app.include_router(auth_routes.router)
 app.include_router(upload_routes.router)
@@ -188,21 +248,27 @@ app.include_router(review_routes.router)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+SPA_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+SPA_INDEX = os.path.join(SPA_DIR, "index.html")
+SPA_ASSETS_DIR = os.path.join(SPA_DIR, "assets")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Favicon endpoint
+
 @app.get("/favicon.ico")
 async def favicon():
     """Return empty favicon to prevent 404 errors."""
     from fastapi.responses import Response
     return Response(content="", media_type="image/x-icon")
 
-# Serve static uploaded files
+
+# User-uploaded files (images pulled from extracted docs, etc.).
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# Serve static frontend files
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# React SPA assets. The SPA's index.html is returned by the root handler
+# and the `spa_catch_all` handler at the very end of the file, after every
+# API route has had its chance to match first.
+if os.path.isdir(SPA_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=SPA_ASSETS_DIR), name="spa_assets")
 
 REQUIREMENTS_VIEWS = {}
 
@@ -635,22 +701,17 @@ async def _analyze_document_internal(
         progress = tracker.get_progress()
         print(f"📊 [{progress['progress']}%] Performing early document validation...")
 
-    v_res = validate_document_for_srs(sanitized_text)
-    if v_res.get("is_rejected"):
-        reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
-        print(f"❌ REJECTED (Early): {reject_msg}")
+    should_reject, gate_detail = pre_model_gate(sanitized_text, file.filename)
+    if should_reject:
+        print(
+            f"❌ REJECTED (Early, basic): {gate_detail.get('error')} - "
+            f"{gate_detail.get('message')}"
+        )
         if tracker:
             tracker.set_stage(ProcessingStage.FINALIZING)
             tracker.complete()
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "DOCUMENT_REJECTED",
-                "message": reject_msg,
-                "score": v_res.get("srs_score"),
-                "reasons": v_res.get("reasons")
-            }
-        )
+        raise HTTPException(status_code=400, detail=gate_detail)
+    v_res = gate_detail
 
     # ----------- LATE IMAGE EXTRACTION (Only if Valid) -----------
     if file.filename.endswith(".pdf"):
@@ -952,972 +1013,19 @@ async def _analyze_document_internal(
 
 
 # -------------------- AUTHENTICATION PAGES --------------------
-@app.get("/login", response_class=HTMLResponse)
-async def login_page():
-    """Clean login page with Bootstrap - NO VERIFICATION CODE."""
-    return """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - FlowMind</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* Animated Background - Data Getting In */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        
-        .data-stream {
-            position: absolute;
-            color: rgba(6, 182, 212, 0.4);
-            font-size: 16px;
-            font-weight: 600;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
-            animation: streamIn linear infinite;
-            white-space: nowrap;
-        }
-        
-        @keyframes streamIn {
-            0% {
-                opacity: 0;
-                transform: translate(0, 0) scale(0.5);
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translate(var(--end-x), var(--end-y)) scale(1);
-            }
-        }
-        
-        /* Circular convergence effect */
-        .convergence-circle {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(6, 182, 212, 0.1);
-            border-radius: 50%;
-            animation: pulseCircle 3s ease-in-out infinite;
-        }
-        
-        .convergence-circle::before,
-        .convergence-circle::after {
-            content: '';
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 50%;
-        }
-        
-        .convergence-circle::after {
-            width: 400px;
-            height: 400px;
-            border-color: rgba(139, 92, 246, 0.1);
-        }
-        
-        @keyframes pulseCircle {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.1);
-                opacity: 0.8;
-            }
-        }
-        
-        .auth-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-            width: 100%;
-            max-width: 450px;
-            animation: slideUp 0.5s ease-out;
-            position: relative;
-            z-index: 1;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(6, 182, 212, 0.2);
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .auth-header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
-        .auth-header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 0.5rem;
-        }
-        .auth-header p {
-            color: #475569;
-            font-size: 1rem;
-        }
-        .form-label {
-            font-weight: 600;
-            color: #0f172a;
-            margin-bottom: 0.5rem;
-        }
-        .form-control {
-            padding: 0.875rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: white;
-            color: #0f172a;
-        }
-        .form-control:focus {
-            border-color: #06b6d4;
-            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
-            outline: none;
-        }
-        .btn-primary {
-            width: 100%;
-            padding: 0.875rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
-            border: none;
-            transition: all 0.3s ease;
-            color: white;
-            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
-            background: linear-gradient(135deg, #075985 0%, #1e40af 50%, #6d28d9 100%);
-        }
-        .alert {
-            border-radius: 12px;
-            border: none;
-            margin-bottom: 1.5rem;
-        }
-        .auth-footer {
-            text-align: center;
-            margin-top: 2rem;
-            color: #475569;
-        }
-        .auth-footer a {
-            color: #06b6d4;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .auth-footer a:hover {
-            text-decoration: underline;
-            color: #0891b2;
-        }
-        .text-primary {
-            color: #06b6d4 !important;
-        }
-    </style>
-</head>
-<body>
-    <div class="auth-card">
-        <div class="auth-header">
-            <h1><i class="fas fa-sign-in-alt text-primary"></i> Login</h1>
-            <p>Welcome back to FlowMind</p>
-        </div>
-        
-        <div id="alertContainer"></div>
-        
-        <form id="loginForm">
-            <div class="mb-3">
-                <label for="loginRole" class="form-label">Select your role</label>
-                <select class="form-control form-select" id="loginRole" name="role" style="padding: 0.875rem 1rem; border-radius: 12px; font-size: 1rem;">
-                    <option value="">— Choose role (optional) —</option>
-                    <option value="manager">Manager</option>
-                    <option value="team_head">Team Head</option>
-                    <option value="member">Member</option>
-                </select>
-                <small class="text-muted">Pick the role that matches your account.</small>
-            </div>
-            <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
-                <input type="email" class="form-control" id="email" name="email" required autocomplete="email" placeholder="Enter your email">
-            </div>
-            
-            <div class="mb-4">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
-            </div>
-            
-            <button type="submit" class="btn btn-primary" id="submitBtn">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-        </form>
-        
-        <div class="auth-footer">
-            <p class="mb-2">Don't have an account? <a href="/signup">Sign up</a></p>
-            <a href="/"><i class="fas fa-arrow-left"></i> Back to Home</a>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Create animated data streams flowing in
-        function createDataStreams() {
-            const bgAnimation = document.querySelector('.bg-animation');
-            if (!bgAnimation) return;
-            
-            const dataSymbols = ['LOGIN', 'AUTH', 'ACCESS', 'SECURE', 'FLOW', 'MIND', 'AI', 'DATA', 'INFO', 'USER', 'PASS', 'KEY'];
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            
-            function createStream() {
-                const stream = document.createElement('div');
-                stream.className = 'data-stream';
-                
-                // Random data symbol
-                stream.textContent = dataSymbols[Math.floor(Math.random() * dataSymbols.length)];
-                
-                // Random starting position from edges
-                const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
-                let startX, startY, endX, endY;
-                
-                if (side === 0) { // Top
-                    startX = Math.random() * window.innerWidth;
-                    startY = -50;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else if (side === 1) { // Right
-                    startX = window.innerWidth + 50;
-                    startY = Math.random() * window.innerHeight;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else if (side === 2) { // Bottom
-                    startX = Math.random() * window.innerWidth;
-                    startY = window.innerHeight + 50;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else { // Left
-                    startX = -50;
-                    startY = Math.random() * window.innerHeight;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                }
-                
-                const deltaX = endX - startX;
-                const deltaY = endY - startY;
-                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                const duration = 3 + (distance / 200); // Speed based on distance
-                
-                stream.style.left = startX + 'px';
-                stream.style.top = startY + 'px';
-                stream.style.setProperty('--end-x', deltaX + 'px');
-                stream.style.setProperty('--end-y', deltaY + 'px');
-                stream.style.animationDuration = duration + 's';
-                stream.style.animationDelay = Math.random() * 0.5 + 's';
-                
-                // Random size
-                const size = 12 + Math.random() * 8;
-                stream.style.fontSize = size + 'px';
-                
-                // Random color variation
-                const colors = [
-                    'rgba(6, 182, 212, 0.4)',
-                    'rgba(59, 130, 246, 0.4)',
-                    'rgba(139, 92, 246, 0.4)',
-                    'rgba(6, 182, 212, 0.3)',
-                    'rgba(59, 130, 246, 0.3)'
-                ];
-                stream.style.color = colors[Math.floor(Math.random() * colors.length)];
-                
-                bgAnimation.appendChild(stream);
-                
-                // Remove after animation
-                setTimeout(() => {
-                    if (stream.parentNode) {
-                        stream.parentNode.removeChild(stream);
-                    }
-                }, (duration + 0.5) * 1000);
-            }
-            
-            // Create streams continuously
-            setInterval(createStream, 150);
-            setInterval(createStream, 200);
-            setInterval(createStream, 250);
-            
-            // Initial burst
-            for (let i = 0; i < 15; i++) {
-                setTimeout(() => createStream(), i * 100);
-            }
-        }
-        
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', createDataStreams);
-        
-        const form = document.getElementById('loginForm');
-        const alertContainer = document.getElementById('alertContainer');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        function showAlert(message, type = 'danger') {
-            alertContainer.innerHTML = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-${type === 'danger' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-        }
-        
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            alertContainer.innerHTML = '';
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
-            
-            const roleEl = document.getElementById('loginRole');
-            const formData = {
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value,
-                role: roleEl ? roleEl.value : ''
-            };
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    showAlert('Login successful! Redirecting...', 'success');
-                    const role = (data.user && data.user.role) || 'member';
-                    const target = role === 'manager' ? '/manager' : (role === 'team_head' ? '/team' : '/dashboard');
-                    setTimeout(() => window.location.href = target, 1000);
-                } else {
-                    let msg = data.detail || 'Login failed. Please try again.';
-                    if (typeof msg === 'object' && msg !== null) {
-                        msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
-                        if (typeof msg === 'object' && msg !== null) {
-                            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
-                        }
-                    }
-                    showAlert(msg);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-                }
-            } catch (error) {
-                showAlert('Network error: ' + (error.message || 'Please check your connection and try again.'));
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-            }
-        });
-    </script>
-</body>
-</html>
-    """
-
-@app.get("/signup", response_class=HTMLResponse)
-async def signup_page():
-    """Clean signup page with Bootstrap - NO VERIFICATION CODE."""
-    return """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - FlowMind</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* Animated Background - Data Getting In */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        
-        .data-stream {
-            position: absolute;
-            color: rgba(6, 182, 212, 0.4);
-            font-size: 16px;
-            font-weight: 600;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
-            animation: streamIn linear infinite;
-            white-space: nowrap;
-        }
-        
-        @keyframes streamIn {
-            0% {
-                opacity: 0;
-                transform: translate(0, 0) scale(0.5);
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translate(var(--end-x), var(--end-y)) scale(1);
-            }
-        }
-        
-        /* Circular convergence effect */
-        .convergence-circle {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(6, 182, 212, 0.1);
-            border-radius: 50%;
-            animation: pulseCircle 3s ease-in-out infinite;
-        }
-        
-        .convergence-circle::before,
-        .convergence-circle::after {
-            content: '';
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 50%;
-        }
-        
-        .convergence-circle::after {
-            width: 400px;
-            height: 400px;
-            border-color: rgba(139, 92, 246, 0.1);
-        }
-        
-        @keyframes pulseCircle {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.1);
-                opacity: 0.8;
-            }
-        }
-        
-        .auth-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-            width: 100%;
-            max-width: 450px;
-            animation: slideUp 0.5s ease-out;
-            position: relative;
-            z-index: 1;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(6, 182, 212, 0.2);
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .auth-header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
-        .auth-header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 0.5rem;
-        }
-        .auth-header p {
-            color: #475569;
-            font-size: 1rem;
-        }
-        .form-label {
-            font-weight: 600;
-            color: #0f172a;
-            margin-bottom: 0.5rem;
-        }
-        .form-control {
-            padding: 0.875rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: white;
-            color: #0f172a;
-        }
-        .form-control:focus {
-            border-color: #06b6d4;
-            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
-            outline: none;
-        }
-        .btn-primary {
-            width: 100%;
-            padding: 0.875rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
-            border: none;
-            transition: all 0.3s ease;
-            color: white;
-            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
-            background: linear-gradient(135deg, #075985 0%, #1e40af 50%, #6d28d9 100%);
-        }
-        .alert {
-            border-radius: 12px;
-            border: none;
-            margin-bottom: 1.5rem;
-        }
-        .auth-footer {
-            text-align: center;
-            margin-top: 2rem;
-            color: #475569;
-        }
-        .auth-footer a {
-            color: #06b6d4;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .auth-footer a:hover {
-            text-decoration: underline;
-            color: #0891b2;
-        }
-        .text-primary {
-            color: #06b6d4 !important;
-        }
-        .password-hint {
-            font-size: 0.875rem;
-            color: #475569;
-            margin-top: 0.25rem;
-        }
-    </style>
-</head>
-<body>
-    <!-- Animated Background -->
-    <div class="bg-animation">
-        <div class="convergence-circle"></div>
-    </div>
-    
-    <div class="auth-card">
-        <div class="auth-header">
-            <h1><i class="fas fa-user-plus text-primary"></i> Sign Up</h1>
-            <p>Create your FlowMind account</p>
-        </div>
-        
-        <div id="alertContainer"></div>
-        
-        <form id="signupForm">
-            <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
-                <input type="email" class="form-control" id="email" name="email" required autocomplete="email" placeholder="Enter your email">
-            </div>
-            
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required autocomplete="username" placeholder="Choose a username">
-            </div>
-            
-            <div class="mb-4">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password" minlength="6" placeholder="Create a password">
-                <div class="password-hint">Must be at least 6 characters long</div>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" id="submitBtn">
-                <i class="fas fa-user-plus"></i> Create Account
-            </button>
-        </form>
-        
-        <div class="auth-footer">
-            <p class="mb-2">Already have an account? <a href="/login">Login</a></p>
-            <a href="/"><i class="fas fa-arrow-left"></i> Back to Home</a>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Create animated data streams flowing in
-        function createDataStreams() {
-            const bgAnimation = document.querySelector('.bg-animation');
-            if (!bgAnimation) return;
-            
-            const dataSymbols = ['SIGNUP', 'REGISTER', 'CREATE', 'ACCOUNT', 'JOIN', 'FLOW', 'MIND', 'AI', 'DATA', 'INFO', 'USER', 'NEW'];
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            
-            function createStream() {
-                const stream = document.createElement('div');
-                stream.className = 'data-stream';
-                
-                // Random data symbol
-                stream.textContent = dataSymbols[Math.floor(Math.random() * dataSymbols.length)];
-                
-                // Random starting position from edges
-                const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
-                let startX, startY, endX, endY;
-                
-                if (side === 0) { // Top
-                    startX = Math.random() * window.innerWidth;
-                    startY = -50;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else if (side === 1) { // Right
-                    startX = window.innerWidth + 50;
-                    startY = Math.random() * window.innerHeight;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else if (side === 2) { // Bottom
-                    startX = Math.random() * window.innerWidth;
-                    startY = window.innerHeight + 50;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                } else { // Left
-                    startX = -50;
-                    startY = Math.random() * window.innerHeight;
-                    endX = centerX + (Math.random() - 0.5) * 200;
-                    endY = centerY + (Math.random() - 0.5) * 200;
-                }
-                
-                const deltaX = endX - startX;
-                const deltaY = endY - startY;
-                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                const duration = 3 + (distance / 200); // Speed based on distance
-                
-                stream.style.left = startX + 'px';
-                stream.style.top = startY + 'px';
-                stream.style.setProperty('--end-x', deltaX + 'px');
-                stream.style.setProperty('--end-y', deltaY + 'px');
-                stream.style.animationDuration = duration + 's';
-                stream.style.animationDelay = Math.random() * 0.5 + 's';
-                
-                // Random size
-                const size = 12 + Math.random() * 8;
-                stream.style.fontSize = size + 'px';
-                
-                // Random color variation
-                const colors = [
-                    'rgba(6, 182, 212, 0.4)',
-                    'rgba(59, 130, 246, 0.4)',
-                    'rgba(139, 92, 246, 0.4)',
-                    'rgba(6, 182, 212, 0.3)',
-                    'rgba(59, 130, 246, 0.3)'
-                ];
-                stream.style.color = colors[Math.floor(Math.random() * colors.length)];
-                
-                bgAnimation.appendChild(stream);
-                
-                // Remove after animation
-                setTimeout(() => {
-                    if (stream.parentNode) {
-                        stream.parentNode.removeChild(stream);
-                    }
-                }, (duration + 0.5) * 1000);
-            }
-            
-            // Create streams continuously
-            setInterval(createStream, 150);
-            setInterval(createStream, 200);
-            setInterval(createStream, 250);
-            
-            // Initial burst
-            for (let i = 0; i < 15; i++) {
-                setTimeout(() => createStream(), i * 100);
-            }
-        }
-        
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', createDataStreams);
-        
-        const form = document.getElementById('signupForm');
-        const alertContainer = document.getElementById('alertContainer');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        function showAlert(message, type = 'danger') {
-            alertContainer.innerHTML = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-${type === 'danger' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-        }
-        
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            alertContainer.innerHTML = '';
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
-            
-            const formData = {
-                email: document.getElementById('email').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
-            };
-            
-            try {
-                const response = await fetch('/api/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    showAlert('Account created successfully! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = '/extract', 1000);
-                } else {
-                    let msg = data.detail || 'Account creation failed. Please try again.';
-                    if (typeof msg === 'object' && msg !== null) {
-                        msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
-                        if (typeof msg === 'object' && msg !== null) {
-                            msg = msg.message || msg.detail || msg.msg || msg.error || JSON.stringify(msg);
-                        }
-                    }
-                    showAlert(msg);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
-                }
-            } catch (error) {
-                showAlert('Network error. Please check your connection and try again.');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
-            }
-        });
-    </script>
-</body>
-</html>
-    """
-
-@app.get("/about", response_class=HTMLResponse)
-async def about_page():
-    """About Us page."""
-    return """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>About Us - FlowMind</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-        <style>
-            :root {
-                --primary-color: #2563eb;
-                --text-primary: #1e293b;
-                --text-secondary: #64748b;
-                --border: #e2e8f0;
-                --radius: 12px;
-            }
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                padding: 2rem;
-            }
-            .container {
-                max-width: 900px;
-                margin: 0 auto;
-                background: white;
-                border-radius: var(--radius);
-                padding: 3rem;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            }
-            .header {
-                text-align: center;
-                margin-bottom: 3rem;
-            }
-            .header h1 {
-                font-size: 2.5rem;
-                font-weight: 700;
-                color: var(--text-primary);
-                margin-bottom: 1rem;
-            }
-            .header p {
-                color: var(--text-secondary);
-                font-size: 1.1rem;
-            }
-            .content {
-                line-height: 1.8;
-                color: var(--text-primary);
-            }
-            .content h2 {
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-top: 2rem;
-                margin-bottom: 1rem;
-                color: var(--primary-color);
-            }
-            .content p {
-                margin-bottom: 1rem;
-                color: var(--text-secondary);
-            }
-            .content ul {
-                margin-left: 2rem;
-                margin-bottom: 1rem;
-                color: var(--text-secondary);
-            }
-            .content li {
-                margin-bottom: 0.5rem;
-            }
-            .back-link {
-                display: inline-block;
-                margin-top: 2rem;
-                color: var(--primary-color);
-                text-decoration: none;
-                font-weight: 500;
-            }
-            .back-link:hover {
-                text-decoration: underline;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1><i class="fas fa-info-circle"></i> About FlowMind</h1>
-                <p>Intelligent Document Analysis Platform</p>
-            </div>
-            <div class="content">
-                <h2>What is FlowMind?</h2>
-                <p>
-                    FlowMind is an advanced document analysis platform that leverages artificial intelligence 
-                    and machine learning to extract, analyze, and understand complex requirements from various 
-                    document formats. Our platform helps organizations streamline their document processing 
-                    workflows and gain valuable insights from their documents.
-                </p>
-                
-                <h2>Key Features</h2>
-                <ul>
-                    <li><strong>Multi-Format Support:</strong> Process PDFs, Word documents, PowerPoint presentations, images, and text files</li>
-                    <li><strong>Intelligent Extraction:</strong> Advanced OCR and text extraction capabilities</li>
-                    <li><strong>Requirements Analysis:</strong> Automatically identify and extract requirements from documents</li>
-                    <li><strong>RAG-Powered:</strong> Retrieval-Augmented Generation for accurate document understanding</li>
-                    <li><strong>Visual Analysis:</strong> Extract and analyze images, diagrams, and visual elements</li>
-                    <li><strong>Self-Learning System:</strong> Continuously improves extraction accuracy over time</li>
-                </ul>
-                
-                <h2>Our Mission</h2>
-                <p>
-                    At FlowMind, we believe that document analysis should be intelligent, efficient, and accessible. 
-                    Our mission is to empower organizations with cutting-edge AI technology that transforms how they 
-                    process and understand their documents.
-                </p>
-                
-                <h2>Implementation Phases (Role-Based Access)</h2>
-                <p>The following six phases are implemented in the application:</p>
-                <ul>
-                    <li><strong>Phase 1 &ndash; Schema:</strong> Teams table, User role and team_id; DB migration and seed.</li>
-                    <li><strong>Phase 2 &ndash; Auth:</strong> JWT includes role and team_id; login/signup return role and team_name.</li>
-                    <li><strong>Phase 3 &ndash; Scoped APIs:</strong> My uploads, progress, features, and teams APIs filtered by Manager / Team Head / Member visibility.</li>
-                    <li><strong>Phase 4 &ndash; Manager &amp; Team UI:</strong> Manager and My Team pages and dashboard nav (visible when your role is manager or team_head).</li>
-                    <li><strong>Phase 5 &ndash; Requirements UI:</strong> Simplified requirements view and collapsible feedback on the approve page.</li>
-                    <li><strong>Phase 6 &ndash; Post-login redirect:</strong> Redirect to dashboard, manager, or team based on role after login.</li>
-                </ul>
-                <p>To see Manager / My Team links, log in as a user with role <code>manager</code> or <code>team_head</code>. Restart the server after code changes to load the latest implementation.</p>
-                
-                <h2>Technology Stack</h2>
-                <p>
-                    FlowMind is built using state-of-the-art technologies including FastAPI, LangChain, ChromaDB, 
-                    and advanced machine learning models for natural language processing and computer vision.
-                </p>
-                
-                <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+# /login, /signup, and /about are now served by the React SPA
+# (frontend/dist). The legacy inline Bootstrap pages that used to live
+# here were removed when the new UI became the default.
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Serve the landing page."""
-    # Try to serve index.html from root first
-    index_path = os.path.join(BASE_DIR, "index.html")
-    if os.path.exists(index_path):
-        with open(index_path, "r", encoding="utf-8") as f:
+    """Serve the built React SPA. Falls back to embedded HTML if the SPA
+    hasn't been built yet (i.e. frontend/dist/index.html is missing)."""
+    if os.path.exists(SPA_INDEX):
+        with open(SPA_INDEX, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
-    
-    # Fallback to static/landing.html
-    landing_path = os.path.join(STATIC_DIR, "landing.html")
-    if os.path.exists(landing_path):
-        with open(landing_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    
-    # Fallback to embedded HTML if static file doesn't exist
+
+    # Fallback to embedded HTML if the SPA is not built
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -3216,24 +2324,21 @@ async def root():
     """
 
 
-@app.get("/index.html", response_class=HTMLResponse)
-async def serve_index():
-    """Serve the index.html landing page."""
-    index_path = os.path.join(BASE_DIR, "index.html")
-    if os.path.exists(index_path):
-        with open(index_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return RedirectResponse(url="/", status_code=302)
+@app.get("/index.html")
+async def serve_index(request: Request):
+    """Legacy alias: forward to the SPA root, preserving any query string."""
+    qs = request.url.query
+    return RedirectResponse(url="/" + (f"?{qs}" if qs else ""), status_code=301)
 
 
-@app.get("/login.html", response_class=HTMLResponse)
-async def serve_login():
-    """Serve the login.html page."""
-    login_path = os.path.join(BASE_DIR, "login.html")
-    if os.path.exists(login_path):
-        with open(login_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return RedirectResponse(url="/", status_code=302)
+@app.get("/login.html")
+async def serve_login(request: Request):
+    """Legacy alias: forward existing invite links (e.g. /login.html?invite_token=...)
+    to the React login route so old emails keep working."""
+    qs = request.url.query
+    return RedirectResponse(
+        url="/login" + (f"?{qs}" if qs else ""), status_code=301
+    )
 
 
 # NOTE: Upload endpoints moved to routes/upload_routes.py to avoid duplicate route definitions
@@ -3906,6 +3011,25 @@ async def _analyze_with_agent_internal(
                 print(f"✅ Finished pages {start + 1}–{end} of {total_pages}.")
             print(f"✅ Completed all {total_pages} pages. Extracted {len(text_output):,} characters.")
 
+            # ----- EARLY PRE-MODEL GATE (before expensive PDF image OCR) -----
+            # Reject empty / non-SRS PDFs quickly so we don't waste image OCR
+            # and downstream LLM/VLM calls on documents that will fail anyway.
+            if tracker:
+                tracker.set_stage(ProcessingStage.VALIDATING)
+                progress = tracker.get_progress()
+                print(f"📊 [{progress['progress']}%] Pre-model gate (agent, pre-OCR)...")
+            _pre_sanitized = sanitize_unicode(text_output or "")
+            _pdf_should_reject, _pdf_gate = pre_model_gate(_pre_sanitized, file.filename)
+            if _pdf_should_reject:
+                print(
+                    f"❌ REJECTED (Early, agent PDF pre-OCR): "
+                    f"{_pdf_gate.get('error')} - {_pdf_gate.get('message')}"
+                )
+                if tracker:
+                    tracker.set_stage(ProcessingStage.FINALIZING)
+                    tracker.complete()
+                raise HTTPException(status_code=400, detail=_pdf_gate)
+
             images_per_page: dict = {}
             for pn, pg in enumerate(reader.pages, start=1):
                 try:
@@ -4061,22 +3185,17 @@ async def _analyze_with_agent_internal(
             progress = tracker.get_progress()
             print(f"📊 [{progress['progress']}%] Performing early agent-flow validation...")
 
-        v_res = validate_document_for_srs(sanitized_text)
-        if v_res.get("is_rejected"):
-            reject_msg = v_res.get("reject_reason", "Document does not meet technical/SRS quality standards.")
-            print(f"❌ REJECTED agent flow (Early): {reject_msg}")
+        should_reject, gate_detail = pre_model_gate(sanitized_text, file.filename)
+        if should_reject:
+            print(
+                f"❌ REJECTED (Early, agent): {gate_detail.get('error')} - "
+                f"{gate_detail.get('message')}"
+            )
             if tracker:
                 tracker.set_stage(ProcessingStage.FINALIZING)
                 tracker.complete()
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "DOCUMENT_REJECTED",
-                    "message": reject_msg,
-                    "score": v_res.get("srs_score"),
-                    "reasons": v_res.get("reasons")
-                }
-            )
+            raise HTTPException(status_code=400, detail=gate_detail)
+        v_res = gate_detail
 
         # Save full text file for debugging/audit
         sanitized_text = sanitize_unicode(text_output or "")
@@ -6050,3 +5169,56 @@ async def view_requirements(view_id: str):
     </html>
     """
     return HTMLResponse(content=html_doc)
+
+
+# ==============================================================
+# SPA CATCH-ALL — must be the LAST route registered so that every
+# API endpoint, static mount, and explicit HTML route above has
+# already had a chance to match. Any remaining GET path is treated
+# as a client-side React-Router route, and we reply with the
+# built SPA's index.html so the router can render it in the browser.
+# ==============================================================
+
+# Prefixes that are owned by the backend (API, legacy assets, OpenAPI, etc.).
+# Requests under these prefixes that aren't matched by an explicit handler
+# should 404 rather than silently falling through to the SPA — otherwise
+# buggy client code would see an HTML document where it expects JSON.
+_SPA_RESERVED_PREFIXES = (
+    "api/",
+    "auth/",
+    "upload/",
+    "upload_",
+    "uploads/",
+    "assets/",
+    "static/",  # legacy — always 404 now that static/ is gone
+    "review/",
+    "requirements/",
+    "approve/",
+    "export/",
+    "files/",
+    "status/",
+    "retry/",
+    "v/",
+    "docs",
+    "redoc",
+    "openapi.json",
+    "favicon.ico",
+)
+
+
+@app.get("/{spa_path:path}", response_class=HTMLResponse)
+async def spa_catch_all(spa_path: str):
+    """Serve the React SPA for any unmatched GET path (client-side routing)."""
+    if any(spa_path == p or spa_path.startswith(p) for p in _SPA_RESERVED_PREFIXES):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if not os.path.exists(SPA_INDEX):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Frontend has not been built. Run `npm run build` in frontend/ "
+                "to produce frontend/dist/index.html."
+            ),
+        )
+    with open(SPA_INDEX, "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())

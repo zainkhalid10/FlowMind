@@ -19,7 +19,10 @@ _processing_results = {}
 
 # File upload configuration
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 50 * 1024 * 1024))  # 50MB default
-ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.bmp'}
+# Manager-only product decision: PPT/PPTX and plain text are no longer
+# accepted. The allowed formats cover real SRS artefacts: PDF, Word docs
+# (legacy + modern), and images (for screenshots / architecture diagrams).
+ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.bmp'}
 
 def validate_file_extension(filename: str) -> bool:
     """Validate file extension is allowed."""
@@ -79,6 +82,38 @@ async def upload_client_doc(
         )
         # Add tracker ID to response
         result["progress_tracker_id"] = tracker_id
+
+        # Resolve file_id so the frontend can deep-link into the requirements
+        # view without a second /api/my-uploads round trip. Mirrors the
+        # agent-upload flow below.
+        try:
+            if isinstance(result, dict) and not result.get("file_id"):
+                view_id = result.get("view_id")
+                row = None
+                if view_id:
+                    row = (
+                        db.query(ParsedFile)
+                        .filter(ParsedFile.view_id == view_id)
+                        .order_by(ParsedFile.id.desc())
+                        .first()
+                    )
+                if row is None:
+                    cutoff = datetime.utcnow() - timedelta(minutes=10)
+                    row = (
+                        db.query(ParsedFile)
+                        .filter(
+                            ParsedFile.user_id == current_user.id,
+                            ParsedFile.filename == file.filename,
+                            ParsedFile.created_at >= cutoff,
+                        )
+                        .order_by(ParsedFile.created_at.desc())
+                        .first()
+                    )
+                if row:
+                    result["file_id"] = row.id
+        except Exception:
+            pass
+
         return result
     except Exception as e:
         remove_progress_tracker(tracker_id)

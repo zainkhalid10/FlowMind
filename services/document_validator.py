@@ -1,6 +1,18 @@
 """Document quality and SRS-validity checks used before extraction."""
+import os
 import re
-from typing import List
+from typing import List, Tuple
+
+# Minimum SRS score accepted by the pre-model gate. Scores below this mean
+# the text lacks enough SRS signals (modals, numbered requirements, tech vocab)
+# to be worth feeding to the LLM/VLM pipeline.
+_PRE_MODEL_MIN_SCORE = int(os.getenv("FLOWMIND_PRE_MODEL_MIN_SCORE", "25"))
+
+# Below this number of non-whitespace characters, a document is treated as empty.
+_EMPTY_MIN_CHARS = int(os.getenv("FLOWMIND_EMPTY_MIN_CHARS", "20"))
+_EMPTY_MIN_WORDS = int(os.getenv("FLOWMIND_EMPTY_MIN_WORDS", "5"))
+
+_IMAGE_ONLY_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp"}
 
 
 def _word_count(text: str) -> int:
@@ -221,3 +233,102 @@ def validate_document_for_srs(text: str) -> dict:
         "reasons": reasons,
         "recommendation": recommendation,
     }
+
+
+def is_document_empty(text: str) -> Tuple[bool, str]:
+    """
+    Fast empty / near-empty detection used before any expensive analysis.
+    Returns (is_empty, reason). Reason is empty string when not empty.
+    """
+    if text is None:
+        return True, "Document has no extractable text content."
+    # Strip whitespace and ASCII control characters
+    cleaned = re.sub(r"[\s\x00-\x1f\x7f]+", "", text)
+    if len(cleaned) == 0:
+        return True, "Document has no extractable text content."
+    if len(cleaned) < _EMPTY_MIN_CHARS:
+        return True, (
+            f"Document has almost no text content ("
+            f"{len(cleaned)} non-whitespace chars)."
+        )
+    words = len(re.findall(r"\b[\w'-]+\b", text))
+    if words < _EMPTY_MIN_WORDS:
+        return True, (
+            f"Document has too few words ({words}) to be a valid document."
+        )
+    return False, ""
+
+
+def pre_model_gate(text: str, filename: str = "") -> Tuple[bool, dict]:
+    """
+    Rapid pre-model gate: reject empty and non-SRS documents quickly,
+    BEFORE any LLM / VLM / embedding / heavy OCR work runs.
+
+    Returns (should_reject, detail):
+      - When should_reject is True, `detail` is shaped for HTTPException(detail=...)
+        with keys: error, message, score, reasons, recommendation.
+      - When should_reject is False, `detail` is the full SRS validation dict
+        (same shape as validate_document_for_srs) so callers can keep using it
+        for downstream logging / persistence.
+    """
+    # 1) Empty check first — cheapest and most common failure mode.
+    is_empty, empty_reason = is_document_empty(text)
+    if is_empty:
+        return True, {
+            "error": "DOCUMENT_EMPTY",
+            "message": empty_reason,
+            "score": 0,
+            "reasons": [empty_reason],
+            "recommendation": (
+                "Upload a document that contains readable SRS-style text content."
+            ),
+        }
+
+    ext = os.path.splitext(str(filename or ""))[1].lower()
+    is_image_only = ext in _IMAGE_ONLY_EXTS
+
+    v_res = validate_document_for_srs(text)
+
+    # Image-only uploads (diagrams, UI mockups) often have short OCR text and
+    # lack classic SRS modal keywords, but can still be valid SRS artifacts.
+    # Only reject them if the underlying validator already flagged junk / garbage.
+    if is_image_only:
+        if v_res.get("is_rejected"):
+            return True, {
+                "error": "NON_SRS_DOCUMENT",
+                "message": v_res.get("reject_reason")
+                or "Image does not contain readable SRS-relevant content.",
+                "score": v_res.get("srs_score"),
+                "reasons": v_res.get("reasons"),
+                "recommendation": v_res.get("recommendation"),
+            }
+        return False, v_res
+
+    # 2) Text-bearing documents: use validator's built-in rejection...
+    if v_res.get("is_rejected"):
+        return True, {
+            "error": "NON_SRS_DOCUMENT",
+            "message": v_res.get("reject_reason")
+            or "Document does not look like a Software Requirements Specification.",
+            "score": v_res.get("srs_score"),
+            "reasons": v_res.get("reasons"),
+            "recommendation": v_res.get("recommendation"),
+        }
+
+    # 3) ... plus a stricter early-reject threshold so non-SRS docs that
+    # squeak past the base validator are still stopped before the models run.
+    score = int(v_res.get("srs_score") or 0)
+    if score < _PRE_MODEL_MIN_SCORE:
+        return True, {
+            "error": "NON_SRS_DOCUMENT",
+            "message": (
+                "Document does not look like a Software Requirements Specification "
+                f"(SRS score {score} below threshold {_PRE_MODEL_MIN_SCORE}). "
+                "Please upload a requirements document."
+            ),
+            "score": score,
+            "reasons": v_res.get("reasons"),
+            "recommendation": v_res.get("recommendation"),
+        }
+
+    return False, v_res

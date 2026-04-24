@@ -66,6 +66,11 @@ class InviteClientRequest(BaseModel):
     file_id: int
 
 
+class AiRefineRequest(BaseModel):
+    """Client asks the AI to rewrite a requirement given their instructions."""
+    instruction: str
+
+
 def _ensure_client(user: User):
     if (getattr(user, "role", "") or "").lower() != "client":
         raise HTTPException(status_code=403, detail="Client role required")
@@ -600,6 +605,117 @@ async def add_client_requirement(
     }
 
 
+@router.post("/review/{file_id}/requirements/{req_id}/ai-refine")
+async def ai_refine_requirement(
+    file_id: int,
+    req_id: int,
+    payload: AiRefineRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Client-only: use the LLM (Groq → Ollama fallback) to rewrite the
+    requirement's description based on the client's modification prompt.
+    Returns the suggested text WITHOUT persisting it — the client previews
+    and submits it through the normal /review/{id}/action flow."""
+    _ensure_client(current_user)
+
+    instruction = (payload.instruction or "").strip()
+    if len(instruction) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Please describe the change you want in a full sentence (at least 10 characters).",
+        )
+
+    assignment = db.query(ReviewAssignment).filter(
+        ReviewAssignment.file_id == file_id,
+        ReviewAssignment.client_id == current_user.id,
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=403, detail="No review assignment for this document")
+
+    feature = (
+        db.query(Feature)
+        .filter(Feature.id == req_id, Feature.file_id == file_id)
+        .first()
+    )
+    if not feature:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+
+    parsed_file = db.query(ParsedFile).filter(ParsedFile.id == file_id).first()
+    doc_summary = (parsed_file.summary or "")[:600] if parsed_file else ""
+
+    prompt = (
+        "You are a senior requirements analyst. A client is asking for a rewrite of "
+        "ONE software requirement. Preserve the original intent and category — only "
+        "apply the change they requested.\n\n"
+        f"Document context (first 600 chars):\n{doc_summary}\n\n"
+        f"Original requirement (category={feature.category or 'functional'}, "
+        f"priority={getattr(feature, 'priority', None) or 'Medium'}):\n"
+        f"{feature.description or ''}\n\n"
+        f"Client's modification request:\n{instruction}\n\n"
+        "Rewrite the requirement in ONE concise sentence using an imperative "
+        "modal verb (shall/must/should). Do not add explanations, preambles, "
+        "bullet points, or headings. Output only the rewritten requirement.\n\n"
+        "Rewritten requirement:"
+    )
+
+    agent = get_agent()
+    refined = None
+    # Prefer Groq via the agent helper — fastest + best quality.
+    try:
+        refined = agent._call_groq(prompt, timeout=30)
+    except Exception:
+        refined = None
+
+    # Fall back to local Ollama if Groq is unreachable.
+    if not refined:
+        try:
+            resp = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": agent._resolve_ollama_model(),
+                    "prompt": prompt,
+                    "stream": False,
+                },
+                timeout=45,
+            )
+            if resp.ok:
+                out = (resp.json().get("response") or "").strip()
+                refined = out or None
+        except Exception:
+            refined = None
+
+    if not refined:
+        raise HTTPException(
+            status_code=502,
+            detail="AI service unavailable. Try typing your change directly into the comment instead.",
+        )
+
+    # Strip any leading label the LLM might add ("Rewritten requirement:" etc.)
+    cleaned = refined.strip()
+    for prefix in (
+        "rewritten requirement:",
+        "requirement:",
+        "updated requirement:",
+        "here is the rewritten requirement:",
+    ):
+        if cleaned.lower().startswith(prefix):
+            cleaned = cleaned[len(prefix):].strip()
+    # Strip surrounding quotes
+    if (cleaned.startswith('"') and cleaned.endswith('"')) or (
+        cleaned.startswith("'") and cleaned.endswith("'")
+    ):
+        cleaned = cleaned[1:-1].strip()
+
+    return {
+        "req_id": req_id,
+        "file_id": file_id,
+        "original": feature.description or "",
+        "refined": cleaned,
+        "instruction": instruction,
+    }
+
+
 @router.post("/review/{file_id}/submit")
 async def submit_review(
     file_id: int,
@@ -946,7 +1062,7 @@ async def manager_add_requirement(
         raise HTTPException(status_code=400, detail="priority must be High, Medium, or Low")
 
     source = (payload.source or "client_approved").strip().lower()
-    if source not in ("system", "client", "client_approved"):
+    if source not in ("system", "client", "client_approved", "image_analysis"):
         source = "client_approved"
 
     created = Feature(

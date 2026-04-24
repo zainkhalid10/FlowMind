@@ -1,4 +1,4 @@
-# Python
+# === Python ===
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,61 +10,58 @@ venv/
 ENV/
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
-var/
 wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Database
+# === Node / frontend ===
+node_modules/
+frontend/dist/
+.vite/
+*.tsbuildinfo
+
+# === Database & vector store ===
 *.db
 *.sqlite
 *.sqlite3
-data/
 chroma_db/
 
-# Logs
+# === Persisted runtime state ===
+uploads/
+reports/
+requirements_views.json
+learned_patterns.json
+learning_state.json
+learning_maintenance_state.json
+
+# === Logs ===
 *.log
 server.log
 ollama.log
 uvicorn.out
 
-# IDE
+# === IDE / OS ===
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# === Secrets ===
 .env
 .env.local
+.env.*.local
 
-# Uploads and temporary files
-uploads/
-*.pdf
-*.txt
-!requirements.txt
-
-# Test files
+# === Ad-hoc / throwaway ===
 test_*.py
 *_test.py
 fix_*.py
 migrate_*.py
-
-# Documentation (optional - remove if you want to commit these)
-# ERRORS_AND_ISSUES.md
-# TEST_RESULTS.md
-# FIXES_APPLIED.md

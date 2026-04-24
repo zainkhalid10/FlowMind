@@ -39,17 +39,9 @@ class VisualExplainRequest(BaseModel):
     image_url: Optional[str] = None
     ocr_text: Optional[str] = None
 
-@router.get("/approve")
-async def serve_approve_page():
-    """Serve the feature approval page - no auth required on page serve."""
-    import os
-    approve_path = os.path.join("static", "approve.html")
-    if os.path.exists(approve_path):
-        from fastapi.responses import HTMLResponse
-        with open(approve_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse(content="<h1>Approve page not found</h1>", status_code=404)
+# /approve is handled by the React SPA catch-all in flowmind.py
+# (legacy handler that served static/approve.html was removed).
+
 
 def get_db():
     db = SessionLocal()
@@ -589,12 +581,54 @@ async def explain_file_visual_item(
                 "or enable VLM (FLOWMIND_USE_VLM=true) for stronger visual semantics."
             )
 
+    # Pre-classify each extracted requirement using the main rag_agent rule
+    # engine so image-derived requirements land in the correct IEEE-830
+    # category (functional / non-functional / business / system) on save.
+    categorized_requirements: List[Dict[str, Any]] = []
+    try:
+        from rag_agent import get_agent
+
+        agent = get_agent()
+        for req_text in extracted_requirements[:8]:
+            try:
+                ev = agent.classify_requirement_with_evidence(req_text)
+                cat = str(ev.get("category") or "functional").lower().replace("_", "-")
+                # Canonical SRS taxonomy
+                if cat not in ("functional", "non-functional", "business", "system"):
+                    cat = "functional"
+                reason = ""
+                reasons_map = ev.get("reasons") or {}
+                if isinstance(reasons_map, dict):
+                    canonical = cat.replace("-", "_")
+                    reason = str(reasons_map.get(canonical) or "")
+                categorized_requirements.append({
+                    "text": req_text,
+                    "category": cat,
+                    "reason": reason,
+                })
+            except Exception:
+                # Safe fallback — treat as functional if the classifier trips.
+                categorized_requirements.append({
+                    "text": req_text,
+                    "category": "functional",
+                    "reason": "",
+                })
+    except Exception:
+        # If the agent can't be instantiated at all, return un-categorized.
+        categorized_requirements = [
+            {"text": r, "category": "functional", "reason": ""}
+            for r in extracted_requirements[:8]
+        ]
+
     response = {
         "status": "success",
         "file_id": file_id,
         "image_name": image_path.name,
         "explanation": explanation_text,
+        # Flat list kept for backwards compatibility with older clients.
         "extracted_requirements": extracted_requirements[:8],
+        # New: each requirement paired with its classifier-picked category.
+        "categorized_requirements": categorized_requirements,
         "components": components[:10],
         "relationships": relationships[:8],
         "process_steps": process_steps[:10],

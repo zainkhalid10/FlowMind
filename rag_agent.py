@@ -30,21 +30,27 @@ class RequirementsExtractionAgent:
         self.llm = None
         self.model_name = "heuristic"
         
-        # Initialize embeddings: prefer HuggingFace all-MiniLM-L6-v2; fallback to simple hash
+        # Initialize embeddings. Default upgraded to BAAI/bge-base-en-v1.5 —
+        # significantly stronger than MiniLM on technical text retrieval, same
+        # HuggingFaceEmbeddings interface. Override via FLOWMIND_EMBEDDING_MODEL
+        # if you want to try bge-m3, nomic-embed, gte-large, etc.
         self.embeddings = None
+        embedding_model_name = os.getenv(
+            "FLOWMIND_EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5"
+        )
         print("🤖 Initializing AI models...")
         try:
-            print("📦 Loading HuggingFace embeddings model: sentence-transformers/all-MiniLM-L6-v2")
-            # Try to import sentence_transformers first to check if it's available
+            print(f"📦 Loading HuggingFace embeddings model: {embedding_model_name}")
+            # Check sentence_transformers availability before touching the network.
             try:
                 import sentence_transformers
                 print(f"✅ sentence_transformers package found (version: {getattr(sentence_transformers, '__version__', 'unknown')})")
             except ImportError as import_err:
                 print(f"⚠️ sentence_transformers package not available: {import_err}")
                 raise import_err
-            
-            self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-            self.model_name = "hf-all-MiniLM-L6-v2"
+
+            self.embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name)
+            self.model_name = f"hf-{embedding_model_name.split('/')[-1]}"
             print(f"✅ Embeddings model loaded successfully: {self.model_name}")
         except Exception as e:
             error_msg = str(e)
@@ -117,7 +123,18 @@ class RequirementsExtractionAgent:
         self.use_llm_finalize = os.getenv("FLOWMIND_USE_LLM_FINALIZE", "1") == "1"
         self._debug_validation = os.getenv("FLOWMIND_DEBUG_VALIDATION", "0") == "1"
         self._debug_extraction = os.getenv("FLOWMIND_DEBUG_EXTRACTION", "0") == "1"
-        self.ollama_model = os.getenv("FLOWMIND_OLLAMA_MODEL", "llama3:8b")
+        # Preferred Ollama text model. If this tag isn't pulled yet, we fall
+        # back to FLOWMIND_OLLAMA_MODEL_FALLBACK (default llama3:8b) at request
+        # time so an un-pulled new model doesn't break extraction end-to-end.
+        self.ollama_model = os.getenv("FLOWMIND_OLLAMA_MODEL", "qwen2.5:14b")
+        self.ollama_model_fallback = os.getenv(
+            "FLOWMIND_OLLAMA_MODEL_FALLBACK", "llama3:8b"
+        )
+        self._resolved_ollama_model: Optional[str] = None
+
+        # Cloud LLM providers (tried before local Ollama for speed).
+        self.groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
+        self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
         
         # Self-learning configuration
@@ -1863,6 +1880,76 @@ class RequirementsExtractionAgent:
         
         return '\n'.join(enhanced_lines)
     
+    def _call_groq(self, prompt: str, timeout: int = 30) -> Optional[str]:
+        """Call Groq's OpenAI-compatible API. Returns response text or None.
+        Roughly 10-20x faster than local Ollama; used as the primary provider
+        when GROQ_API_KEY is set."""
+        if not self.groq_api_key:
+            return None
+        try:
+            import requests  # type: ignore
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.groq_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2,
+                },
+                timeout=timeout,
+            )
+            if resp.ok:
+                data = resp.json()
+                choices = data.get("choices") or []
+                if choices:
+                    msg = (choices[0].get("message") or {}).get("content") or ""
+                    out = (msg or "").strip()
+                    return out or None
+            else:
+                # 429 = rate-limited; let the caller fall through to Ollama.
+                print(f"⚠️ Groq returned {resp.status_code}; falling back")
+        except Exception as e:
+            print(f"⚠️ Groq call failed: {e}; falling back")
+        return None
+
+    def _resolve_ollama_model(self) -> str:
+        """Pick the Ollama text model to use, falling back if the preferred
+        tag isn't installed yet. Cached on the instance after first success."""
+        if self._resolved_ollama_model:
+            return self._resolved_ollama_model
+        preferred = self.ollama_model or "qwen2.5:14b"
+        fallback = self.ollama_model_fallback or "llama3:8b"
+        try:
+            import requests  # type: ignore
+            resp = requests.get("http://localhost:11434/api/tags", timeout=2)
+            if resp.ok:
+                installed = {m.get("name", "") for m in resp.json().get("models", [])}
+                # Match ignoring tag for convenience (qwen2.5:14b vs qwen2.5:14b-instruct)
+                def has(tag: str) -> bool:
+                    base = tag.split(":")[0]
+                    return any(name == tag or name.split(":")[0] == base for name in installed)
+                if has(preferred):
+                    self._resolved_ollama_model = preferred
+                elif has(fallback):
+                    print(f"⚠️ Preferred model {preferred} not installed — falling back to {fallback}")
+                    self._resolved_ollama_model = fallback
+                else:
+                    # Last-resort: whatever is present, first non-VLM tag
+                    for name in installed:
+                        low = name.lower()
+                        if "vl" not in low and "llava" not in low and "vision" not in low:
+                            print(f"⚠️ Neither {preferred} nor {fallback} installed; using {name}")
+                            self._resolved_ollama_model = name
+                            break
+        except Exception:
+            pass
+        if not self._resolved_ollama_model:
+            self._resolved_ollama_model = preferred  # best-effort
+        return self._resolved_ollama_model
+
     def _llm_finalize(self, section_text: str) -> str:
         """Optional LLM polishing via Ollama (local) or OpenRouter; fallback to input.
         Prompt text is only sent to the LLM HTTP API — never returned verbatim on failure
@@ -1881,13 +1968,17 @@ class RequirementsExtractionAgent:
         fallback = self._extract_finalize_fallback(section_text) if (
             "You are a requirements extraction specialist" in (section_text or "")
         ) else section_text
-        # Try Ollama first
+        # Try Groq first (fastest, cloud).
+        groq_out = self._call_groq(prompt, timeout=30)
+        if groq_out:
+            return groq_out
+        # Then try local Ollama.
         try:
             import requests  # type: ignore
             resp = requests.post(
                 "http://localhost:11434/api/generate",
-                json={"model": self.ollama_model, "prompt": prompt, "stream": False},
-                timeout=15,
+                json={"model": self._resolve_ollama_model(), "prompt": prompt, "stream": False},
+                timeout=60,
             )
             if resp.ok:
                 data = resp.json()
@@ -2415,19 +2506,59 @@ Thought: {agent_scratchpad}""",
             return max(domain_scores, key=domain_scores.get)
         return 'general'
 
-    # --- Documented rule keywords: explainable classification (classify_requirement_with_evidence) ---
+    # --- Classification rules grounded in IEEE 830 / Sommerville / Wiegers ---
+    # Each category's keyword set is intentionally opinionated: words that
+    # strongly signal that category even when other words also appear.
     _FUNCTIONAL_KEYWORDS = frozenset({
-        "shall", "must", "will", "should", "enable", "allow", "provide", "support",
-        "display", "process", "validate", "authenticate", "generate", "calculate",
-        "store", "retrieve", "update", "delete", "notify",
+        # Imperative verbs — what the system DOES (behaviour)
+        "authenticate", "authorize", "login", "logout", "register", "signup",
+        "enable", "allow", "provide", "support", "display", "render", "show",
+        "process", "validate", "verify", "check",
+        "generate", "produce", "create", "compose",
+        "calculate", "compute", "derive",
+        "store", "save", "persist", "retrieve", "fetch", "read",
+        "update", "modify", "edit", "delete", "remove",
+        "send", "receive", "notify", "alert", "email",
+        "search", "filter", "sort", "export", "import",
+        "upload", "download",
+        "submit", "approve", "reject",
+        "track", "log", "record",
+        "print", "schedule", "assign",
     })
     _NON_FUNCTIONAL_KEYWORDS = frozenset({
-        "performance", "security", "reliability", "usability", "availability", "scalability",
-        "maintainability", "throughput", "latency",
+        # Quality attributes (ISO 25010) + observable measurable traits
+        "performance", "latency", "throughput", "responsiveness", "response",
+        "scalability", "concurrency", "concurrent",
+        "availability", "uptime", "downtime", "redundancy", "failover",
+        "reliability", "mtbf", "mttr", "fault-tolerance",
+        "security", "encryption", "encrypt", "ssl", "tls", "https",
+        "hash", "bcrypt", "oauth", "authentication", "authorization",
+        "usability", "accessibility", "wcag", "intuitive",
+        "maintainability", "modular", "documentation",
+        "portability", "cross-platform", "compatible", "compatibility",
+        "localization", "i18n", "l10n",
+        "observability", "logging", "monitoring", "tracing",
     })
     _BUSINESS_KEYWORDS = frozenset({
-        "stakeholder", "business", "cost", "budget", "revenue", "roi", "compliance",
-        "regulation", "policy", "legal", "audit", "sla",
+        # Organizational / strategic / regulatory concerns
+        "stakeholder", "business", "objective", "goal", "strategy",
+        "cost", "budget", "pricing", "revenue", "roi", "kpi", "nps", "csat",
+        "compliance", "regulation", "regulatory", "policy", "legal", "audit",
+        "gdpr", "hipaa", "sox", "pci", "pci-dss", "iso", "soc2",
+        "contract", "sla", "license", "licensing",
+        "stakeholders", "executive", "investor", "shareholder",
+    })
+    _SYSTEM_KEYWORDS = frozenset({
+        # Technical infrastructure / deployment
+        "hardware", "server", "host", "cpu", "ram", "memory", "gpu", "storage",
+        "disk", "ssd", "database", "postgres", "postgresql", "mysql", "mongodb",
+        "redis", "cache", "elasticsearch", "kafka",
+        "network", "bandwidth", "tcp", "http", "https", "grpc", "rest", "websocket",
+        "infrastructure", "deployment", "container", "docker", "kubernetes",
+        "cloud", "aws", "azure", "gcp", "s3",
+        "os", "linux", "windows", "macos", "ubuntu", "debian",
+        "browser", "chrome", "firefox", "safari", "edge",
+        "middleware", "queue", "broker",
     })
     def _rule_layer_scores(self, text: str) -> Dict[str, Any]:
         """
@@ -2472,53 +2603,115 @@ Thought: {agent_scratchpad}""",
             if "functional" not in reasons:
                 reasons["functional"] = "Modal language plus system/component actor (what the system does for a user)"
 
-        # NON-FUNCTIONAL
+        # NON-FUNCTIONAL — quality attributes + measurable constraints win big
         nfr_hits = [w for w in self._NON_FUNCTIONAL_KEYWORDS if w in low]
         for _ in nfr_hits:
             scores["non_functional"] += 2
-        if re.search(
-            r"\bresponse\s+time\b|\b\d+(\.\d+)?\s*(ms|s|sec|second|seconds|min|hour|day)s?\b|\b\d+(\.\d+)?\s*%\b",
-            low,
-        ):
-            scores["non_functional"] += 3
-            reasons["non_functional"] = "Contains quality attribute [measurable constraint] or measurable constraint"
-        elif nfr_hits and "non_functional" not in reasons:
-            reasons["non_functional"] = f"Contains quality attribute [{nfr_hits[0]}] or measurable constraint"
 
-        # BUSINESS
+        # Measurable constraints (the SE-textbook signal for NFRs)
+        #   - explicit time: "within 200ms", "under 2s", "less than 5 minutes"
+        #   - explicit throughput/load: "1000 RPS", "10000 concurrent users", "100 MB/s"
+        #   - explicit availability: "99.9%", "99.99%", "five nines"
+        #   - explicit size: "500 MB", "2 GB"
+        measurable_patterns = [
+            r"\bwithin\s+\d+(\.\d+)?\s*(ms|milliseconds|s|sec|seconds|min|minutes|hour|hours|day|days)\b",
+            r"\bless\s+than\s+\d+(\.\d+)?\s*(ms|s|seconds|minutes)\b",
+            r"\bunder\s+\d+(\.\d+)?\s*(ms|s|seconds)\b",
+            r"\b\d+(\.\d+)?\s*(ms|milliseconds)\b",
+            r"\b\d+\s*(rps|qps|tps|requests\s*/\s*s|transactions\s*/\s*s)\b",
+            r"\b\d{2,}\s+concurrent\s+(users|sessions|connections|requests)\b",
+            # Percentage ONLY counts for NFR when tied to a quality attribute;
+            # a bare "20%" on its own is usually business (cost / revenue / adoption).
+            r"\b\d+(\.\d+)?\s*%\s+(uptime|availability|success|error|accuracy|throughput|reliability)\b",
+            r"\b(uptime|availability|success\s+rate|error\s+rate|accuracy)\s+(of|is|must\s+be)?\s*\d+(\.\d+)?\s*%",
+            r"\b(four|five|six)\s+nines\b",
+            r"\b(gdpr|hipaa|sox|pci[- ]?dss|iso\s?27001)\b",
+            r"\bresponse\s+time\b",
+            r"\b(tls|ssl|aes[- ]?256|bcrypt|scrypt|argon2|oauth\s*2)\b",
+        ]
+        measurable_hit = False
+        for pat in measurable_patterns:
+            if re.search(pat, low):
+                scores["non_functional"] += 4
+                measurable_hit = True
+        if measurable_hit:
+            reasons["non_functional"] = (
+                "Measurable constraint detected (time / throughput / availability / "
+                "security standard) — canonical NFR indicator"
+            )
+        elif nfr_hits and "non_functional" not in reasons:
+            reasons["non_functional"] = f"Contains quality attribute [{nfr_hits[0]}]"
+
+        # BUSINESS — organizational / regulatory / strategic concerns
         bus_hits = sorted(self._BUSINESS_KEYWORDS & word_set)
         for _ in bus_hits:
             scores["business"] += 2
-        if bus_hits and "business" not in reasons:
-            x = bus_hits[0]
-            reasons["business"] = f"Contains business/organizational concern [{x}]"
 
-        # SYSTEM / infrastructure (word-boundary matches)
-        sys_terms = [
-            "hardware", "server", "database", "network", "cpu", "ram", "memory", "infrastructure",
-            "deployment", "bandwidth", "storage",
+        business_patterns = [
+            r"\bshall\s+comply\s+with\b",
+            r"\bbusiness\s+(goal|objective|outcome|rule|process)\b",
+            r"\bstakeholders?\s+(require|expect|need)\b",
+            r"\breturn\s+on\s+investment\b",
+            r"\bmarket\s+(share|differentiation)\b",
+            r"\boperational\s+cost\b",
+            r"\breduce\s+(costs?|expenses?)\b",
+            r"\bincrease\s+(revenue|retention|adoption)\b",
         ]
-        sys_match = None
-        for term in sys_terms:
-            if re.search(r"\b" + re.escape(term) + r"\b", low):
-                scores["system"] += 2
-                if not sys_match:
-                    sys_match = term
+        for pat in business_patterns:
+            if re.search(pat, low):
+                scores["business"] += 3
+                if "business" not in reasons:
+                    reasons["business"] = "Business-level objective / policy / KPI phrasing"
+                break
+        if bus_hits and "business" not in reasons:
+            reasons["business"] = f"Contains business/organizational concern [{bus_hits[0]}]"
+
+        # SYSTEM — technical infrastructure (hardware / DB / network / deployment / OS)
+        sys_hits = sorted(self._SYSTEM_KEYWORDS & word_set)
+        for _ in sys_hits:
+            scores["system"] += 2
+        sys_match = sys_hits[0] if sys_hits else None
         if re.search(r"\b(operating\s+system|o/s)\b", low):
             scores["system"] += 2
             if not sys_match:
                 sys_match = "operating system"
-        if scores["system"] > 0 and "system" not in reasons:
-            reasons["system"] = f"Contains technical infrastructure concern [{sys_match or 'infrastructure'}]"
-
-        # Do not let pure NFR wording steal payment/calculation-style functional behavior
+        # Deployment targets and platform versions are system concerns
         if re.search(
-            r"\b(collect|charge|payment|calculate|book|assign|invoice|deposit|order|cart)\b", low
-        ) and scores["non_functional"] > scores["functional"]:
+            r"\b(windows|linux|macos|ios|android)\s+\d+",
+            low,
+        ) or re.search(r"\b(chrome|firefox|safari|edge)\s+\d+", low):
+            scores["system"] += 3
+            if not sys_match:
+                sys_match = "platform version"
+        if scores["system"] > 0 and "system" not in reasons:
+            reasons["system"] = f"Technical infrastructure concern [{sys_match or 'infrastructure'}]"
+
+        # ---- Tie-breaks to respect canonical SE categorization ----
+
+        # (a) Action-oriented business behavior (payment, book, calc, etc.) is
+        #     FUNCTIONAL by convention — don't let a stray NFR keyword hijack it.
+        if re.search(
+            r"\b(collect|charge|payment|calculate|book|assign|invoice|deposit|order|cart|refund|checkout)\b",
+            low,
+        ) and scores["non_functional"] > scores["functional"] and not measurable_hit:
             scores["functional"] = max(scores["functional"], scores["non_functional"] - 1)
             reasons["functional"] = (
-                "Action-oriented business behavior (e.g. payment, calculate) — treated as functional, not NFR"
+                "Action-oriented behavior (payment/calculate/book) — treated as functional, not NFR"
             )
+
+        # (b) If we saw a MEASURABLE constraint, NFR wins even against functional verbs
+        #     ("The system shall authenticate users within 200ms" → NFR, not functional)
+        if measurable_hit and scores["functional"] >= scores["non_functional"]:
+            scores["non_functional"] = scores["functional"] + 1
+            reasons["non_functional"] = (
+                "Measurable performance / availability / security constraint — "
+                "canonical NFR (overrides functional verb)"
+            )
+
+        # (c) Compliance/regulatory wording always wins for BUSINESS
+        if re.search(r"\b(gdpr|hipaa|sox|pci[- ]?dss|regulatory\s+compliance)\b", low):
+            scores["business"] = max(scores["business"], scores["non_functional"] + 1)
+            reasons["business"] = "Regulatory compliance is a canonical business/policy requirement"
 
         return {"scores": scores, "reasons": reasons, "user_story_override": scores["user"] >= 4}
 
@@ -2543,17 +2736,23 @@ Thought: {agent_scratchpad}""",
             "Category:"
         )
         out = None
-        try:
-            import requests
-            resp = requests.post(
-                "http://localhost:11434/api/generate",
-                json={"model": self.ollama_model, "prompt": prompt, "stream": False},
-                timeout=20,
-            )
-            if resp.ok:
-                out = (resp.json().get("response") or "").strip().lower()
-        except Exception:
-            pass
+        # Try Groq first (fastest, cloud).
+        groq_out = self._call_groq(prompt, timeout=20)
+        if groq_out:
+            out = groq_out.strip().lower()
+        # Then local Ollama.
+        if not out:
+            try:
+                import requests
+                resp = requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={"model": self._resolve_ollama_model(), "prompt": prompt, "stream": False},
+                    timeout=20,
+                )
+                if resp.ok:
+                    out = (resp.json().get("response") or "").strip().lower()
+            except Exception:
+                pass
         if not out and self.openrouter_key:
             try:
                 import requests

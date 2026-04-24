@@ -1,4 +1,12 @@
-"""Dashboard and user file management routes"""
+"""Dashboard and user file management routes.
+
+Legacy HTML page handlers that served static/*.html for each dashboard route
+were removed when the React SPA took over rendering — the SPA catch-all in
+flowmind.py handles `/dashboard`, `/upload`, `/requirements`, `/approve`,
+`/settings`, `/export`, `/analytics`, `/members`, `/integrations`,
+`/integration-log`, `/manager-feedback`, `/client-review`, and `/clients`.
+Only JSON / data endpoints live in this module now.
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -8,163 +16,10 @@ from datetime import datetime, timedelta
 from database import SessionLocal, ParsedFile, User, Team, Feature, IntegrationLog, ImageMeta, ReviewAssignment, ReviewFeedback, AgentChatHistory
 from auth import get_current_user, get_db, get_visible_user_ids, can_user_access_project, SECRET_KEY, ALGORITHM
 from jose import JWTError, jwt
-from fastapi.responses import HTMLResponse
 import os
 
 router = APIRouter()
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-
-
-@router.get("/dashboard", response_class=HTMLResponse)
-@router.get("/dashboard.html", response_class=HTMLResponse)
-async def dashboard_page():
-    """Dashboard page showing user's uploaded files."""
-    dashboard_path = os.path.join(STATIC_DIR, "dashboard.html")
-    if os.path.exists(dashboard_path):
-        with open(dashboard_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
-
-
-@router.get("/manager", response_class=HTMLResponse)
-async def manager_page():
-    """Manager dashboard: all teams and progress."""
-    p = os.path.join(STATIC_DIR, "manager.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Manager page not found</h1>", status_code=404)
-
-
-@router.get("/team", response_class=HTMLResponse)
-async def team_page():
-    """Team head dashboard: team members and progress."""
-    p = os.path.join(STATIC_DIR, "team.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Team page not found</h1>", status_code=404)
-
-
-@router.get("/member", response_class=HTMLResponse)
-async def member_page():
-    """Member dashboard: personal workload, uploads, and daily execution view."""
-    p = os.path.join(STATIC_DIR, "member.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Member page not found</h1>", status_code=404)
-
-
-@router.get("/client-review", response_class=HTMLResponse)
-@router.get("/client_review.html", response_class=HTMLResponse)
-async def client_review_page():
-    """Client review page for requirement validation."""
-    p = os.path.join(STATIC_DIR, "client_review.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Client review page not found</h1>", status_code=404)
-
-
-@router.get("/extract", response_class=HTMLResponse)
-async def extract_page():
-    """Extract page for uploading and analyzing documents."""
-    extract_path = os.path.join(STATIC_DIR, "extract.html")
-    if os.path.exists(extract_path):
-        with open(extract_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    # Fallback to embedded extract page if static file doesn't exist
-    return HTMLResponse(content="<h1>Extract page not found</h1>", status_code=404)
-
-
-@router.get("/upload", response_class=HTMLResponse)
-@router.get("/upload.html", response_class=HTMLResponse)
-async def upload_page():
-    """Upload page for document processing."""
-    p = os.path.join(STATIC_DIR, "upload.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Upload page not found</h1>", status_code=404)
-
-
-@router.get("/processing", response_class=HTMLResponse)
-@router.get("/processing.html", response_class=HTMLResponse)
-async def processing_page():
-    """Processing page for pipeline progress."""
-    p = os.path.join(STATIC_DIR, "processing.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Processing page not found</h1>", status_code=404)
-
-
-@router.get("/settings", response_class=HTMLResponse)
-@router.get("/settings.html", response_class=HTMLResponse)
-async def settings_page():
-    """Workspace settings page reachable from profile menu."""
-    settings_path = os.path.join(STATIC_DIR, "settings.html")
-    if os.path.exists(settings_path):
-        with open(settings_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Settings page not found</h1>", status_code=404)
-
-
-@router.get("/requirements", response_class=HTMLResponse)
-@router.get("/requirements.html", response_class=HTMLResponse)
-async def requirements_page():
-    """Requirements page for extracted requirement management."""
-    p = os.path.join(STATIC_DIR, "requirements.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Requirements page not found</h1>", status_code=404)
-
-
-@router.get("/analytics", response_class=HTMLResponse)
-@router.get("/analytics.html", response_class=HTMLResponse)
-async def analytics_page():
-    """Analytics page for requirement visualizations."""
-    p = os.path.join(STATIC_DIR, "analytics.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Analytics page not found</h1>", status_code=404)
-
-
-@router.get("/export", response_class=HTMLResponse)
-@router.get("/export.html", response_class=HTMLResponse)
-async def export_page():
-    """Export and integrations page."""
-    p = os.path.join(STATIC_DIR, "export.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Export page not found</h1>", status_code=404)
-
-
-@router.get("/manager-feedback", response_class=HTMLResponse)
-@router.get("/manager_feedback.html", response_class=HTMLResponse)
-async def manager_feedback_page():
-    """Manager feedback page for client review responses."""
-    p = os.path.join(STATIC_DIR, "manager_feedback.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Manager feedback page not found</h1>", status_code=404)
-
-
-@router.get("/clients", response_class=HTMLResponse)
-@router.get("/clients.html", response_class=HTMLResponse)
-async def clients_page():
-    """Client credentials listing page for managers."""
-    p = os.path.join(STATIC_DIR, "clients.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Clients page not found</h1>", status_code=404)
 
 
 def _get_user_from_token(token: Optional[str] = None, credentials: Optional[HTTPAuthorizationCredentials] = None, db: Session = None) -> User:
@@ -249,6 +104,10 @@ async def get_my_uploads(
         
         print(f"✅ Returning {len(result)} uploads")
         return {"uploads": result}
+    except HTTPException:
+        # Auth errors and other deliberate HTTP responses must pass through
+        # unchanged; wrapping them as 500 hides the real failure mode.
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching uploads: {str(e)}")
 
@@ -669,32 +528,193 @@ async def get_assignable_users(
     return {"users": []}
 
 
-@router.get("/members", response_class=HTMLResponse)
-async def members_page():
-    """Manager: Members management page (assign users to teams, set roles)."""
-    p = os.path.join(STATIC_DIR, "members.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Members page not found</h1>", status_code=404)
+# ==============================================================
+#  Manager dashboard: aggregate stats for the home screen
+# ==============================================================
 
+@router.get("/api/manager/stats")
+async def manager_dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rich aggregate stats for the manager dashboard home page.
 
-@router.get("/integrations", response_class=HTMLResponse)
-async def integrations_page():
-    """Manager: Trello/Jira configuration page (Manage Configuration)."""
-    p = os.path.join(STATIC_DIR, "integrations.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Integrations page not found</h1>", status_code=404)
+    Returns document counts, requirement counts broken down by status and
+    category, integration export counts, recent-documents feed with
+    per-doc status badges, and a 14-day activity sparkline.
+    """
+    from sqlalchemy import func
 
+    visible_ids = get_visible_user_ids(current_user, db)
+    if not visible_ids:
+        return {
+            "totals": {"documents": 0, "requirements": 0, "images": 0},
+            "by_status": {},
+            "by_category": {},
+            "exports": {"jira": 0, "trello": 0, "csv": 0, "json": 0, "total": 0},
+            "client_feedback": {
+                "total": 0, "approved": 0, "rejected": 0,
+                "modification_requested": 0, "pending": 0,
+            },
+            "recent_documents": [],
+            "activity_14d": [],
+        }
 
-@router.get("/integrations/log", response_class=HTMLResponse)
-async def integration_log_page():
-    """Manager: Task Integration Log (D2) page."""
-    p = os.path.join(STATIC_DIR, "integration_log.html")
-    if os.path.exists(p):
-        with open(p, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Integration log page not found</h1>", status_code=404)
+    # --- Totals --------------------------------------------------
+    total_docs = (
+        db.query(func.count(ParsedFile.id))
+        .filter(ParsedFile.user_id.in_(visible_ids))
+        .scalar() or 0
+    )
+    total_reqs = (
+        db.query(func.count(Feature.id))
+        .filter(Feature.user_id.in_(visible_ids))
+        .scalar() or 0
+    )
+    total_images = (
+        db.query(func.count(ImageMeta.id))
+        .join(ParsedFile, ParsedFile.id == ImageMeta.file_id)
+        .filter(ParsedFile.user_id.in_(visible_ids))
+        .scalar() or 0
+    )
 
+    # --- Features by status & category ---------------------------
+    by_status: dict[str, int] = {}
+    for row in (
+        db.query(Feature.status, func.count(Feature.id))
+        .filter(Feature.user_id.in_(visible_ids))
+        .group_by(Feature.status)
+        .all()
+    ):
+        by_status[(row[0] or "pending")] = int(row[1])
+
+    by_category: dict[str, int] = {}
+    for row in (
+        db.query(Feature.category, func.count(Feature.id))
+        .filter(Feature.user_id.in_(visible_ids))
+        .group_by(Feature.category)
+        .all()
+    ):
+        by_category[(row[0] or "uncategorized").lower()] = int(row[1])
+
+    # --- Integration exports -----------------------------------
+    exports = {"jira": 0, "trello": 0, "csv": 0, "json": 0, "total": 0}
+    for row in (
+        db.query(IntegrationLog.platform, func.count(IntegrationLog.id))
+        .filter(IntegrationLog.user_id.in_(visible_ids))
+        .group_by(IntegrationLog.platform)
+        .all()
+    ):
+        p = (row[0] or "").lower()
+        if p in exports:
+            exports[p] = int(row[1])
+        exports["total"] += int(row[1])
+
+    # --- Client feedback totals -------------------------------
+    client_feedback = {
+        "total": 0, "approved": 0, "rejected": 0,
+        "modification_requested": 0, "pending": 0,
+    }
+    file_ids_visible = [
+        fid for (fid,) in db.query(ParsedFile.id)
+        .filter(ParsedFile.user_id.in_(visible_ids)).all()
+    ]
+    if file_ids_visible:
+        for row in (
+            db.query(ReviewFeedback.action, func.count(ReviewFeedback.id))
+            .filter(ReviewFeedback.file_id.in_(file_ids_visible))
+            .group_by(ReviewFeedback.action)
+            .all()
+        ):
+            action = (row[0] or "").lower()
+            key = {
+                "approve": "approved",
+                "reject": "rejected",
+                "request_modification": "modification_requested",
+            }.get(action, "pending")
+            client_feedback[key] = client_feedback.get(key, 0) + int(row[1])
+            client_feedback["total"] += int(row[1])
+
+    # --- Recent documents with per-doc status -----------------
+    recent_files = (
+        db.query(ParsedFile)
+        .filter(ParsedFile.user_id.in_(visible_ids))
+        .order_by(ParsedFile.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    recent_documents = []
+    for pf in recent_files:
+        feat_total = (
+            db.query(func.count(Feature.id))
+            .filter(Feature.file_id == pf.id)
+            .scalar() or 0
+        )
+        feat_approved = (
+            db.query(func.count(Feature.id))
+            .filter(Feature.file_id == pf.id, Feature.status == "approved")
+            .scalar() or 0
+        )
+        has_client_review = (
+            db.query(func.count(ReviewAssignment.id))
+            .filter(ReviewAssignment.file_id == pf.id)
+            .scalar() or 0
+        ) > 0
+
+        # Derive a coarse status for the badge
+        if feat_total == 0:
+            status_label = "processing"
+        elif has_client_review:
+            submitted = (
+                db.query(func.count(ReviewAssignment.id))
+                .filter(
+                    ReviewAssignment.file_id == pf.id,
+                    ReviewAssignment.submitted_at.isnot(None),
+                )
+                .scalar() or 0
+            )
+            status_label = "client-submitted" if submitted else "in-review"
+        elif feat_approved and feat_approved == feat_total:
+            status_label = "complete"
+        else:
+            status_label = "pending"
+
+        recent_documents.append({
+            "id": pf.id,
+            "filename": pf.filename,
+            "created_at": pf.created_at.isoformat() if pf.created_at else None,
+            "view_id": pf.view_id,
+            "user_id": pf.user_id,
+            "feature_count": int(feat_total),
+            "approved_count": int(feat_approved),
+            "status": status_label,
+        })
+
+    # --- 14-day activity (uploads per day) --------------------
+    activity_14d = []
+    today = datetime.utcnow().date()
+    for offset in range(13, -1, -1):
+        day = today - timedelta(days=offset)
+        count = (
+            db.query(func.count(ParsedFile.id))
+            .filter(
+                ParsedFile.user_id.in_(visible_ids),
+                func.date(ParsedFile.created_at) == day,
+            )
+            .scalar() or 0
+        )
+        activity_14d.append({"date": day.isoformat(), "uploads": int(count)})
+
+    return {
+        "totals": {
+            "documents": int(total_docs),
+            "requirements": int(total_reqs),
+            "images": int(total_images),
+        },
+        "by_status": by_status,
+        "by_category": by_category,
+        "exports": exports,
+        "client_feedback": client_feedback,
+        "recent_documents": recent_documents,
+        "activity_14d": activity_14d,
+    }

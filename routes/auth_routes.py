@@ -139,7 +139,8 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
                 "username": new_user.username,
                 "role": role,
                 "team_id": team_id,
-                "team_name": team_name
+                "team_name": team_name,
+                "avatar_url": getattr(new_user, "oauth_profile_picture", None),
             }
         }
     except HTTPException:
@@ -217,7 +218,8 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 "username": user.username,
                 "role": role,
                 "team_id": team_id,
-                "team_name": team_name
+                "team_name": team_name,
+                "avatar_url": getattr(user, "oauth_profile_picture", None),
             }
         }
     except HTTPException:
@@ -398,9 +400,21 @@ async def invite_client(
                 temp_password=temporary_password,
             )
     else:
+        # No file attached — the client is still being invited, so the
+        # email still goes out. The login link is generic (no invite token)
+        # because there's no assigned document yet.
         invite_link = f"{_resolve_app_base_url()}/login.html"
 
         if can_send_email:
+            send_invite_email_async(
+                to_email=client_user.email,
+                to_name=request.name or client_user.username,
+                manager_name=current_user.username,
+                filename="(your manager will attach a document soon)",
+                deadline=request.due_date or "",
+                temp_password=temporary_password,
+                login_link=invite_link,
+            )
             send_confirmation_email_to_manager_async(
                 manager_email=current_user.email,
                 manager_name=current_user.username,
@@ -500,7 +514,8 @@ async def get_current_user_info(
         "role": role,
         "team_id": team_id,
         "team_name": team_name,
-        "created_at": user.created_at.isoformat() if user.created_at else None
+        "avatar_url": getattr(user, "oauth_profile_picture", None),
+        "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
 
