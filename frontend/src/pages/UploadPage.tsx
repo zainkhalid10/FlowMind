@@ -40,14 +40,7 @@ import { VisualAnalysisPanel } from "@/components/VisualAnalysisPanel";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AnalyzeResponse, RejectionDetail } from "@/types/api";
 
-const ACCEPTED_EXTENSIONS = [
-  ".pdf",
-  ".doc",
-  ".docx",
-  ".png",
-  ".jpg",
-  ".jpeg",
-];
+const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 
 function formatBytes(size: number): string {
   if (size < 1024) return `${size} B`;
@@ -211,9 +204,10 @@ export default function UploadPage() {
             Analyze with AI
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Drop any PDF, Word, PowerPoint, image, or text file. The SRS gate
-            rejects empty & non-SRS docs in milliseconds, then Ollama + Qwen-VL
-            process the rest in parallel.
+            Drop a PDF or Word document. The SRS gate rejects empty &
+            non-SRS files in milliseconds, then the extraction pipeline pulls
+            functional, non-functional, business, and system requirements —
+            including from diagrams inside the document.
           </p>
         </div>
       </header>
@@ -247,7 +241,7 @@ export default function UploadPage() {
                 Drag &amp; drop your document, or click to browse
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                PDF · DOC · DOCX · PNG · JPG
+                PDF · DOC · DOCX
               </p>
               <input
                 type="file"

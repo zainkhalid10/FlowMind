@@ -19,10 +19,11 @@ _processing_results = {}
 
 # File upload configuration
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 50 * 1024 * 1024))  # 50MB default
-# Manager-only product decision: PPT/PPTX and plain text are no longer
-# accepted. The allowed formats cover real SRS artefacts: PDF, Word docs
-# (legacy + modern), and images (for screenshots / architecture diagrams).
-ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.bmp'}
+# Product decision: only real SRS artefacts are accepted as uploads —
+# PDF and Word documents. Standalone images / PowerPoint / plain text
+# were removed because they're rarely real SRS sources; diagrams EMBEDDED
+# in a PDF or DOCX are still analyzed by the VLM pipeline automatically.
+ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx'}
 
 def validate_file_extension(filename: str) -> bool:
     """Validate file extension is allowed."""
@@ -32,6 +33,57 @@ def validate_file_extension(filename: str) -> bool:
 def validate_file_size(file_size: int) -> bool:
     """Validate file size is within limits."""
     return file_size <= MAX_FILE_SIZE
+
+
+# Minimum plausible file size per format (bytes). Anything below this is
+# empty or corrupt and can be rejected at upload time without ever
+# running the text extractor. Values are conservative — real docs are
+# always at least an order of magnitude larger.
+_MIN_BYTES_BY_EXT = {
+    ".pdf": 200,        # smallest valid PDF is ~100 bytes, real docs are kB+
+    ".doc": 512,        # OLE compound file headers alone are 512 bytes
+    ".docx": 400,       # minimum zipped docx with empty body
+}
+
+# Magic bytes the file must start with for each format. If the bytes don't
+# match, the file was renamed (e.g. a .txt file renamed to .pdf) or is
+# corrupt — reject before parsing.
+_MAGIC_BYTES = {
+    ".pdf": [b"%PDF-"],
+    ".docx": [b"PK\x03\x04"],                    # ZIP archive
+    ".doc": [b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"],  # OLE compound file
+}
+
+
+def early_reject_reason(filename: str, contents: bytes) -> str | None:
+    """Run cheap integrity checks before touching the parser. Returns a
+    human-readable rejection reason if the upload should be blocked, or
+    None to let it continue.
+
+    These checks fire in milliseconds and catch:
+      - 0-byte uploads
+      - Files below the format's minimum plausible size
+      - Files renamed to the wrong extension (wrong magic bytes)
+      - Truncated files where the header is missing
+    """
+    if contents is None or len(contents) == 0:
+        return "File is empty (0 bytes)."
+    ext = os.path.splitext(filename or "")[1].lower()
+    min_bytes = _MIN_BYTES_BY_EXT.get(ext)
+    if min_bytes is not None and len(contents) < min_bytes:
+        return (
+            f"File is too small to be a valid {ext} document "
+            f"({len(contents)} bytes; expected at least {min_bytes})."
+        )
+    expected_magic = _MAGIC_BYTES.get(ext)
+    if expected_magic:
+        head = contents[:16]
+        if not any(head.startswith(m) for m in expected_magic):
+            return (
+                f"File does not look like a real {ext} — magic bytes don't match. "
+                "It may have been renamed from a different format."
+            )
+    return None
 
 
 @router.post("/upload_client_doc")
@@ -49,21 +101,37 @@ async def upload_client_doc(
             status_code=400,
             detail=f"File type not supported. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
         )
-    
+
     # Read file to check size
     contents = await file.read()
     file_size = len(contents)
-    
+
     # Validate file size
     if not validate_file_size(file_size):
         raise HTTPException(
             status_code=413,
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
         )
-    
+
+    # === Instant early reject (size + magic bytes) ===
+    # Catches empty / corrupt / renamed files in <1 ms without ever
+    # starting the extractor or touching disk.
+    early_reason = early_reject_reason(file.filename, contents)
+    if early_reason:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "DOCUMENT_EMPTY",
+                "message": early_reason,
+                "score": 0,
+                "reasons": [early_reason],
+                "recommendation": "Upload a real SRS document (PDF / DOC / DOCX / image).",
+            },
+        )
+
     # Reset file pointer for processing
     await file.seek(0)
-    
+
     # Create progress tracker
     tracker_id, tracker = create_progress_tracker()
     tracker.start()
@@ -150,10 +218,24 @@ async def upload_agent_doc(
             status_code=413,
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
         )
-    
+
+    # === Instant early reject (size + magic bytes) ===
+    early_reason = early_reject_reason(file.filename, contents)
+    if early_reason:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "DOCUMENT_EMPTY",
+                "message": early_reason,
+                "score": 0,
+                "reasons": [early_reason],
+                "recommendation": "Upload a real SRS document (PDF / DOC / DOCX / image).",
+            },
+        )
+
     # Reset file pointer for processing
     await file.seek(0)
-    
+
     # Parse Basic Extraction image summaries if provided
     basic_extraction_data = None
     if basic_extraction_text or basic_extraction_full_text or basic_extraction_image_summaries:

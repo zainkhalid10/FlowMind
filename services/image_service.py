@@ -624,16 +624,12 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
     Enhanced VLM analysis with smart prompts based on image type and context.
     Supports FLOWMIND_VLM_MODELS (comma-separated) for hybrid Qwen2.5-VL and LLaVA-13B.
     Returns comprehensive interpretation.
+
+    NOTE: This function always attempts VLM inference. Gating whether VLM
+    runs at all is done by the CALLERS — the bulk-pipeline path reads
+    FLOWMIND_IMAGE_REQ_VLM_PASS; the on-demand path reads
+    FLOWMIND_ONDEMAND_VLM_DISABLED. So we don't re-check here.
     """
-    if not _is_vlm_pass_enabled():
-        print("   ⚠️  VLM disabled via FLOWMIND_IMAGE_REQ_VLM_PASS")
-        return {
-            'interpretation': '',
-            'requirements': [],
-            'components': [],
-            'confidence': 0
-        }
-    
     # Check Ollama status
     ollama_status = check_ollama_status()
     if not ollama_status['running']:
@@ -645,7 +641,7 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             'components': [],
             'confidence': 0
         }
-    
+
     ollama_models = ollama_status.get('models', [])
     available = _resolve_vlm_models(ollama_models)
     if not available:
@@ -658,13 +654,10 @@ def enhanced_vlm_analyze(image_path: str, ocr_text: str, image_type: str, contex
             'components': [],
             'confidence': 0
         }
-    
+
     print(f"   🤖 Using VLM models: {', '.join(available)}")
-    
+
     vlm_timeout = get_vlm_timeout_seconds()
-    if not _is_vlm_pass_enabled():
-        print("   ⚠️  VLM is disabled (FLOWMIND_IMAGE_REQ_VLM_PASS!=1), skipping VLM analysis")
-        return {'interpretation': '', 'requirements': [], 'components': [], 'confidence': 0}
     
     try:
         if image_path and os.path.isfile(image_path):
@@ -871,34 +864,40 @@ def comprehensive_image_interpretation(image_path: str, context: str = "") -> Di
     """
     Complete image interpretation combining OCR, VLM, and analysis.
     This is the main function to use for image interpretation.
+
+    NOTE: This runs on-demand when a user clicks "Analyze" on a specific
+    image. It is NOT gated by FLOWMIND_IMAGE_REQ_VLM_PASS (which controls
+    the bulk-pipeline VLM pass during upload). To disable on-demand VLM
+    as well, set FLOWMIND_ONDEMAND_VLM_DISABLED=1.
     """
     print(f"🖼️  Comprehensive interpretation: {os.path.basename(image_path)}")
-    
+
     # Step 1: Advanced OCR
     ocr_result = advanced_ocr_extract(image_path)
     ocr_text = ocr_result['text']
     ocr_confidence = ocr_result['confidence']
-    
+
     print(f"   📝 OCR: {len(ocr_text)} chars (confidence: {ocr_confidence:.1f}%)")
-    
+
     # Step 2: Detect image type
     type_info = detect_image_type_advanced(image_path, ocr_text)
     image_type = type_info['type']
-    
+
     print(f"   🔍 Type: {image_type} (confidence: {type_info['confidence']})")
-    
-    # Step 3: VLM analysis (if enabled)
+
+    # Step 3: VLM analysis — always runs on-demand unless explicitly disabled.
     vlm_result = {'interpretation': '', 'requirements': [], 'components': [], 'relationships': []}
-    
-    if _is_vlm_pass_enabled():
-        print(f"   🤖 Starting VLM analysis...")
+
+    ondemand_disabled = os.getenv("FLOWMIND_ONDEMAND_VLM_DISABLED", "0") == "1"
+    if not ondemand_disabled:
+        print(f"   🤖 Starting VLM analysis (on-demand)…")
         vlm_result = enhanced_vlm_analyze(image_path, ocr_text, image_type, context)
         if vlm_result.get('interpretation'):
             print(f"   ✅ VLM: {len(vlm_result['interpretation'])} chars")
         else:
-            print(f"   ⚠️  VLM analysis produced no results (falling back to OCR-only)")
+            print(f"   ⚠️  VLM produced no results (falling back to OCR-only)")
     else:
-        print(f"   ⏭️  VLM disabled, using intelligent OCR analysis")
+        print(f"   ⏭️  On-demand VLM disabled (FLOWMIND_ONDEMAND_VLM_DISABLED=1)")
     
     # Step 4: Merge and structure results
     final_interpretation = merge_interpretations(

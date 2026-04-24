@@ -16,11 +16,6 @@ SRS_SUPPORTED_EXTENSIONS = (
     ".pdf",
     ".doc",
     ".docx",
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".bmp",
 )
 
 
