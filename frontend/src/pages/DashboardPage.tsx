@@ -9,12 +9,15 @@ import {
   FileText,
   ImageIcon,
   Loader2,
+  MessageCircle,
   Send,
   Trash2,
   UploadCloud,
   UserPlus,
 } from "lucide-react";
 import { InviteClientModal } from "@/components/InviteClientModal";
+import { SendSummaryModal } from "@/components/SendSummaryModal";
+import { WhatsappShareButton } from "@/components/WhatsappShareButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -127,9 +130,11 @@ function ActivitySparkline({
 function DocumentRow({
   doc,
   onInvite,
+  onSendSummary,
 }: {
   doc: RecentDocument;
   onInvite: (fileId: number) => void;
+  onSendSummary: (fileId: number) => void;
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -189,6 +194,15 @@ function DocumentRow({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => onSendSummary(doc.id)}
+            aria-label="Send summary via WhatsApp"
+            title="Send the requirement summary to a client on WhatsApp"
+          >
+            <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => navigate(`/export?file_id=${doc.id}`)}
             aria-label="Export"
           >
@@ -226,6 +240,8 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteFileId, setInviteFileId] = useState<number | undefined>(undefined);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryFileId, setSummaryFileId] = useState<number | null>(null);
   const statsQ = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: fetchDashboardStats,
@@ -235,6 +251,11 @@ export default function DashboardPage() {
   const openInviteFor = (fid?: number) => {
     setInviteFileId(fid);
     setInviteOpen(true);
+  };
+
+  const openSummaryFor = (fid: number) => {
+    setSummaryFileId(fid);
+    setSummaryOpen(true);
   };
 
   const s = statsQ.data;
@@ -267,6 +288,7 @@ export default function DashboardPage() {
           >
             Refresh
           </Button>
+          <WhatsappShareButton variant="outline" size="md" label="Share" />
           <Button variant="secondary" onClick={() => openInviteFor()}>
             <UserPlus className="h-4 w-4" />
             Invite client
@@ -282,6 +304,12 @@ export default function DashboardPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         initialFileId={inviteFileId}
+      />
+
+      <SendSummaryModal
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        fileId={summaryFileId}
       />
 
       {statsQ.isError ? (
@@ -465,6 +493,7 @@ export default function DashboardPage() {
                             key={d.id}
                             doc={d}
                             onInvite={openInviteFor}
+                            onSendSummary={openSummaryFor}
                           />
                         ))}
                       </tbody>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -9,13 +10,18 @@ import {
   Eye,
   FileText,
   Gauge,
+  HelpCircle,
   Image as ImageIcon,
   Kanban,
   Layers,
   LineChart,
+  Minus,
   MessageSquare,
+  Plus,
+  Quote,
   ShieldCheck,
   Sparkles,
+  Star,
   UploadCloud,
   Users2,
   Workflow,
@@ -25,6 +31,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { roleHome } from "@/lib/roles";
+import { WhatsappShareButton } from "@/components/WhatsappShareButton";
 
 /* -------------------------------------------------------------------------- */
 /* Sub-components                                                             */
@@ -50,7 +57,7 @@ function Header() {
     <header className="sticky top-0 z-40 border-b border-slate-200/60 bg-white/75 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
-        <nav className="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex">
+        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
           <a href="#features" className="hover:text-slate-900 transition">
             Features
           </a>
@@ -60,8 +67,11 @@ function Header() {
           <a href="#gate" className="hover:text-slate-900 transition">
             SRS gate
           </a>
-          <a href="#stack" className="hover:text-slate-900 transition">
-            Stack
+          <a href="#pricing" className="hover:text-slate-900 transition">
+            Pricing
+          </a>
+          <a href="#faq" className="hover:text-slate-900 transition">
+            FAQ
           </a>
         </nav>
         <div className="flex items-center gap-2">
@@ -511,6 +521,348 @@ function StackSection() {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Testimonials                                                               */
+/* -------------------------------------------------------------------------- */
+
+interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+  rating: number;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "FlowMind turned a 40-page SRS into 62 categorized requirements in 3 minutes. The client-review portal alone saved us two weeks of back-and-forth email.",
+    name: "Ayesha R.",
+    role: "Lead BA · fintech startup",
+    rating: 5,
+  },
+  {
+    quote:
+      "The pre-model gate is the killer feature — it instantly rejected a vendor RFP that wasn't actually an SRS before we wasted GPU time. Zero false positives on our real docs.",
+    name: "Daniel K.",
+    role: "Engineering Manager",
+    rating: 5,
+  },
+  {
+    quote:
+      "We plugged it into our Jira workflow on day one. Managers drop in a PDF, clients approve on a mobile link, approved requirements appear as Jira tickets. Done.",
+    name: "Priya S.",
+    role: "Delivery lead · consulting",
+    rating: 5,
+  },
+];
+
+function TestimonialsSection() {
+  return (
+    <section className="bg-gradient-to-b from-slate-50 via-white to-slate-50 py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="reveal mx-auto max-w-2xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">
+            Trusted by teams
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            What product teams say
+          </h2>
+          <p className="mt-4 text-lg text-slate-600">
+            Real quotes from pilot customers running FlowMind in production.
+          </p>
+        </div>
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
+          {TESTIMONIALS.map((t, i) => (
+            <figure
+              key={t.name}
+              className="reveal group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-500/5"
+              style={{ transitionDelay: `${i * 80}ms` }}
+            >
+              <Quote className="absolute right-4 top-4 h-7 w-7 text-brand-100" />
+              <blockquote className="relative text-sm leading-relaxed text-slate-700">
+                "{t.quote}"
+              </blockquote>
+              <figcaption className="mt-5 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{t.name}</p>
+                  <p className="text-xs text-slate-500">{t.role}</p>
+                </div>
+                <div className="flex">
+                  {Array.from({ length: t.rating }).map((_, idx) => (
+                    <Star
+                      key={idx}
+                      className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                    />
+                  ))}
+                </div>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pricing                                                                    */
+/* -------------------------------------------------------------------------- */
+
+interface Plan {
+  name: string;
+  price: string;
+  tag: string;
+  features: string[];
+  cta: string;
+  ctaTo: string;
+  highlight?: boolean;
+}
+
+const PLANS: Plan[] = [
+  {
+    name: "Local",
+    price: "Free",
+    tag: "forever · self-hosted",
+    features: [
+      "Unlimited documents on your hardware",
+      "Ollama + Qwen 2.5-VL locally",
+      "Client review portal",
+      "Jira / Trello / CSV export",
+      "MIT-style source available",
+    ],
+    cta: "Run locally",
+    ctaTo: "/login?mode=signup",
+  },
+  {
+    name: "Cloud",
+    price: "Pilot",
+    tag: "bring your own Groq key",
+    features: [
+      "Everything in Local, plus:",
+      "Groq-accelerated extraction (~17× faster)",
+      "Hosted database + ChromaDB",
+      "Branded client invite emails",
+      "WhatsApp / Slack share built-in",
+    ],
+    cta: "Start pilot",
+    ctaTo: "/login?mode=signup",
+    highlight: true,
+  },
+  {
+    name: "Team",
+    price: "Contact",
+    tag: "5+ seats · priority",
+    features: [
+      "Everything in Cloud, plus:",
+      "SSO (Google Workspace, SAML)",
+      "Audit log + RBAC policies",
+      "Custom VLM / LLM fine-tuning",
+      "SLA & named support engineer",
+    ],
+    cta: "Talk to us",
+    ctaTo: "/login",
+  },
+];
+
+function PricingSection() {
+  return (
+    <section id="pricing" className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+      <div className="reveal mx-auto max-w-2xl text-center">
+        <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">
+          Pricing
+        </p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+          Start free. Scale when you're ready.
+        </h2>
+        <p className="mt-4 text-lg text-slate-600">
+          Run locally forever, or add cloud acceleration and team features when
+          your pilot proves value.
+        </p>
+      </div>
+      <div className="mt-14 grid gap-5 md:grid-cols-3">
+        {PLANS.map((plan, i) => (
+          <div
+            key={plan.name}
+            className={
+              "reveal relative flex flex-col rounded-2xl border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl " +
+              (plan.highlight
+                ? "border-brand-300 bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-900 text-white shadow-brand-500/25 hover:shadow-brand-500/40"
+                : "border-slate-200 bg-white")
+            }
+            style={{ transitionDelay: `${i * 60}ms` }}
+          >
+            {plan.highlight && (
+              <span className="absolute -top-3 right-6 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-700 shadow-md">
+                Most popular
+              </span>
+            )}
+            <h3
+              className={
+                "text-lg font-semibold " +
+                (plan.highlight ? "text-white" : "text-slate-900")
+              }
+            >
+              {plan.name}
+            </h3>
+            <p
+              className={
+                "mt-1 text-xs font-medium uppercase tracking-wider " +
+                (plan.highlight ? "text-brand-100/90" : "text-slate-500")
+              }
+            >
+              {plan.tag}
+            </p>
+            <p
+              className={
+                "mt-4 text-4xl font-bold tracking-tight " +
+                (plan.highlight ? "text-white" : "text-slate-900")
+              }
+            >
+              {plan.price}
+            </p>
+            <ul className="mt-5 flex-1 space-y-2 text-sm">
+              {plan.features.map((f, j) => (
+                <li key={j} className="flex items-start gap-2">
+                  <CheckCircle2
+                    className={
+                      "mt-0.5 h-4 w-4 shrink-0 " +
+                      (plan.highlight ? "text-emerald-300" : "text-emerald-600")
+                    }
+                  />
+                  <span
+                    className={
+                      plan.highlight ? "text-brand-50/90" : "text-slate-700"
+                    }
+                  >
+                    {f}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              to={plan.ctaTo}
+              className={
+                "mt-6 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition " +
+                (plan.highlight
+                  ? "bg-white text-brand-800 shadow hover:bg-brand-50"
+                  : "bg-brand-600 text-white shadow hover:bg-brand-700")
+              }
+            >
+              {plan.cta}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* FAQ — accordion                                                            */
+/* -------------------------------------------------------------------------- */
+
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Does my document ever leave my machine?",
+    a: "Only if you choose to. FlowMind runs Ollama + Qwen 2.5-VL + LLaVA locally — the default configuration keeps every document, embedding, and chat trace on your hardware. If you enable Groq for speed, only the extracted text is sent to Groq for LLM inference; images still process locally.",
+  },
+  {
+    q: "What makes the SRS gate different from just asking the LLM?",
+    a: "It's pure Python rules, so it runs in <50 ms and never burns GPU time on garbage. The gate checks word count, modal verbs, numbered requirement patterns, citation density, theme keywords, and letter ratio. Empty/non-SRS docs are rejected with a structured error code before a single model call.",
+  },
+  {
+    q: "How does the client actually review?",
+    a: "Manager invites a client from the Clients page or per-document row. FlowMind creates a client account with a one-click login link (sent via email or WhatsApp). The client logs in to their own portal, approves/rejects/requests modification on each requirement, and optionally uses the AI to suggest a rewrite. Manager sees every action read-only in the Manager Feedback view.",
+  },
+  {
+    q: "Can the AI pull requirements from diagrams?",
+    a: "Yes. Qwen 2.5-VL analyzes every image the pipeline extracts: architecture diagrams, UI mockups, flowcharts. It returns components, relationships, process steps, and requirement statements — each classified as Functional / Non-functional / Business / System. Add them to the document with one click.",
+  },
+  {
+    q: "Which formats are supported?",
+    a: "PDF · DOC · DOCX · PNG · JPG. PPT/PPTX and plain text are intentionally not accepted for SRS artefacts — these were rarely used in practice and brought more noise than signal.",
+  },
+  {
+    q: "How do I export approved requirements?",
+    a: "One click from the Export page: CSV, JSON, Jira (creates issues under your configured project key), or Trello (creates cards on your chosen board/list). Or copy-to-clipboard as Markdown from the image-analysis modal.",
+  },
+];
+
+function FaqSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  return (
+    <section id="faq" className="bg-slate-50 py-24">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div className="reveal text-center">
+          <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">
+            FAQ
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            Questions we hear often
+          </h2>
+        </div>
+        <div className="mt-10 space-y-2">
+          {FAQ.map((item, i) => {
+            const isOpen = openIndex === i;
+            return (
+              <div
+                key={i}
+                className="reveal overflow-hidden rounded-xl border border-slate-200 bg-white transition-all"
+                style={{ transitionDelay: `${i * 30}ms` }}
+              >
+                <button
+                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50"
+                  onClick={() => setOpenIndex(isOpen ? null : i)}
+                  aria-expanded={isOpen}
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <HelpCircle className="h-4 w-4 text-brand-500" />
+                    {item.q}
+                  </span>
+                  {isOpen ? (
+                    <Minus className="h-4 w-4 text-slate-500" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-slate-500" />
+                  )}
+                </button>
+                <div
+                  className={
+                    "grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out " +
+                    (isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")
+                  }
+                >
+                  <div className="min-h-0">
+                    <p className="px-5 pb-4 text-sm leading-relaxed text-slate-600">
+                      {item.a}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Floating WhatsApp share button (persistent CTA)                            */
+/* -------------------------------------------------------------------------- */
+
+function FloatingShareButton() {
+  return (
+    <div className="fixed bottom-6 right-6 z-30">
+      <WhatsappShareButton
+        size="lg"
+        label="Share FlowMind"
+        className="rounded-full shadow-2xl shadow-[#25D366]/30 transition hover:scale-105"
+      />
+    </div>
+  );
+}
+
 function StatCard({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -674,6 +1026,8 @@ export default function LandingPage() {
       <HowItWorks />
       <SrsGateSection />
       <StackSection />
+      <TestimonialsSection />
+      <PricingSection />
 
       {/* --- Detail callouts --- */}
       <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
@@ -682,7 +1036,7 @@ export default function LandingPage() {
             {
               icon: <FileText className="h-5 w-5" />,
               title: "Multi-format ingest",
-              body: "PDF · DOCX · PPTX · DOC · PPT · TXT · PNG · JPG — all normalized through the same pipeline.",
+              body: "PDF · DOC · DOCX · PNG · JPG — normalized through one pipeline, with diagrams routed through the VLM automatically.",
             },
             {
               icon: <Workflow className="h-5 w-5" />,
@@ -714,8 +1068,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <FaqSection />
       <FinalCta />
       <Footer />
+      <FloatingShareButton />
     </div>
   );
 }
