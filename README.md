@@ -1,8 +1,7 @@
-# FlowMind - AI-Powered Requirements Engineering (Phase 2)
+# FlowMind - AI-Powered Requirements Engineering 
 
 FlowMind is an intelligent requirements engineering platform for extracting, reviewing, managing, and exporting software requirements from documents (PDF, DOCX, PPTX, images).
 
-Phase 2 extends the extraction pipeline with manager-client review workflows, analytics, integrations, and role-based collaboration.
 
 ## Highlights
 
